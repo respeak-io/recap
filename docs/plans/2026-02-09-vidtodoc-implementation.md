@@ -2017,6 +2017,108 @@ git commit -m "fix: address issues found during end-to-end smoke test"
 
 ---
 
+## Task 18: Multi-Language Support
+
+> **Addendum — added during implementation.** Observation: Gemini natively handles cross-language video analysis (e.g. German speech → English docs) with high quality. This makes multi-language doc generation a natural extension.
+
+**Files:**
+- Modify: `supabase/migrations/` (new migration for `language` column)
+- Modify: `lib/ai/prompts.ts` (add translation prompt)
+- Create: `lib/ai/translate.ts`
+- Modify: `app/api/videos/process/route.ts` (generate per-language variants)
+- Modify: `components/video-upload.tsx` (language selection UI)
+- Modify: `components/docs/sidebar.tsx` (language switcher)
+- Create: `lib/vtt.ts` (VTT generation + translation)
+
+**Step 1: Schema migration — add `language` column**
+
+```sql
+-- Add language to articles
+alter table articles add column language text not null default 'en';
+
+-- Update unique constraint to include language
+alter table articles drop constraint articles_project_id_audience_slug_key;
+alter table articles add constraint articles_project_id_audience_language_slug_key
+  unique (project_id, audience, language, slug);
+
+-- Add VTT storage per language on videos
+alter table videos add column vtt_languages jsonb not null default '{}';
+-- Format: { "en": "WEBVTT\n00:00...", "de": "WEBVTT\n00:00..." }
+```
+
+**Step 2: VTT generation during video processing**
+
+During the Gemini extraction step, we already get `spoken_content` with timestamps per segment. Use this to:
+1. Generate a VTT file in the source language (detected from video)
+2. Store as `vtt_content` on the video record
+3. Store structured VTT in `vtt_languages` JSON field
+
+```typescript
+// lib/vtt.ts
+export function segmentsToVtt(segments: { start_time: number; end_time: number; spoken_content: string }[]): string {
+  let vtt = "WEBVTT\n\n";
+  for (const seg of segments) {
+    vtt += `${formatTime(seg.start_time)} --> ${formatTime(seg.end_time)}\n`;
+    vtt += `${seg.spoken_content}\n\n`;
+  }
+  return vtt;
+}
+
+function formatTime(seconds: number): string {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  const ms = Math.floor((seconds % 1) * 1000);
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}.${String(ms).padStart(3, "0")}`;
+}
+```
+
+**Step 3: Translation pipeline**
+
+After generating docs in the primary language:
+1. For each additional target language, send the article `content_text` to an LLM with a translation prompt
+2. Create a new article row with the same `audience` + `slug` but different `language`
+3. Translate the VTT file similarly (preserving timestamps, translating only the text cues)
+
+```typescript
+// lib/ai/translate.ts
+export function getTranslationPrompt(targetLanguage: string, content: string) {
+  return `Translate the following documentation to ${targetLanguage}.
+Preserve all formatting, code snippets, [video:MM:SS] timestamp references, and technical terms.
+Only translate the natural language text.
+
+${content}`;
+}
+```
+
+**Step 4: Video upload UI — language selection**
+
+Add to the upload form:
+- **Source language** (auto-detected, but user can override): dropdown with common languages
+- **Target languages** (multi-select checkboxes): which languages to generate docs in
+- Default: source language only. User can add more.
+
+**Step 5: Docs site — language switcher**
+
+Add a language dropdown to the docs sidebar (alongside the audience switcher):
+- Shows available languages for the current project
+- Switching language reloads the article in the selected language
+- Falls back to primary language if a specific article isn't translated yet
+- URL pattern: `/<project>/<article>?audience=developers&lang=de`
+
+**Step 6: Video player — multi-language subtitles**
+
+- Load VTT tracks for all available languages
+- Add a subtitle language selector on the video player
+- Default to the current docs language
+
+**Step 7: llms.txt — per-language generation**
+
+- `/<project>/llms.txt?lang=en` and `/<project>/llms-full.txt?lang=de`
+- Default (no param) serves the primary language
+
+---
+
 ## Summary
 
 | Task | Description | Depends On |
@@ -2037,4 +2139,5 @@ git commit -m "fix: address issues found during end-to-end smoke test"
 | 14 | Processing status UI | 9 |
 | 15 | llms.txt generation & Context7 integration | 12 |
 | 16 | Polish & typography | 12 |
-| 17 | End-to-end smoke test | all |
+| 17 | End-to-end smoke test | all (1-16) |
+| 18 | Multi-language support | 17 |
