@@ -10,10 +10,15 @@ function getAI() {
 }
 
 export async function uploadAndProcessVideo(videoUrl: string) {
-  // Upload video to Gemini Files API
   const ai = getAI();
+
+  // Download video from Supabase Storage, then upload to Gemini
+  const videoResponse = await fetch(videoUrl);
+  if (!videoResponse.ok) throw new Error("Failed to download video from storage");
+  const videoBlob = await videoResponse.blob();
+
   const uploadResponse = await ai.files.upload({
-    file: videoUrl,
+    file: videoBlob,
     config: { mimeType: "video/mp4" },
   });
 
