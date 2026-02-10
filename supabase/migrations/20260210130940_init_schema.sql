@@ -116,21 +116,21 @@ create trigger articles_updated_at
 create or replace function handle_new_user()
 returns trigger as $$
 declare
-  org_id uuid;
+  new_org_id uuid;
 begin
-  insert into organizations (name, slug)
+  insert into public.organizations (name, slug)
   values (
     coalesce(new.raw_user_meta_data->>'full_name', split_part(new.email, '@', 1)),
     new.id::text
   )
-  returning id into org_id;
+  returning id into new_org_id;
 
-  insert into organization_members (org_id, user_id, role)
-  values (org_id, new.id, 'owner');
+  insert into public.organization_members (org_id, user_id, role)
+  values (new_org_id, new.id, 'owner');
 
   return new;
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql security definer set search_path = public;
 
 create trigger on_auth_user_created
   after insert on auth.users
