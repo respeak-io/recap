@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { getProjects } from "@/lib/queries/projects";
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/dashboard/app-sidebar";
 
 export default async function DashboardLayout({
   children,
@@ -15,21 +16,17 @@ export default async function DashboardLayout({
 
   if (!user) redirect("/login");
 
+  const projects = await getProjects();
+
   return (
-    <div className="min-h-screen">
-      <header className="border-b">
-        <div className="container flex h-14 items-center justify-between">
-          <Link href="/dashboard" className="font-semibold">
-            vidtodoc
-          </Link>
-          <form action="/api/auth/signout" method="post">
-            <Button variant="ghost" size="sm" type="submit">
-              Sign out
-            </Button>
-          </form>
-        </div>
-      </header>
-      <main className="container py-8">{children}</main>
-    </div>
+    <SidebarProvider>
+      <AppSidebar
+        projects={projects}
+        userEmail={user.email ?? ""}
+      />
+      <SidebarInset>
+        {children}
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

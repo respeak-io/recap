@@ -29,6 +29,16 @@ export async function getProjects() {
   return data ?? [];
 }
 
+export async function getProject(slug: string) {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("projects")
+    .select("*")
+    .eq("slug", slug)
+    .single();
+  return data;
+}
+
 export async function createProject(name: string, slug: string) {
   const supabase = await createClient();
   const orgId = await getUserOrg();
