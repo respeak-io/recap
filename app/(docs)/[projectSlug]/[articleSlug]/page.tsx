@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { extractHeadings } from "@/lib/extract-headings";
 import { Toc } from "@/components/docs/toc";
+import { DocsBreadcrumb } from "@/components/docs/docs-breadcrumb";
 import { notFound } from "next/navigation";
 import { ArticleWithVideo } from "./article-with-video";
 
@@ -17,7 +18,7 @@ export default async function ArticlePage({
 
   const { data: article } = await supabase
     .from("articles")
-    .select("*, videos(*), projects!inner(*)")
+    .select("*, videos(*), projects!inner(*), chapters(title)")
     .eq("projects.slug", projectSlug)
     .eq("slug", articleSlug)
     .eq("audience", audience)
@@ -41,6 +42,12 @@ export default async function ArticlePage({
   return (
     <div className="flex gap-8">
       <article className="flex-1 max-w-[720px] mx-auto px-8 py-12 min-w-0">
+        <DocsBreadcrumb
+          projectName={article.projects.name}
+          projectSlug={projectSlug}
+          chapterTitle={article.chapters?.title}
+          articleTitle={article.title}
+        />
         <ArticleWithVideo
           title={article.title}
           content={article.content_json}
