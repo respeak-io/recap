@@ -43,3 +43,15 @@ export async function unpublishArticle(id: string) {
   const supabase = await createClient();
   await supabase.from("articles").update({ status: "draft" }).eq("id", id);
 }
+
+export async function deleteArticle(id: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("articles").delete().eq("id", id);
+  if (error) throw error;
+}
+
+export async function deleteVideo(id: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("videos").delete().eq("id", id);
+  if (error) throw error;
+}
