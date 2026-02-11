@@ -48,6 +48,7 @@ export function ProcessingStatus({
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
         let buffer = "";
+        let prevStepKey: string | null = null;
 
         while (true) {
           const { done, value } = await reader.read();
@@ -67,6 +68,11 @@ export function ProcessingStatus({
             }
 
             if (data.step === "complete") {
+              if (prevStepKey) {
+                setCompletedSteps((prev) =>
+                  prev.includes(prevStepKey!) ? prev : [...prev, prevStepKey!]
+                );
+              }
               setCompletedSteps((prev) => [...prev, "complete"]);
               setCurrentStep(data);
               onComplete?.();
@@ -74,12 +80,13 @@ export function ProcessingStatus({
             }
 
             // Mark previous step as completed
-            if (currentStep && currentStep.step !== data.step) {
+            if (prevStepKey && prevStepKey !== data.step) {
               setCompletedSteps((prev) =>
-                prev.includes(currentStep!.step) ? prev : [...prev, currentStep!.step]
+                prev.includes(prevStepKey!) ? prev : [...prev, prevStepKey!]
               );
             }
 
+            prevStepKey = data.step;
             setCurrentStep(data);
           }
         }
