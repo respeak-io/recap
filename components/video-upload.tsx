@@ -7,23 +7,26 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Progress } from "@/components/ui/progress";
 import { ProcessingStatus } from "./processing-status";
+import { Upload } from "lucide-react";
 
 const AUDIENCES = [
-  { id: "developers", label: "Developers" },
-  { id: "end-users", label: "End Users" },
-  { id: "ai-agents", label: "AI Agents" },
+  { id: "developers", label: "Developers", description: "Technical docs with code snippets and API references" },
+  { id: "end-users", label: "End Users", description: "Step-by-step guides with simple language" },
+  { id: "ai-agents", label: "AI Agents", description: "LLM-optimized docs for coding assistants" },
 ];
 
 const LANGUAGES = [
-  { id: "en", label: "English" },
-  { id: "de", label: "Deutsch" },
-  { id: "es", label: "Espanol" },
-  { id: "fr", label: "Francais" },
-  { id: "ja", label: "Japanese" },
-  { id: "zh", label: "Chinese" },
-  { id: "ko", label: "Korean" },
-  { id: "pt", label: "Portugues" },
+  { id: "en", label: "English", flag: "\u{1F1FA}\u{1F1F8}" },
+  { id: "de", label: "Deutsch", flag: "\u{1F1E9}\u{1F1EA}" },
+  { id: "es", label: "Espanol", flag: "\u{1F1EA}\u{1F1F8}" },
+  { id: "fr", label: "Francais", flag: "\u{1F1EB}\u{1F1F7}" },
+  { id: "ja", label: "Japanese", flag: "\u{1F1EF}\u{1F1F5}" },
+  { id: "zh", label: "Chinese", flag: "\u{1F1E8}\u{1F1F3}" },
+  { id: "ko", label: "Korean", flag: "\u{1F1F0}\u{1F1F7}" },
+  { id: "pt", label: "Portugues", flag: "\u{1F1E7}\u{1F1F7}" },
 ];
 
 export function VideoUpload({ projectId }: { projectId: string }) {
@@ -48,7 +51,6 @@ export function VideoUpload({ projectId }: { projectId: string }) {
   function toggleLanguage(id: string) {
     setLanguages((prev) => {
       if (prev.includes(id)) {
-        // Don't allow removing the last language
         if (prev.length <= 1) return prev;
         return prev.filter((l) => l !== id);
       }
@@ -70,7 +72,6 @@ export function VideoUpload({ projectId }: { projectId: string }) {
         body: JSON.stringify({ projectId }),
       });
       const { videoId, uploadUrl } = await urlRes.json();
-
       if (!uploadUrl) throw new Error("Failed to get upload URL");
 
       setUploadProgress(10);
@@ -79,7 +80,6 @@ export function VideoUpload({ projectId }: { projectId: string }) {
         headers: { "Content-Type": file.type },
         body: file,
       });
-
       if (!uploadRes.ok) throw new Error("Upload failed");
       setUploadProgress(80);
 
@@ -90,8 +90,6 @@ export function VideoUpload({ projectId }: { projectId: string }) {
 
       setUploadProgress(100);
       setUploading(false);
-
-      // Switch to processing view
       setProcessingVideoId(videoId);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");
@@ -107,7 +105,6 @@ export function VideoUpload({ projectId }: { projectId: string }) {
     router.refresh();
   }
 
-  // Show processing status after upload
   if (processingVideoId) {
     return (
       <Card>
@@ -127,81 +124,125 @@ export function VideoUpload({ projectId }: { projectId: string }) {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Upload video</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleUpload} className="grid gap-4">
-          <div className="grid gap-2">
-            <Label htmlFor="video-title">Title</Label>
+    <form onSubmit={handleUpload} className="space-y-8">
+      {/* Video file */}
+      <div className="grid gap-6 md:grid-cols-[1fr_1.5fr]">
+        <div>
+          <Label className="text-base font-medium">Video file</Label>
+          <p className="text-sm text-muted-foreground mt-1">
+            Upload an MP4, MOV, or WebM file. Screen recordings, product demos, and tutorials work best.
+          </p>
+        </div>
+        <div className="space-y-3">
+          <div className="border-2 border-dashed rounded-lg p-6 text-center hover:border-primary transition-colors">
+            <Upload className="size-8 mx-auto text-muted-foreground mb-2" />
+            <p className="text-sm text-muted-foreground mb-2">
+              {file ? file.name : "Drag and drop or click to select"}
+            </p>
             <Input
-              id="video-title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Getting Started Tutorial"
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="video-file">Video file</Label>
-            <Input
-              id="video-file"
               ref={fileInputRef}
               type="file"
               accept="video/*"
               onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              className="max-w-xs mx-auto"
               required
             />
           </div>
-          <div className="grid gap-2">
-            <Label>Target audiences</Label>
-            <div className="flex gap-3">
-              {AUDIENCES.map((a) => (
-                <label key={a.id} className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={audiences.includes(a.id)}
-                    onChange={() => toggleAudience(a.id)}
-                    className="rounded"
-                  />
-                  {a.label}
-                </label>
-              ))}
-            </div>
-          </div>
-          <div className="grid gap-2">
-            <Label>Languages</Label>
-            <p className="text-xs text-muted-foreground">
-              First selected language is the primary. Others will be translated.
-            </p>
-            <div className="flex flex-wrap gap-3">
-              {LANGUAGES.map((l) => (
-                <label key={l.id} className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={languages.includes(l.id)}
-                    onChange={() => toggleLanguage(l.id)}
-                    className="rounded"
-                  />
-                  {l.label}
-                </label>
-              ))}
-            </div>
-          </div>
-          {uploading && (
-            <div className="w-full bg-secondary rounded-full h-2">
-              <div
-                className="bg-primary h-2 rounded-full transition-all"
-                style={{ width: `${uploadProgress}%` }}
+        </div>
+      </div>
+
+      <Separator />
+
+      {/* Title */}
+      <div className="grid gap-6 md:grid-cols-[1fr_1.5fr]">
+        <div>
+          <Label className="text-base font-medium">Title</Label>
+          <p className="text-sm text-muted-foreground mt-1">
+            A name for this video. Used as the default title for generated articles.
+          </p>
+        </div>
+        <Input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Getting Started Tutorial"
+        />
+      </div>
+
+      <Separator />
+
+      {/* Audiences */}
+      <div className="grid gap-6 md:grid-cols-[1fr_1.5fr]">
+        <div>
+          <Label className="text-base font-medium">Target audiences</Label>
+          <p className="text-sm text-muted-foreground mt-1">
+            Each audience gets its own tailored documentation. Select at least one.
+          </p>
+        </div>
+        <div className="space-y-3">
+          {AUDIENCES.map((a) => (
+            <label
+              key={a.id}
+              className="flex items-start gap-3 rounded-lg border p-3 cursor-pointer hover:bg-accent/50 transition-colors"
+            >
+              <input
+                type="checkbox"
+                checked={audiences.includes(a.id)}
+                onChange={() => toggleAudience(a.id)}
+                className="mt-0.5 rounded"
               />
-            </div>
-          )}
-          {error && <p className="text-sm text-destructive">{error}</p>}
-          <Button type="submit" disabled={uploading || !file}>
-            {uploading ? "Uploading..." : "Upload & generate docs"}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+              <div>
+                <span className="text-sm font-medium">{a.label}</span>
+                <p className="text-xs text-muted-foreground">{a.description}</p>
+              </div>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <Separator />
+
+      {/* Languages */}
+      <div className="grid gap-6 md:grid-cols-[1fr_1.5fr]">
+        <div>
+          <Label className="text-base font-medium">Languages</Label>
+          <p className="text-sm text-muted-foreground mt-1">
+            First selected language is the primary. Others will be auto-translated.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {LANGUAGES.map((l) => (
+            <label
+              key={l.id}
+              className={`flex items-center gap-2 rounded-lg border px-3 py-2 cursor-pointer transition-colors ${
+                languages.includes(l.id)
+                  ? "border-primary bg-primary/5"
+                  : "hover:bg-accent/50"
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={languages.includes(l.id)}
+                onChange={() => toggleLanguage(l.id)}
+                className="sr-only"
+              />
+              <span className="text-base">{l.flag}</span>
+              <span className="text-sm">{l.label}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <Separator />
+
+      {/* Upload status */}
+      {uploading && <Progress value={uploadProgress} className="w-full" />}
+      {error && <p className="text-sm text-destructive">{error}</p>}
+
+      <div className="flex justify-end">
+        <Button type="submit" disabled={uploading || !file} size="lg">
+          {uploading ? "Uploading..." : "Upload & generate docs"}
+        </Button>
+      </div>
+    </form>
   );
 }
