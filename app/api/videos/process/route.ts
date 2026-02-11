@@ -219,6 +219,52 @@ export async function POST(request: Request) {
           currentProgress += progressPerStep * audiences.length;
         }
 
+        // If ai-agents audience was selected but English wasn't in the
+        // language list, auto-translate ai-agents articles to English so
+        // llms.txt always has content.
+        const needsEnglishForLlms =
+          audiences.includes("ai-agents") && !languages.includes("en");
+        if (needsEnglishForLlms) {
+          send({
+            step: "translating",
+            message: "Translating ai-agents docs to English for llms.txt...",
+            language: "en",
+            progress: currentProgress,
+          });
+
+          const aiAgentArticles = createdArticles.filter(
+            (a) => a.audience === "ai-agents"
+          );
+          for (const article of aiAgentArticles) {
+            try {
+              const { json: translatedJson, text: translatedText } =
+                await translateTiptapJson(
+                  article.contentJson,
+                  article.contentText,
+                  "en"
+                );
+
+              await supabase.from("articles").insert({
+                project_id: video.project_id,
+                video_id: videoId,
+                chapter_id: article.chapterId,
+                title: article.title,
+                slug: article.slug,
+                audience: "ai-agents",
+                language: "en",
+                content_json: translatedJson,
+                content_text: translatedText,
+                status: "draft",
+              });
+            } catch (e) {
+              console.error(
+                `English translation of "${article.title}" for llms.txt failed:`,
+                e
+              );
+            }
+          }
+        }
+
         // Save all VTT translations
         await supabase
           .from("videos")
