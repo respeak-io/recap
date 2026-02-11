@@ -1,6 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
+import { getProjectVideos } from "@/lib/queries/videos";
 import { BreadcrumbNav } from "@/components/dashboard/breadcrumb-nav";
 import { ArticleTree } from "@/components/dashboard/article-tree";
+import { VideoGallery } from "@/components/dashboard/video-gallery";
+import { Separator } from "@/components/ui/separator";
 import { notFound } from "next/navigation";
 
 export default async function ArticlesPage({
@@ -31,6 +34,8 @@ export default async function ArticlesPage({
     .eq("project_id", project.id)
     .order("order");
 
+  const videos = await getProjectVideos(project.id);
+
   const allArticles = articles ?? [];
   const audiences = [...new Set(allArticles.map((a) => a.audience))];
   const languages = [...new Set(allArticles.map((a) => a.language))];
@@ -51,6 +56,8 @@ export default async function ArticlesPage({
           audiences={audiences}
           languages={languages}
         />
+        <Separator className="my-6" />
+        <VideoGallery videos={videos} />
       </div>
     </>
   );
