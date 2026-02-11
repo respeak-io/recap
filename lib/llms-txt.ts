@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 
-export async function generateLlmsTxt(projectSlug: string, lang = "en") {
+export async function generateLlmsTxt(projectSlug: string) {
   const supabase = await createClient();
 
   const { data: project } = await supabase
@@ -18,7 +18,7 @@ export async function generateLlmsTxt(projectSlug: string, lang = "en") {
     .map((ch: { title: string; articles: { audience: string; language: string; status: string; title: string; slug: string; content_text: string }[] }) => ({
       ...ch,
       articles: ch.articles.filter(
-        (a) => a.audience === "ai-agents" && a.language === lang && a.status === "published"
+        (a) => a.audience === "ai-agents" && a.language === "en" && a.status === "published"
       ),
     }))
     .filter((ch: { articles: unknown[] }) => ch.articles.length > 0);
@@ -33,8 +33,7 @@ export async function generateLlmsTxt(projectSlug: string, lang = "en") {
   for (const chapter of chapters) {
     lines.push(`## ${chapter.title}`);
     for (const article of chapter.articles) {
-      const langParam = lang !== "en" ? `&lang=${lang}` : "";
-      const url = `/${projectSlug}/${article.slug}?audience=ai-agents${langParam}`;
+      const url = `/${projectSlug}/${article.slug}?audience=ai-agents`;
       lines.push(
         `- [${article.title}](${url}): ${article.content_text.slice(0, 120)}`
       );
@@ -45,7 +44,7 @@ export async function generateLlmsTxt(projectSlug: string, lang = "en") {
   return lines.join("\n");
 }
 
-export async function generateLlmsFullTxt(projectSlug: string, lang = "en") {
+export async function generateLlmsFullTxt(projectSlug: string) {
   const supabase = await createClient();
 
   const { data: project } = await supabase
@@ -63,7 +62,7 @@ export async function generateLlmsFullTxt(projectSlug: string, lang = "en") {
     .map((ch: { title: string; articles: { audience: string; language: string; status: string; title: string; content_text: string }[] }) => ({
       ...ch,
       articles: ch.articles.filter(
-        (a) => a.audience === "ai-agents" && a.language === lang && a.status === "published"
+        (a) => a.audience === "ai-agents" && a.language === "en" && a.status === "published"
       ),
     }))
     .filter((ch: { articles: unknown[] }) => ch.articles.length > 0);
