@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { ArticleRenderer, extractHeadings } from "@/components/docs/article-renderer";
+import { extractHeadings } from "@/components/docs/article-renderer";
 import { Toc } from "@/components/docs/toc";
 import { notFound } from "next/navigation";
 import { ArticleWithVideo } from "./article-with-video";
@@ -38,8 +38,8 @@ export default async function ArticlePage({
   const headings = extractHeadings(article.content_json);
 
   return (
-    <div className="flex">
-      <article className="flex-1 max-w-3xl mx-auto px-8 py-12 min-w-0">
+    <div className="flex gap-8">
+      <article className="flex-1 max-w-[720px] mx-auto px-8 py-12 min-w-0">
         <ArticleWithVideo
           title={article.title}
           content={article.content_json}

@@ -125,3 +125,67 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Syntax highlighting - neutral theme */
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-built_in,
+.hljs-name,
+.hljs-tag {
+  color: oklch(0.55 0.15 260);
+}
+.hljs-string,
+.hljs-title,
+.hljs-section,
+.hljs-attribute,
+.hljs-literal,
+.hljs-template-tag,
+.hljs-template-variable,
+.hljs-type,
+.hljs-addition {
+  color: oklch(0.55 0.15 150);
+}
+.hljs-comment,
+.hljs-quote,
+.hljs-deletion,
+.hljs-meta {
+  color: oklch(0.55 0 0);
+}
+.hljs-number,
+.hljs-regexp,
+.hljs-literal,
+.hljs-bullet,
+.hljs-link {
+  color: oklch(0.6 0.15 40);
+}
+.hljs-emphasis {
+  font-style: italic;
+}
+.hljs-strong {
+  font-weight: bold;
+}
+
+/* Prose refinements for Mintlify-style docs */
+.prose {
+  --tw-prose-body: var(--foreground);
+  line-height: 1.8;
+}
+.prose h2 {
+  margin-top: 2em;
+  margin-bottom: 0.75em;
+  scroll-margin-top: 5rem;
+}
+.prose h3 {
+  margin-top: 1.6em;
+  margin-bottom: 0.6em;
+  scroll-margin-top: 5rem;
+}
+.prose h4 {
+  scroll-margin-top: 5rem;
+}
+.prose pre {
+  border: 1px solid var(--border);
+}
+.prose table {
+  font-size: 0.875rem;
+}

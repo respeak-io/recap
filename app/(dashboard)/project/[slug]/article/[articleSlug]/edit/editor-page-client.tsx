@@ -1,15 +1,18 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
+import Link from "next/link";
 import { Editor } from "@/editor/editor";
 import { VideoPlayer, type VideoPlayerHandle } from "@/components/video-player";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ExternalLink } from "lucide-react";
 import { saveArticleAction, togglePublishAction } from "./actions";
 
 interface ArticleData {
   id: string;
   title: string;
+  slug: string;
   audience: string;
   status: string;
   content_json: Record<string, unknown>;
@@ -31,9 +34,11 @@ function extractText(json: Record<string, unknown>): string {
 
 export function EditorPageClient({
   article,
+  projectSlug,
   videoUrl,
 }: {
   article: ArticleData;
+  projectSlug: string;
   videoUrl: string | null;
 }) {
   const [saving, setSaving] = useState(false);
@@ -65,6 +70,8 @@ export function EditorPageClient({
     setStatus(newStatus);
   }
 
+  const publicUrl = `/${projectSlug}/${article.slug}?audience=${article.audience}`;
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -76,6 +83,14 @@ export function EditorPageClient({
           </Badge>
         </div>
         <div className="flex items-center gap-2">
+          {status === "published" && (
+            <Button variant="ghost" size="sm" asChild>
+              <Link href={publicUrl} target="_blank">
+                <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                View
+              </Link>
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"

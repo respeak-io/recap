@@ -37,11 +37,13 @@ export default async function ArticleEditPage({
       article={{
         id: article.id,
         title: article.title,
+        slug: article.slug,
         audience: article.audience,
         status: article.status,
         content_json: article.content_json,
         videos: article.videos,
       }}
+      projectSlug={slug}
       videoUrl={videoUrl}
     />
   );

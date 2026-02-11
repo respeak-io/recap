@@ -1,6 +1,10 @@
 "use client";
 
 import slugify from "slugify";
+import { common, createLowlight } from "lowlight";
+import { toHtml } from "hast-util-to-html";
+
+const lowlight = createLowlight(common);
 
 interface TiptapNode {
   type: string;
@@ -112,12 +116,34 @@ function renderNode(
       return <ol key={index}>{children}</ol>;
     case "listItem":
       return <li key={index}>{children}</li>;
-    case "codeBlock":
+    case "codeBlock": {
+      const lang = (node.attrs?.language as string) || "";
+      const codeText =
+        node.content?.map((n) => n.text ?? "").join("") ?? "";
+      let highlighted: string | null = null;
+      try {
+        if (lang && lowlight.registered(lang)) {
+          highlighted = toHtml(lowlight.highlight(lang, codeText));
+        }
+      } catch {
+        // fallback to plain text
+      }
       return (
-        <pre key={index} className="rounded-lg bg-muted p-4 overflow-x-auto">
-          <code>{children}</code>
+        <pre
+          key={index}
+          className="rounded-lg bg-muted p-4 overflow-x-auto text-sm leading-relaxed"
+        >
+          {highlighted ? (
+            <code
+              className={`language-${lang}`}
+              dangerouslySetInnerHTML={{ __html: highlighted }}
+            />
+          ) : (
+            <code>{codeText}</code>
+          )}
         </pre>
       );
+    }
     case "blockquote":
       return <blockquote key={index}>{children}</blockquote>;
     case "horizontalRule":

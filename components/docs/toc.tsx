@@ -35,7 +35,7 @@ export function Toc({ headings }: { headings: TocItem[] }) {
   if (headings.length === 0) return null;
 
   return (
-    <aside className="hidden xl:block w-[200px] flex-shrink-0 sticky top-8 h-fit">
+    <aside className="hidden xl:block w-[200px] flex-shrink-0 sticky top-12 h-fit pr-4">
       <p className="text-xs font-semibold uppercase text-muted-foreground mb-3">
         On this page
       </p>
