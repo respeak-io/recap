@@ -2,11 +2,16 @@ import { createClient } from "@/lib/supabase/server";
 import { uploadAndProcessVideo, extractVideoContent, getAI } from "@/lib/ai/gemini";
 import { getDocGenerationPrompt } from "@/lib/ai/prompts";
 import { markdownToTiptap } from "@/lib/ai/markdown-to-tiptap";
+import { segmentsToVtt } from "@/lib/vtt";
+import { translateTiptapJson, translateVtt } from "@/lib/ai/translate";
 import slugify from "slugify";
 
 export async function POST(request: Request) {
   const supabase = await createClient();
-  const { videoId, audiences } = await request.json();
+  const { videoId, audiences, languages = ["en"] } = await request.json();
+
+  const primaryLanguage: string = languages[0] ?? "en";
+  const additionalLanguages: string[] = languages.slice(1);
 
   const { data: video } = await supabase
     .from("videos")
@@ -31,7 +36,7 @@ export async function POST(request: Request) {
       }
 
       try {
-        send({ step: "uploading", message: "Uploading video to AI...", progress: 0.1 });
+        send({ step: "uploading", message: "Uploading video to AI...", progress: 0.05 });
 
         const { data: urlData } = await supabase.storage
           .from("videos")
@@ -39,7 +44,7 @@ export async function POST(request: Request) {
 
         const fileInfo = await uploadAndProcessVideo(urlData!.signedUrl);
 
-        send({ step: "transcribing", message: "Extracting content from video...", progress: 0.3 });
+        send({ step: "transcribing", message: "Extracting content from video...", progress: 0.2 });
 
         const segments = await extractVideoContent(fileInfo.uri!, fileInfo.mimeType!);
 
@@ -55,13 +60,42 @@ export async function POST(request: Request) {
         );
         await supabase.from("video_segments").insert(segmentRows);
 
-        const progressPerAudience = 0.6 / audiences.length;
-        let currentProgress = 0.35;
+        // Generate VTT from segments
+        const vtt = segmentsToVtt(
+          segments.map((s: Record<string, unknown>) => ({
+            start_time: s.start_time as number,
+            end_time: s.end_time as number,
+            spoken_content: s.spoken_content as string,
+          }))
+        );
 
+        const vttLanguages: Record<string, string> = { [primaryLanguage]: vtt };
+
+        await supabase
+          .from("videos")
+          .update({ vtt_content: vtt, vtt_languages: vttLanguages })
+          .eq("id", videoId);
+
+        // Calculate progress allocation
+        const totalAudienceSteps = audiences.length * (1 + additionalLanguages.length);
+        const progressPerStep = 0.6 / Math.max(totalAudienceSteps, 1);
+        let currentProgress = 0.25;
+
+        // Track created articles for translation
+        const createdArticles: {
+          audience: string;
+          chapterId: string | null;
+          title: string;
+          slug: string;
+          contentJson: Record<string, unknown>;
+          contentText: string;
+        }[] = [];
+
+        // Generate docs for each audience in primary language
         for (const audience of audiences) {
           send({
             step: "generating_docs",
-            message: `Generating ${audience} documentation...`,
+            message: `Generating ${audience} documentation (${primaryLanguage})...`,
             audience,
             progress: currentProgress,
           });
@@ -107,6 +141,8 @@ export async function POST(request: Request) {
               strict: true,
             });
 
+            const contentJson = markdownToTiptap(chapter.sections);
+
             await supabase.from("articles").insert({
               project_id: video.project_id,
               video_id: videoId,
@@ -114,14 +150,80 @@ export async function POST(request: Request) {
               title: chapter.title,
               slug: articleSlug,
               audience,
-              content_json: markdownToTiptap(chapter.sections),
+              language: primaryLanguage,
+              content_json: contentJson,
               content_text: contentText,
               status: "draft",
             });
+
+            createdArticles.push({
+              audience,
+              chapterId: chapterRow?.id ?? null,
+              title: chapter.title,
+              slug: articleSlug,
+              contentJson,
+              contentText,
+            });
           }
 
-          currentProgress += progressPerAudience;
+          currentProgress += progressPerStep;
         }
+
+        // Translate to additional languages
+        for (const lang of additionalLanguages) {
+          send({
+            step: "translating",
+            message: `Translating to ${lang}...`,
+            language: lang,
+            progress: currentProgress,
+          });
+
+          // Translate VTT
+          try {
+            const translatedVtt = await translateVtt(vtt, lang);
+            vttLanguages[lang] = translatedVtt;
+          } catch (e) {
+            console.error(`VTT translation to ${lang} failed:`, e);
+          }
+
+          // Translate each article
+          for (const article of createdArticles) {
+            try {
+              const { json: translatedJson, text: translatedText } =
+                await translateTiptapJson(
+                  article.contentJson,
+                  article.contentText,
+                  lang
+                );
+
+              await supabase.from("articles").insert({
+                project_id: video.project_id,
+                video_id: videoId,
+                chapter_id: article.chapterId,
+                title: article.title,
+                slug: article.slug,
+                audience: article.audience,
+                language: lang,
+                content_json: translatedJson,
+                content_text: translatedText,
+                status: "draft",
+              });
+            } catch (e) {
+              console.error(
+                `Translation of "${article.title}" to ${lang} failed:`,
+                e
+              );
+            }
+          }
+
+          currentProgress += progressPerStep * audiences.length;
+        }
+
+        // Save all VTT translations
+        await supabase
+          .from("videos")
+          .update({ vtt_languages: vttLanguages })
+          .eq("id", videoId);
 
         await supabase
           .from("videos")

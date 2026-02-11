@@ -15,7 +15,7 @@ export default async function DocsLayout({
   const { data: project } = await supabase
     .from("projects")
     .select(
-      "*, chapters(id, title, slug, order, articles(id, title, slug, audience, status))"
+      "*, chapters(id, title, slug, order, articles(id, title, slug, audience, language, status))"
     )
     .eq("slug", projectSlug)
     .eq("is_public", true)
@@ -37,6 +37,15 @@ export default async function DocsLayout({
     ),
   ] as string[];
 
+  // Collect unique languages
+  const languages = [
+    ...new Set(
+      chapters.flatMap((ch: { articles: { language: string }[] }) =>
+        ch.articles.map((a: { language: string }) => a.language)
+      )
+    ),
+  ] as string[];
+
   return (
     <div className="flex min-h-screen">
       <Sidebar
@@ -45,6 +54,7 @@ export default async function DocsLayout({
         projectSlug={projectSlug}
         chapters={chapters}
         audiences={audiences}
+        languages={languages}
       />
       <div className="flex-1 min-w-0">{children}</div>
     </div>

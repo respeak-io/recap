@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   CommandDialog,
   CommandEmpty,
@@ -32,6 +32,8 @@ export function SearchDialog({ projectId, projectSlug }: SearchDialogProps) {
   const [aiAnswer, setAiAnswer] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const searchParamsHook = useSearchParams();
+  const currentLang = searchParamsHook.get("lang") ?? "en";
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   // Cmd+K shortcut
@@ -56,8 +58,9 @@ export function SearchDialog({ projectId, projectSlug }: SearchDialogProps) {
 
       setLoading(true);
       try {
+        const langParam = currentLang !== "en" ? `&lang=${currentLang}` : "";
         const res = await fetch(
-          `/api/search?q=${encodeURIComponent(q)}&projectId=${projectId}`
+          `/api/search?q=${encodeURIComponent(q)}&projectId=${projectId}${langParam}`
         );
         const data = await res.json();
         setResults(data.articles ?? []);
@@ -79,7 +82,7 @@ export function SearchDialog({ projectId, projectSlug }: SearchDialogProps) {
         setLoading(false);
       }
     },
-    [projectId]
+    [projectId, currentLang]
   );
 
   const handleValueChange = useCallback(
@@ -93,7 +96,8 @@ export function SearchDialog({ projectId, projectSlug }: SearchDialogProps) {
 
   function handleSelect(slug: string, audience: string) {
     setOpen(false);
-    router.push(`/${projectSlug}/${slug}?audience=${audience}`);
+    const langParam = currentLang !== "en" ? `&lang=${currentLang}` : "";
+    router.push(`/${projectSlug}/${slug}?audience=${audience}${langParam}`);
   }
 
   function snippet(text: string) {

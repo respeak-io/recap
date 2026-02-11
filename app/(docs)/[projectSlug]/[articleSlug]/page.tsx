@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { extractHeadings } from "@/components/docs/article-renderer";
+import { extractHeadings } from "@/lib/extract-headings";
 import { Toc } from "@/components/docs/toc";
 import { notFound } from "next/navigation";
 import { ArticleWithVideo } from "./article-with-video";
@@ -9,10 +9,10 @@ export default async function ArticlePage({
   searchParams,
 }: {
   params: Promise<{ projectSlug: string; articleSlug: string }>;
-  searchParams: Promise<{ audience?: string }>;
+  searchParams: Promise<{ audience?: string; lang?: string }>;
 }) {
   const { projectSlug, articleSlug } = await params;
-  const { audience = "developers" } = await searchParams;
+  const { audience = "developers", lang = "en" } = await searchParams;
   const supabase = await createClient();
 
   const { data: article } = await supabase
@@ -21,6 +21,7 @@ export default async function ArticlePage({
     .eq("projects.slug", projectSlug)
     .eq("slug", articleSlug)
     .eq("audience", audience)
+    .eq("language", lang)
     .eq("status", "published")
     .single();
 

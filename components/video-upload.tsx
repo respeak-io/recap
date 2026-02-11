@@ -15,10 +15,22 @@ const AUDIENCES = [
   { id: "ai-agents", label: "AI Agents" },
 ];
 
+const LANGUAGES = [
+  { id: "en", label: "English" },
+  { id: "de", label: "Deutsch" },
+  { id: "es", label: "Espanol" },
+  { id: "fr", label: "Francais" },
+  { id: "ja", label: "Japanese" },
+  { id: "zh", label: "Chinese" },
+  { id: "ko", label: "Korean" },
+  { id: "pt", label: "Portugues" },
+];
+
 export function VideoUpload({ projectId }: { projectId: string }) {
   const [title, setTitle] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [audiences, setAudiences] = useState<string[]>(["developers"]);
+  const [languages, setLanguages] = useState<string[]>(["en"]);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -31,6 +43,17 @@ export function VideoUpload({ projectId }: { projectId: string }) {
     setAudiences((prev) =>
       prev.includes(id) ? prev.filter((a) => a !== id) : [...prev, id]
     );
+  }
+
+  function toggleLanguage(id: string) {
+    setLanguages((prev) => {
+      if (prev.includes(id)) {
+        // Don't allow removing the last language
+        if (prev.length <= 1) return prev;
+        return prev.filter((l) => l !== id);
+      }
+      return [...prev, id];
+    });
   }
 
   async function handleUpload(e: React.FormEvent) {
@@ -95,6 +118,7 @@ export function VideoUpload({ projectId }: { projectId: string }) {
           <ProcessingStatus
             videoId={processingVideoId}
             audiences={audiences}
+            languages={languages}
             onComplete={handleProcessingComplete}
           />
         </CardContent>
@@ -141,6 +165,25 @@ export function VideoUpload({ projectId }: { projectId: string }) {
                     className="rounded"
                   />
                   {a.label}
+                </label>
+              ))}
+            </div>
+          </div>
+          <div className="grid gap-2">
+            <Label>Languages</Label>
+            <p className="text-xs text-muted-foreground">
+              First selected language is the primary. Others will be translated.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              {LANGUAGES.map((l) => (
+                <label key={l.id} className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={languages.includes(l.id)}
+                    onChange={() => toggleLanguage(l.id)}
+                    className="rounded"
+                  />
+                  {l.label}
                 </label>
               ))}
             </div>

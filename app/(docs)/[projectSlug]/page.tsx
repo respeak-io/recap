@@ -8,10 +8,10 @@ export default async function DocsIndexPage({
   searchParams,
 }: {
   params: Promise<{ projectSlug: string }>;
-  searchParams: Promise<{ audience?: string }>;
+  searchParams: Promise<{ audience?: string; lang?: string }>;
 }) {
   const { projectSlug } = await params;
-  const { audience = "developers" } = await searchParams;
+  const { audience = "developers", lang = "en" } = await searchParams;
   const supabase = await createClient();
 
   const { data: project } = await supabase
@@ -28,6 +28,7 @@ export default async function DocsIndexPage({
     .select("id, title, slug, audience, chapter_id")
     .eq("project_id", project.id)
     .eq("audience", audience)
+    .eq("language", lang)
     .eq("status", "published")
     .order("order");
 
@@ -42,7 +43,7 @@ export default async function DocsIndexPage({
           {articles.map((article) => (
             <Link
               key={article.id}
-              href={`/${projectSlug}/${article.slug}?audience=${audience}`}
+              href={`/${projectSlug}/${article.slug}?audience=${audience}${lang !== "en" ? `&lang=${lang}` : ""}`}
             >
               <Card className="hover:border-primary transition-colors">
                 <CardHeader className="py-3">

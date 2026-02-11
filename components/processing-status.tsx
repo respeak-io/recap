@@ -9,19 +9,28 @@ interface ProcessingStep {
   message: string;
   progress: number;
   audience?: string;
+  language?: string;
 }
 
-const STEP_ORDER = ["uploading", "transcribing", "generating_docs", "complete"];
+const STEP_ORDER = [
+  "uploading",
+  "transcribing",
+  "generating_docs",
+  "translating",
+  "complete",
+];
 
 interface ProcessingStatusProps {
   videoId: string;
   audiences: string[];
+  languages?: string[];
   onComplete?: () => void;
 }
 
 export function ProcessingStatus({
   videoId,
   audiences,
+  languages = ["en"],
   onComplete,
 }: ProcessingStatusProps) {
   const [currentStep, setCurrentStep] = useState<ProcessingStep | null>(null);
@@ -36,7 +45,7 @@ export function ProcessingStatus({
         const res = await fetch("/api/videos/process", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ videoId, audiences }),
+          body: JSON.stringify({ videoId, audiences, languages }),
           signal: controller.signal,
         });
 
@@ -79,7 +88,6 @@ export function ProcessingStatus({
               return;
             }
 
-            // Mark previous step as completed
             if (prevStepKey && prevStepKey !== data.step) {
               setCompletedSteps((prev) =>
                 prev.includes(prevStepKey!) ? prev : [...prev, prevStepKey!]
@@ -102,12 +110,18 @@ export function ProcessingStatus({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [videoId]);
 
+  const additionalLanguages = languages.slice(1);
+
   const steps = [
     { key: "uploading", label: "Uploading video to AI" },
     { key: "transcribing", label: "Extracting content" },
     ...audiences.map((a) => ({
       key: `generating_docs_${a}`,
       label: `Generating ${a} docs`,
+    })),
+    ...additionalLanguages.map((l) => ({
+      key: `translating_${l}`,
+      label: `Translating to ${l}`,
     })),
     { key: "complete", label: "Done" },
   ];
@@ -122,8 +136,20 @@ export function ProcessingStatus({
       }
       return (
         completedSteps.includes("generating_docs") ||
+        completedSteps.includes("translating") ||
         completedSteps.includes("complete")
       );
+    }
+    if (stepKey.startsWith("translating_")) {
+      const lang = stepKey.replace("translating_", "");
+      const langIdx = additionalLanguages.indexOf(lang);
+      if (currentStep?.step === "translating") {
+        const currentIdx = additionalLanguages.indexOf(
+          currentStep.language ?? ""
+        );
+        return langIdx < currentIdx;
+      }
+      return completedSteps.includes("translating") || completedSteps.includes("complete");
     }
     if (completedSteps.includes(stepKey)) return true;
     const currentIdx = STEP_ORDER.indexOf(currentStep?.step ?? "");
@@ -135,7 +161,16 @@ export function ProcessingStatus({
     if (!currentStep) return false;
     if (stepKey.startsWith("generating_docs_")) {
       const audience = stepKey.replace("generating_docs_", "");
-      return currentStep.step === "generating_docs" && currentStep.audience === audience;
+      return (
+        currentStep.step === "generating_docs" &&
+        currentStep.audience === audience
+      );
+    }
+    if (stepKey.startsWith("translating_")) {
+      const lang = stepKey.replace("translating_", "");
+      return (
+        currentStep.step === "translating" && currentStep.language === lang
+      );
     }
     return currentStep.step === stepKey;
   }
@@ -145,7 +180,6 @@ export function ProcessingStatus({
   return (
     <Card>
       <CardContent className="pt-6 space-y-4">
-        {/* Progress bar */}
         <div className="w-full bg-secondary rounded-full h-2 overflow-hidden">
           <div
             className="bg-primary h-2 rounded-full transition-all duration-500 ease-out"
@@ -153,7 +187,6 @@ export function ProcessingStatus({
           />
         </div>
 
-        {/* Steps */}
         <div className="space-y-2">
           {steps.map((step) => {
             const completed = isStepCompleted(step.key);

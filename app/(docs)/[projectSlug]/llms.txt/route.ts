@@ -2,11 +2,13 @@ import { generateLlmsTxt } from "@/lib/llms-txt";
 import { NextResponse } from "next/server";
 
 export async function GET(
-  _: Request,
+  request: Request,
   { params }: { params: Promise<{ projectSlug: string }> }
 ) {
   const { projectSlug } = await params;
-  const content = await generateLlmsTxt(projectSlug);
+  const { searchParams } = new URL(request.url);
+  const lang = searchParams.get("lang") ?? "en";
+  const content = await generateLlmsTxt(projectSlug, lang);
 
   if (!content) {
     return new NextResponse("Not found", { status: 404 });

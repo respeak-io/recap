@@ -6,6 +6,7 @@ export async function GET(request: Request) {
   const query = searchParams.get("q");
   const projectId = searchParams.get("projectId");
   const audience = searchParams.get("audience");
+  const lang = searchParams.get("lang");
 
   if (!query || !projectId) {
     return NextResponse.json({ articles: [], videos: [] });
@@ -23,6 +24,9 @@ export async function GET(request: Request) {
 
   if (audience) {
     articlesQuery = articlesQuery.eq("audience", audience);
+  }
+  if (lang) {
+    articlesQuery = articlesQuery.eq("language", lang);
   }
 
   const { data: articles } = await articlesQuery;
