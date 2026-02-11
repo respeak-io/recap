@@ -7,6 +7,7 @@ import { VideoPlayer, type VideoPlayerHandle } from "@/components/video-player";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ExternalLink } from "lucide-react";
+import { BreadcrumbNav } from "@/components/dashboard/breadcrumb-nav";
 import { saveArticleAction, togglePublishAction } from "./actions";
 
 interface ArticleData {
@@ -35,10 +36,12 @@ function extractText(json: Record<string, unknown>): string {
 export function EditorPageClient({
   article,
   projectSlug,
+  projectName,
   videoUrl,
 }: {
   article: ArticleData;
   projectSlug: string;
+  projectName: string;
   videoUrl: string | null;
 }) {
   const [saving, setSaving] = useState(false);
@@ -73,7 +76,16 @@ export function EditorPageClient({
   const publicUrl = `/${projectSlug}/${article.slug}?audience=${article.audience}`;
 
   return (
-    <div className="space-y-4">
+    <>
+    <BreadcrumbNav
+      projectName={projectName}
+      projectSlug={projectSlug}
+      items={[
+        { label: "Articles", href: `/project/${projectSlug}/articles` },
+        { label: article.title },
+      ]}
+    />
+    <div className="p-6 space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <h1 className="text-xl font-bold">{article.title}</h1>
@@ -121,5 +133,6 @@ export function EditorPageClient({
         )}
       </div>
     </div>
+    </>
   );
 }

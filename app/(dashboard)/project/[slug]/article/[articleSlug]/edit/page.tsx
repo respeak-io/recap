@@ -45,6 +45,7 @@ export default async function ArticleEditPage({
         videos: article.videos,
       }}
       projectSlug={slug}
+      projectName={article.projects.name}
       videoUrl={videoUrl}
     />
   );
