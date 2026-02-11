@@ -7,10 +7,10 @@ export default async function ArticleEditPage({
   searchParams,
 }: {
   params: Promise<{ slug: string; articleSlug: string }>;
-  searchParams: Promise<{ audience?: string }>;
+  searchParams: Promise<{ audience?: string; lang?: string }>;
 }) {
   const { slug, articleSlug } = await params;
-  const { audience = "developers" } = await searchParams;
+  const { audience = "developers", lang = "en" } = await searchParams;
   const supabase = await createClient();
 
   const { data: article } = await supabase
@@ -19,6 +19,7 @@ export default async function ArticleEditPage({
     .eq("projects.slug", slug)
     .eq("slug", articleSlug)
     .eq("audience", audience)
+    .eq("language", lang)
     .single();
 
   if (!article) notFound();

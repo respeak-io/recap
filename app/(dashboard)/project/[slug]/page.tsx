@@ -27,7 +27,7 @@ export default async function ProjectPage({
   // Get articles for this project
   const { data: articles } = await supabase
     .from("articles")
-    .select("id, title, slug, audience, status")
+    .select("id, title, slug, audience, language, status")
     .eq("project_id", project.id)
     .order("created_at", { ascending: false });
 
@@ -75,7 +75,7 @@ export default async function ProjectPage({
             {articles.map((article) => (
               <Link
                 key={article.id}
-                href={`/project/${slug}/article/${article.slug}/edit?audience=${article.audience}`}
+                href={`/project/${slug}/article/${article.slug}/edit?audience=${article.audience}&lang=${article.language}`}
               >
                 <Card className="hover:border-primary transition-colors">
                   <CardHeader className="py-3">
