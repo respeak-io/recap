@@ -1,12 +1,14 @@
 import { createClient } from "@/lib/supabase/server";
 import { getProjectVideos } from "@/lib/queries/videos";
-import { VideoUpload } from "@/components/video-upload";
+import { BreadcrumbNav } from "@/components/dashboard/breadcrumb-nav";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { FileText, Video, Globe, Upload, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-export default async function ProjectPage({
+export default async function ProjectOverviewPage({
   params,
 }: {
   params: Promise<{ slug: string }>;
@@ -24,85 +26,148 @@ export default async function ProjectPage({
 
   const videos = await getProjectVideos(project.id);
 
-  // Get articles for this project
   const { data: articles } = await supabase
     .from("articles")
-    .select("id, title, slug, audience, language, status")
+    .select("id, title, slug, audience, language, status, created_at")
     .eq("project_id", project.id)
     .order("created_at", { ascending: false });
 
+  const allArticles = articles ?? [];
+  const publishedCount = allArticles.filter((a) => a.status === "published").length;
+  const draftCount = allArticles.filter((a) => a.status === "draft").length;
+  const recentArticles = allArticles.slice(0, 5);
+
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold">{project.name}</h1>
-        <p className="text-muted-foreground">/{project.slug}</p>
-      </div>
-
-      <VideoUpload projectId={project.id} />
-
-      {videos.length > 0 && (
-        <div>
-          <h2 className="text-lg font-semibold mb-4">Videos</h2>
-          <div className="grid gap-3">
-            {videos.map((video) => (
-              <Card key={video.id}>
-                <CardHeader className="py-3">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-base">{video.title}</CardTitle>
-                    <Badge
-                      variant={
-                        video.status === "ready"
-                          ? "default"
-                          : video.status === "failed"
-                            ? "destructive"
-                            : "secondary"
-                      }
-                    >
-                      {video.status}
-                    </Badge>
-                  </div>
-                </CardHeader>
-              </Card>
-            ))}
-          </div>
+    <>
+      <BreadcrumbNav
+        projectName={project.name}
+        projectSlug={slug}
+        items={[{ label: "Overview" }]}
+      />
+      <div className="p-6 space-y-6">
+        {/* Stats row */}
+        <div className="grid gap-4 md:grid-cols-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Total Articles</CardTitle>
+              <FileText className="size-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{allArticles.length}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Published</CardTitle>
+              <Globe className="size-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{publishedCount}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Drafts</CardTitle>
+              <FileText className="size-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{draftCount}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Videos</CardTitle>
+              <Video className="size-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{videos.length}</div>
+            </CardContent>
+          </Card>
         </div>
-      )}
 
-      {articles && articles.length > 0 && (
-        <div>
-          <h2 className="text-lg font-semibold mb-4">Articles</h2>
-          <div className="grid gap-3">
-            {articles.map((article) => (
-              <Link
-                key={article.id}
-                href={`/project/${slug}/article/${article.slug}/edit?audience=${article.audience}&lang=${article.language}`}
-              >
-                <Card className="hover:border-primary transition-colors">
-                  <CardHeader className="py-3">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-base">
-                        {article.title}
-                      </CardTitle>
-                      <div className="flex gap-2">
-                        <Badge variant="outline">{article.audience}</Badge>
-                        <Badge
-                          variant={
-                            article.status === "published"
-                              ? "default"
-                              : "secondary"
-                          }
-                        >
+        <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+          {/* Recent articles */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Recent Articles</CardTitle>
+                <CardDescription>Latest documentation updates</CardDescription>
+              </div>
+              <Button variant="outline" size="sm" asChild>
+                <Link href={`/project/${slug}/articles`}>View all</Link>
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {recentArticles.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No articles yet. Upload a video to generate documentation.</p>
+              ) : (
+                <div className="space-y-3">
+                  {recentArticles.map((article) => (
+                    <Link
+                      key={article.id}
+                      href={`/project/${slug}/article/${article.slug}/edit?audience=${article.audience}&lang=${article.language}`}
+                      className="flex items-center justify-between rounded-md border p-3 hover:bg-accent transition-colors"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <FileText className="size-4 text-muted-foreground flex-shrink-0" />
+                        <span className="text-sm font-medium truncate">{article.title}</span>
+                      </div>
+                      <div className="flex gap-2 flex-shrink-0">
+                        <Badge variant="outline" className="text-xs">{article.language}</Badge>
+                        <Badge variant="outline" className="text-xs">{article.audience}</Badge>
+                        <Badge variant={article.status === "published" ? "default" : "secondary"} className="text-xs">
                           {article.status}
                         </Badge>
                       </div>
-                    </div>
-                  </CardHeader>
-                </Card>
-              </Link>
-            ))}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Quick links */}
+          <div className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Quick Actions</CardTitle>
+              </CardHeader>
+              <CardContent className="grid gap-2">
+                <Button variant="outline" className="justify-start" asChild>
+                  <Link href={`/project/${slug}/upload`}>
+                    <Upload className="mr-2 size-4" />
+                    Upload Video
+                  </Link>
+                </Button>
+                <Button variant="outline" className="justify-start" asChild>
+                  <Link href={`/project/${slug}/articles`}>
+                    <FileText className="mr-2 size-4" />
+                    Manage Articles
+                  </Link>
+                </Button>
+                <Button variant="outline" className="justify-start" asChild>
+                  <Link href={`/${slug}`} target="_blank">
+                    <ExternalLink className="mr-2 size-4" />
+                    View Public Site
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Analytics</CardTitle>
+                <CardDescription>Coming soon</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Page views, search queries, and audience breakdown will appear here.
+                </p>
+              </CardContent>
+            </Card>
           </div>
         </div>
-      )}
-    </div>
+      </div>
+    </>
   );
 }
