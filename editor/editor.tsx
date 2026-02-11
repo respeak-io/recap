@@ -3,6 +3,7 @@
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
+import { Table, TableRow, TableCell, TableHeader } from "@tiptap/extension-table";
 import Placeholder from "@tiptap/extension-placeholder";
 import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
 import { common, createLowlight } from "lowlight";
@@ -21,6 +22,7 @@ interface EditorProps {
 
 export function Editor({ content, onUpdate, onTimestampClick }: EditorProps) {
   const editor = useEditor({
+    immediatelyRender: false,
     extensions: [
       StarterKit.configure({
         heading: { levels: [1, 2, 3, 4] },
@@ -28,6 +30,10 @@ export function Editor({ content, onUpdate, onTimestampClick }: EditorProps) {
       }),
       CodeBlockLowlight.configure({ lowlight }),
       Image,
+      Table.configure({ resizable: false }),
+      TableRow,
+      TableCell,
+      TableHeader,
       Placeholder.configure({ placeholder: "Start writing..." }),
       TimestampLink.configure({ onTimestampClick }),
       Callout,

@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu } from "lucide-react";
+import { SearchDialog } from "./search-dialog";
 
 interface Chapter {
   id: string;
@@ -22,6 +23,7 @@ interface Chapter {
 }
 
 interface SidebarProps {
+  projectId: string;
   projectName: string;
   projectSlug: string;
   chapters: Chapter[];
@@ -29,6 +31,7 @@ interface SidebarProps {
 }
 
 function SidebarContent({
+  projectId,
   projectName,
   projectSlug,
   chapters,
@@ -55,6 +58,8 @@ function SidebarContent({
       <Link href={`/${projectSlug}`} className="font-semibold text-lg">
         {projectName}
       </Link>
+
+      <SearchDialog projectId={projectId} projectSlug={projectSlug} />
 
       {displayAudiences.length > 1 && (
         <div className="flex gap-1">

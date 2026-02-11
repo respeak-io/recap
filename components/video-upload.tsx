@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ProcessingStatus } from "./processing-status";
 
 const AUDIENCES = [
   { id: "developers", label: "Developers" },
@@ -19,8 +20,9 @@ export function VideoUpload({ projectId }: { projectId: string }) {
   const [file, setFile] = useState<File | null>(null);
   const [audiences, setAudiences] = useState<string[]>(["developers"]);
   const [uploading, setUploading] = useState(false);
-  const [progress, setProgress] = useState(0);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [processingVideoId, setProcessingVideoId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const supabase = createClient();
@@ -36,10 +38,9 @@ export function VideoUpload({ projectId }: { projectId: string }) {
     if (!file) return;
     setUploading(true);
     setError(null);
-    setProgress(0);
+    setUploadProgress(0);
 
     try {
-      // Get presigned upload URL
       const urlRes = await fetch("/api/videos/upload-url", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -49,8 +50,7 @@ export function VideoUpload({ projectId }: { projectId: string }) {
 
       if (!uploadUrl) throw new Error("Failed to get upload URL");
 
-      // Upload file directly to Supabase Storage
-      setProgress(10);
+      setUploadProgress(10);
       const uploadRes = await fetch(uploadUrl, {
         method: "PUT",
         headers: { "Content-Type": file.type },
@@ -58,35 +58,48 @@ export function VideoUpload({ projectId }: { projectId: string }) {
       });
 
       if (!uploadRes.ok) throw new Error("Upload failed");
-      setProgress(50);
+      setUploadProgress(80);
 
-      // Update video title
       await supabase
         .from("videos")
         .update({ title: title || file.name })
         .eq("id", videoId);
 
-      setProgress(60);
+      setUploadProgress(100);
+      setUploading(false);
 
-      // Trigger processing
-      const processRes = await fetch("/api/videos/process", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ videoId, audiences }),
-      });
-
-      if (!processRes.ok) throw new Error("Processing failed to start");
-      setProgress(100);
-
-      setTitle("");
-      setFile(null);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-      router.refresh();
+      // Switch to processing view
+      setProcessingVideoId(videoId);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");
-    } finally {
       setUploading(false);
     }
+  }
+
+  function handleProcessingComplete() {
+    setProcessingVideoId(null);
+    setTitle("");
+    setFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    router.refresh();
+  }
+
+  // Show processing status after upload
+  if (processingVideoId) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Processing video</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ProcessingStatus
+            videoId={processingVideoId}
+            audiences={audiences}
+            onComplete={handleProcessingComplete}
+          />
+        </CardContent>
+      </Card>
+    );
   }
 
   return (
@@ -136,7 +149,7 @@ export function VideoUpload({ projectId }: { projectId: string }) {
             <div className="w-full bg-secondary rounded-full h-2">
               <div
                 className="bg-primary h-2 rounded-full transition-all"
-                style={{ width: `${progress}%` }}
+                style={{ width: `${uploadProgress}%` }}
               />
             </div>
           )}

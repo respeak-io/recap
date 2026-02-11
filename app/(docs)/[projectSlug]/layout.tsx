@@ -40,6 +40,7 @@ export default async function DocsLayout({
   return (
     <div className="flex min-h-screen">
       <Sidebar
+        projectId={project.id}
         projectName={project.name}
         projectSlug={projectSlug}
         chapters={chapters}

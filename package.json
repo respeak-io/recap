@@ -12,9 +12,11 @@
     "@google/genai": "^1.40.0",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.95.3",
+    "@tailwindcss/typography": "^0.5.19",
     "@tiptap/extension-code-block-lowlight": "^3.19.0",
     "@tiptap/extension-image": "^3.19.0",
     "@tiptap/extension-placeholder": "^3.19.0",
+    "@tiptap/extension-table": "^3.19.0",
     "@tiptap/pm": "^3.19.0",
     "@tiptap/react": "^3.19.0",
     "@tiptap/starter-kit": "^3.19.0",
@@ -23,6 +25,7 @@
     "cmdk": "^1.1.1",
     "lowlight": "^3.3.0",
     "lucide-react": "^0.563.0",
+    "marked": "^17.0.1",
     "next": "16.1.6",
     "radix-ui": "^1.4.3",
     "react": "19.2.3",
@@ -34,7 +37,11 @@
     "zustand": "^5.0.11"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["supabase", "sharp", "unrs-resolver"]
+    "onlyBuiltDependencies": [
+      "supabase",
+      "sharp",
+      "unrs-resolver"
+    ]
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

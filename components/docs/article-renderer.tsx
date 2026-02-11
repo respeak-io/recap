@@ -131,6 +131,28 @@ function renderNode(
           className="rounded-lg"
         />
       );
+    case "table":
+      return (
+        <table key={index} className="border-collapse w-full">
+          <tbody>{children}</tbody>
+        </table>
+      );
+    case "tableRow":
+      return <tr key={index}>{children}</tr>;
+    case "tableHeader":
+      return (
+        <th key={index} className="border border-border bg-muted px-3 py-2 text-left font-semibold">
+          {children}
+        </th>
+      );
+    case "tableCell":
+      return (
+        <td key={index} className="border border-border px-3 py-2">
+          {children}
+        </td>
+      );
+    case "hardBreak":
+      return <br key={index} />;
     case "callout": {
       const type = (node.attrs?.type as string) ?? "info";
       const styles: Record<string, string> = {
