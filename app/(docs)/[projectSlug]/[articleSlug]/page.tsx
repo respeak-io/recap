@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { extractHeadings } from "@/lib/extract-headings";
 import { Toc } from "@/components/docs/toc";
 import { DocsBreadcrumb } from "@/components/docs/docs-breadcrumb";
+import { AnalyticsTracker } from "@/components/docs/analytics-tracker";
 import { notFound } from "next/navigation";
 import { ArticleWithVideo } from "./article-with-video";
 
@@ -55,6 +56,13 @@ export default async function ArticlePage({
         />
       </article>
       <Toc headings={headings} />
+      <AnalyticsTracker
+        projectId={article.project_id}
+        articleSlug={articleSlug}
+        articleId={article.id}
+        audience={audience}
+        language={lang}
+      />
     </div>
   );
 }
