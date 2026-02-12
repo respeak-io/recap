@@ -35,7 +35,6 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { ChevronRight, GripVertical, FileText, Trash2 } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 interface Article {
   id: string;
@@ -55,6 +54,15 @@ interface Chapter {
   order: number;
 }
 
+interface ArticleGroup {
+  slug: string;
+  audience: string;
+  title: string;
+  chapter_id: string | null;
+  order: number;
+  languages: { language: string; id: string; status: string }[];
+}
+
 interface ArticleTreeProps {
   projectSlug: string;
   chapters: Chapter[];
@@ -63,39 +71,61 @@ interface ArticleTreeProps {
   languages: string[];
 }
 
+function groupArticles(articles: Article[]): ArticleGroup[] {
+  const map = new Map<string, ArticleGroup>();
+  for (const a of articles) {
+    const key = `${a.slug}::${a.audience}`;
+    const existing = map.get(key);
+    if (existing) {
+      existing.languages.push({ language: a.language, id: a.id, status: a.status });
+      // Prefer English title
+      if (a.language === "en") existing.title = a.title;
+    } else {
+      map.set(key, {
+        slug: a.slug,
+        audience: a.audience,
+        title: a.title,
+        chapter_id: a.chapter_id,
+        order: a.order,
+        languages: [{ language: a.language, id: a.id, status: a.status }],
+      });
+    }
+  }
+  return Array.from(map.values());
+}
+
 export function ArticleTree({
   projectSlug,
   chapters,
   articles: initialArticles,
   audiences,
-  languages,
 }: ArticleTreeProps) {
   const router = useRouter();
   const [articles, setArticles] = useState(initialArticles);
   const [audienceFilter, setAudienceFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [langFilter, setLangFilter] = useState<string>("all");
 
   const filtered = articles.filter((a) => {
     if (audienceFilter !== "all" && a.audience !== audienceFilter) return false;
     if (statusFilter !== "all" && a.status !== statusFilter) return false;
-    if (langFilter !== "all" && a.language !== langFilter) return false;
     return true;
   });
+
+  const groups = groupArticles(filtered);
 
   // Group by chapter
   const grouped = chapters
     .map((ch) => ({
       ...ch,
-      articles: filtered
-        .filter((a) => a.chapter_id === ch.id)
+      groups: groups
+        .filter((g) => g.chapter_id === ch.id)
         .sort((a, b) => a.order - b.order),
     }))
-    .filter((ch) => ch.articles.length > 0);
+    .filter((ch) => ch.groups.length > 0);
 
   // Uncategorized articles (no chapter)
-  const uncategorized = filtered
-    .filter((a) => !a.chapter_id)
+  const uncategorized = groups
+    .filter((g) => !g.chapter_id)
     .sort((a, b) => a.order - b.order);
 
   async function handleDelete(articleId: string) {
@@ -167,18 +197,6 @@ export function ArticleTree({
             <SelectItem value="published">Published</SelectItem>
           </SelectContent>
         </Select>
-
-        <Select value={langFilter} onValueChange={setLangFilter}>
-          <SelectTrigger className="w-[140px]">
-            <SelectValue placeholder="Language" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All languages</SelectItem>
-            {languages.map((l) => (
-              <SelectItem key={l} value={l}>{l}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
       </div>
 
       {/* Tree */}
@@ -188,16 +206,16 @@ export function ArticleTree({
             <CollapsibleTrigger className="flex items-center gap-2 py-2 text-sm font-semibold uppercase text-muted-foreground hover:text-foreground w-full">
               <ChevronRight className="size-4 transition-transform [[data-state=open]>&]:rotate-90" />
               {chapter.title}
-              <span className="text-xs font-normal ml-auto">{chapter.articles.length}</span>
+              <span className="text-xs font-normal ml-auto">{chapter.groups.length}</span>
             </CollapsibleTrigger>
             <CollapsibleContent>
               <Droppable droppableId={chapter.id}>
                 {(provided) => (
                   <div ref={provided.innerRef} {...provided.droppableProps} className="space-y-1 ml-4">
-                    {chapter.articles.map((article, index) => (
-                      <ArticleRow
-                        key={article.id}
-                        article={article}
+                    {chapter.groups.map((group, index) => (
+                      <ArticleGroupRow
+                        key={`${group.slug}::${group.audience}`}
+                        group={group}
                         index={index}
                         projectSlug={projectSlug}
                         onDelete={handleDelete}
@@ -219,10 +237,10 @@ export function ArticleTree({
             <Droppable droppableId="uncategorized">
               {(provided) => (
                 <div ref={provided.innerRef} {...provided.droppableProps} className="space-y-1 ml-4">
-                  {uncategorized.map((article, index) => (
-                    <ArticleRow
-                      key={article.id}
-                      article={article}
+                  {uncategorized.map((group, index) => (
+                    <ArticleGroupRow
+                      key={`${group.slug}::${group.audience}`}
+                      group={group}
                       index={index}
                       projectSlug={projectSlug}
                       onDelete={handleDelete}
@@ -239,19 +257,20 @@ export function ArticleTree({
   );
 }
 
-function ArticleRow({
-  article,
+function ArticleGroupRow({
+  group,
   index,
   projectSlug,
   onDelete,
 }: {
-  article: Article;
+  group: ArticleGroup;
   index: number;
   projectSlug: string;
   onDelete: (id: string) => void;
 }) {
+  const primaryLang = group.languages.find((l) => l.language === "en") ?? group.languages[0];
   return (
-    <Draggable draggableId={article.id} index={index}>
+    <Draggable draggableId={primaryLang.id} index={index}>
       {(provided) => (
         <div
           ref={provided.innerRef}
@@ -263,19 +282,22 @@ function ArticleRow({
           </div>
           <FileText className="size-4 text-muted-foreground flex-shrink-0" />
           <Link
-            href={`/project/${projectSlug}/article/${article.slug}/edit?audience=${article.audience}&lang=${article.language}`}
+            href={`/project/${projectSlug}/article/${group.slug}/edit?audience=${group.audience}&lang=${primaryLang.language}`}
             className="flex-1 text-sm font-medium truncate hover:underline"
           >
-            {article.title}
+            {group.title}
           </Link>
-          <Badge variant="outline" className="text-xs">{article.language}</Badge>
-          <Badge variant="outline" className="text-xs">{article.audience}</Badge>
-          <Badge
-            variant={article.status === "published" ? "default" : "secondary"}
-            className="text-xs"
-          >
-            {article.status}
-          </Badge>
+          {group.languages.map((l) => (
+            <Link
+              key={l.language}
+              href={`/project/${projectSlug}/article/${group.slug}/edit?audience=${group.audience}&lang=${l.language}`}
+            >
+              <Badge variant="outline" className="text-xs cursor-pointer hover:bg-accent">
+                {l.language}
+              </Badge>
+            </Link>
+          ))}
+          <Badge variant="outline" className="text-xs">{group.audience}</Badge>
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button
@@ -290,12 +312,14 @@ function ArticleRow({
               <AlertDialogHeader>
                 <AlertDialogTitle>Delete article?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  This will permanently delete &quot;{article.title}&quot;. This action cannot be undone.
+                  This will permanently delete &quot;{group.title}&quot; in all languages ({group.languages.map((l) => l.language).join(", ")}). This action cannot be undone.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={() => onDelete(article.id)}>
+                <AlertDialogAction onClick={() => {
+                  group.languages.forEach((l) => onDelete(l.id));
+                }}>
                   Delete
                 </AlertDialogAction>
               </AlertDialogFooter>

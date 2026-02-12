@@ -110,7 +110,7 @@ export function ProcessingStatus({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [videoId]);
 
-  const additionalLanguages = languages.slice(1);
+  const targetLanguages = languages.filter((l) => l !== "en");
 
   const steps = [
     { key: "uploading", label: "Uploading video to AI" },
@@ -119,7 +119,7 @@ export function ProcessingStatus({
       key: `generating_docs_${a}`,
       label: `Generating ${a} docs`,
     })),
-    ...additionalLanguages.map((l) => ({
+    ...targetLanguages.map((l) => ({
       key: `translating_${l}`,
       label: `Translating to ${l}`,
     })),
@@ -142,9 +142,9 @@ export function ProcessingStatus({
     }
     if (stepKey.startsWith("translating_")) {
       const lang = stepKey.replace("translating_", "");
-      const langIdx = additionalLanguages.indexOf(lang);
+      const langIdx = targetLanguages.indexOf(lang);
       if (currentStep?.step === "translating") {
-        const currentIdx = additionalLanguages.indexOf(
+        const currentIdx = targetLanguages.indexOf(
           currentStep.language ?? ""
         );
         return langIdx < currentIdx;

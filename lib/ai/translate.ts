@@ -44,8 +44,9 @@ export async function translateVtt(
 export async function translateTiptapJson(
   contentJson: Record<string, unknown>,
   contentText: string,
-  targetLanguage: string
-): Promise<{ json: Record<string, unknown>; text: string }> {
+  targetLanguage: string,
+  title?: string
+): Promise<{ json: Record<string, unknown>; text: string; title?: string }> {
   // Translate the plain text version
   const translatedText = await translateContent(contentText, targetLanguage);
 
@@ -66,11 +67,16 @@ ${JSON.stringify(contentJson)}`;
     config: { responseMimeType: "application/json" },
   });
 
+  let translatedTitle: string | undefined;
+  if (title) {
+    translatedTitle = await translateContent(title, targetLanguage);
+  }
+
   try {
     const translatedJson = JSON.parse(response.text!);
-    return { json: translatedJson, text: translatedText };
+    return { json: translatedJson, text: translatedText, title: translatedTitle };
   } catch {
     // Fallback: return original JSON with translated text
-    return { json: contentJson, text: translatedText };
+    return { json: contentJson, text: translatedText, title: translatedTitle };
   }
 }

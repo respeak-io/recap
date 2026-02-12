@@ -33,9 +33,27 @@ export default async function ProjectOverviewPage({
     .order("created_at", { ascending: false });
 
   const allArticles = articles ?? [];
+
+  // Deduplicate for display: one row per (slug, audience), prefer English
+  const articleMap = new Map<string, typeof allArticles[number] & { languages: string[] }>();
+  for (const a of allArticles) {
+    const key = `${a.slug}::${a.audience}`;
+    const existing = articleMap.get(key);
+    if (existing) {
+      existing.languages.push(a.language);
+      if (a.language === "en") {
+        existing.title = a.title;
+        existing.id = a.id;
+      }
+    } else {
+      articleMap.set(key, { ...a, languages: [a.language] });
+    }
+  }
+  const uniqueArticles = articleMap.size;
+  const languageCount = new Set(allArticles.map((a) => a.language)).size;
   const publishedCount = allArticles.filter((a) => a.status === "published").length;
   const draftCount = allArticles.filter((a) => a.status === "draft").length;
-  const recentArticles = allArticles.slice(0, 5);
+  const recentArticles = Array.from(articleMap.values()).slice(0, 5);
 
   return (
     <>
@@ -49,11 +67,12 @@ export default async function ProjectOverviewPage({
         <div className="grid gap-4 md:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Total Articles</CardTitle>
+              <CardTitle className="text-sm font-medium">Articles</CardTitle>
               <FileText className="size-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{allArticles.length}</div>
+              <div className="text-2xl font-bold">{uniqueArticles}</div>
+              <p className="text-xs text-muted-foreground">{languageCount} language{languageCount !== 1 ? "s" : ""}</p>
             </CardContent>
           </Card>
           <Card>
@@ -104,7 +123,7 @@ export default async function ProjectOverviewPage({
                 <div className="space-y-3">
                   {recentArticles.map((article) => (
                     <Link
-                      key={article.id}
+                      key={`${article.slug}::${article.audience}`}
                       href={`/project/${slug}/article/${article.slug}/edit?audience=${article.audience}&lang=${article.language}`}
                       className="flex items-center justify-between rounded-md border p-3 hover:bg-accent transition-colors"
                     >
@@ -113,7 +132,9 @@ export default async function ProjectOverviewPage({
                         <span className="text-sm font-medium truncate">{article.title}</span>
                       </div>
                       <div className="flex gap-2 flex-shrink-0">
-                        <Badge variant="outline" className="text-xs">{article.language}</Badge>
+                        {article.languages.map((l: string) => (
+                          <Badge key={l} variant="outline" className="text-xs">{l}</Badge>
+                        ))}
                         <Badge variant="outline" className="text-xs">{article.audience}</Badge>
                         <Badge variant={article.status === "published" ? "default" : "secondary"} className="text-xs">
                           {article.status}

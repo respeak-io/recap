@@ -10,8 +10,8 @@ export async function POST(request: Request) {
   const supabase = await createClient();
   const { videoId, audiences, languages = ["en"] } = await request.json();
 
-  const primaryLanguage: string = languages[0] ?? "en";
-  const additionalLanguages: string[] = languages.slice(1);
+  // Always generate in English (most reliable for AI), then translate to all non-English languages
+  const targetLanguages: string[] = languages.filter((l: string) => l !== "en");
 
   const { data: video } = await supabase
     .from("videos")
@@ -69,7 +69,7 @@ export async function POST(request: Request) {
           }))
         );
 
-        const vttLanguages: Record<string, string> = { [primaryLanguage]: vtt };
+        const vttLanguages: Record<string, string> = { en: vtt };
 
         await supabase
           .from("videos")
@@ -77,7 +77,7 @@ export async function POST(request: Request) {
           .eq("id", videoId);
 
         // Calculate progress allocation
-        const totalAudienceSteps = audiences.length * (1 + additionalLanguages.length);
+        const totalAudienceSteps = audiences.length * (1 + targetLanguages.length);
         const progressPerStep = 0.6 / Math.max(totalAudienceSteps, 1);
         let currentProgress = 0.25;
 
@@ -95,7 +95,7 @@ export async function POST(request: Request) {
         for (const audience of audiences) {
           send({
             step: "generating_docs",
-            message: `Generating ${audience} documentation (${primaryLanguage})...`,
+            message: `Generating ${audience} documentation...`,
             audience,
             progress: currentProgress,
           });
@@ -150,7 +150,7 @@ export async function POST(request: Request) {
               title: chapter.title,
               slug: articleSlug,
               audience,
-              language: primaryLanguage,
+              language: "en",
               content_json: contentJson,
               content_text: contentText,
               status: "draft",
@@ -169,8 +169,8 @@ export async function POST(request: Request) {
           currentProgress += progressPerStep;
         }
 
-        // Translate to additional languages
-        for (const lang of additionalLanguages) {
+        // Translate to all non-English target languages
+        for (const lang of targetLanguages) {
           send({
             step: "translating",
             message: `Translating to ${lang}...`,
@@ -189,18 +189,19 @@ export async function POST(request: Request) {
           // Translate each article
           for (const article of createdArticles) {
             try {
-              const { json: translatedJson, text: translatedText } =
+              const { json: translatedJson, text: translatedText, title: translatedTitle } =
                 await translateTiptapJson(
                   article.contentJson,
                   article.contentText,
-                  lang
+                  lang,
+                  article.title
                 );
 
               await supabase.from("articles").insert({
                 project_id: video.project_id,
                 video_id: videoId,
                 chapter_id: article.chapterId,
-                title: article.title,
+                title: translatedTitle ?? article.title,
                 slug: article.slug,
                 audience: article.audience,
                 language: lang,
@@ -217,52 +218,6 @@ export async function POST(request: Request) {
           }
 
           currentProgress += progressPerStep * audiences.length;
-        }
-
-        // If ai-agents audience was selected but English wasn't in the
-        // language list, auto-translate ai-agents articles to English so
-        // llms.txt always has content.
-        const needsEnglishForLlms =
-          audiences.includes("ai-agents") && !languages.includes("en");
-        if (needsEnglishForLlms) {
-          send({
-            step: "translating",
-            message: "Translating ai-agents docs to English for llms.txt...",
-            language: "en",
-            progress: currentProgress,
-          });
-
-          const aiAgentArticles = createdArticles.filter(
-            (a) => a.audience === "ai-agents"
-          );
-          for (const article of aiAgentArticles) {
-            try {
-              const { json: translatedJson, text: translatedText } =
-                await translateTiptapJson(
-                  article.contentJson,
-                  article.contentText,
-                  "en"
-                );
-
-              await supabase.from("articles").insert({
-                project_id: video.project_id,
-                video_id: videoId,
-                chapter_id: article.chapterId,
-                title: article.title,
-                slug: article.slug,
-                audience: "ai-agents",
-                language: "en",
-                content_json: translatedJson,
-                content_text: translatedText,
-                status: "draft",
-              });
-            } catch (e) {
-              console.error(
-                `English translation of "${article.title}" for llms.txt failed:`,
-                e
-              );
-            }
-          }
         }
 
         // Save all VTT translations

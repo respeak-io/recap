@@ -24,6 +24,14 @@ export default async function ArticleEditPage({
 
   if (!article) notFound();
 
+  // Fetch sibling language versions
+  const { data: siblingLanguages } = await supabase
+    .from("articles")
+    .select("id, language, status")
+    .eq("project_id", article.project_id)
+    .eq("slug", articleSlug)
+    .eq("audience", audience);
+
   // Get signed URL for video if present
   let videoUrl: string | null = null;
   if (article.videos?.storage_path) {
@@ -47,6 +55,8 @@ export default async function ArticleEditPage({
       projectSlug={slug}
       projectName={article.projects.name}
       videoUrl={videoUrl}
+      siblingLanguages={siblingLanguages ?? []}
+      currentLanguage={lang}
     />
   );
 }

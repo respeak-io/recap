@@ -9,7 +9,7 @@ export async function GET(request: Request) {
   const lang = searchParams.get("lang");
 
   if (!query || !projectId) {
-    return NextResponse.json({ articles: [], videos: [] });
+    return NextResponse.json({ articles: [] });
   }
 
   const supabase = await createClient();
@@ -19,7 +19,7 @@ export async function GET(request: Request) {
     .select("id, title, slug, audience, content_text, project_id")
     .eq("project_id", projectId)
     .eq("status", "published")
-    .textSearch("fts", query, { type: "websearch" })
+    .textSearch("fts", query, { type: "websearch", config: "english" })
     .limit(10);
 
   if (audience) {
@@ -40,15 +40,7 @@ export async function GET(request: Request) {
     language: lang ?? null,
   }).then(() => {});
 
-  const { data: videos } = await supabase
-    .from("videos")
-    .select("id, title, vtt_content, project_id")
-    .eq("project_id", projectId)
-    .textSearch("fts", query, { type: "websearch" })
-    .limit(5);
-
   return NextResponse.json({
     articles: articles ?? [],
-    videos: videos ?? [],
   });
 }

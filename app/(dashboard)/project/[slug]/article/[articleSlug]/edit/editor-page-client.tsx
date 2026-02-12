@@ -6,6 +6,7 @@ import { Editor } from "@/editor/editor";
 import { VideoPlayer, type VideoPlayerHandle } from "@/components/video-player";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ExternalLink } from "lucide-react";
 import { BreadcrumbNav } from "@/components/dashboard/breadcrumb-nav";
 import { saveArticleAction, togglePublishAction } from "./actions";
@@ -38,14 +39,20 @@ export function EditorPageClient({
   projectSlug,
   projectName,
   videoUrl,
+  siblingLanguages,
+  currentLanguage,
 }: {
   article: ArticleData;
   projectSlug: string;
   projectName: string;
   videoUrl: string | null;
+  siblingLanguages: { id: string; language: string; status: string }[];
+  currentLanguage: string;
 }) {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [translating, setTranslating] = useState(false);
+  const [translateError, setTranslateError] = useState<string | null>(null);
   const [status, setStatus] = useState(article.status);
   const contentRef = useRef(article.content_json);
   const playerRef = useRef<VideoPlayerHandle>(null);
@@ -73,6 +80,25 @@ export function EditorPageClient({
     setStatus(newStatus);
   }
 
+  async function handleTranslate() {
+    if (!window.confirm("This will overwrite the current content with a fresh translation from the English version. Continue?")) {
+      return;
+    }
+    setTranslating(true);
+    setTranslateError(null);
+    try {
+      const res = await fetch(`/api/articles/${article.id}/translate`, { method: "POST" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Translation failed");
+      }
+      window.location.reload();
+    } catch (e) {
+      setTranslateError(e instanceof Error ? e.message : "Translation failed");
+      setTranslating(false);
+    }
+  }
+
   const publicUrl = `/${projectSlug}/${article.slug}?audience=${article.audience}`;
 
   return (
@@ -86,6 +112,19 @@ export function EditorPageClient({
       ]}
     />
     <div className="p-6 space-y-4">
+      {siblingLanguages.length > 1 && (
+        <Tabs value={currentLanguage}>
+          <TabsList>
+            {siblingLanguages.map((lang) => (
+              <TabsTrigger key={lang.language} value={lang.language} asChild>
+                <Link href={`/project/${projectSlug}/article/${article.slug}/edit?audience=${article.audience}&lang=${lang.language}`}>
+                  {lang.language.toUpperCase()}
+                </Link>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+      )}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <h1 className="text-xl font-bold">{article.title}</h1>
@@ -95,6 +134,16 @@ export function EditorPageClient({
           </Badge>
         </div>
         <div className="flex items-center gap-2">
+          {currentLanguage !== "en" && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleTranslate}
+              disabled={translating}
+            >
+              {translating ? "Translating..." : "Re-translate from English"}
+            </Button>
+          )}
           {status === "published" && (
             <Button variant="ghost" size="sm" asChild>
               <Link href={publicUrl} target="_blank">
@@ -116,6 +165,9 @@ export function EditorPageClient({
           </Button>
         </div>
       </div>
+      {translateError && (
+        <p className="text-sm text-destructive">{translateError}</p>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <Editor
