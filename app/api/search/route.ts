@@ -31,6 +31,15 @@ export async function GET(request: Request) {
 
   const { data: articles } = await articlesQuery;
 
+  // Log search event asynchronously (don't block response)
+  supabase.from("search_events").insert({
+    project_id: projectId,
+    query: query,
+    results_count: articles?.length ?? 0,
+    audience: audience ?? null,
+    language: lang ?? null,
+  }).then(() => {});
+
   const { data: videos } = await supabase
     .from("videos")
     .select("id, title, vtt_content, project_id")
