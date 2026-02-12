@@ -4,7 +4,7 @@ import { BreadcrumbNav } from "@/components/dashboard/breadcrumb-nav";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { FileText, Video, Globe, Upload, ExternalLink } from "lucide-react";
+import { FileText, Video, Globe, Upload, ExternalLink, BarChart3 } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -157,12 +157,15 @@ export default async function ProjectOverviewPage({
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">Analytics</CardTitle>
-                <CardDescription>Coming soon</CardDescription>
+                <CardDescription>Docs performance</CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground">
-                  Page views, search queries, and audience breakdown will appear here.
-                </p>
+                <Button variant="outline" className="justify-start w-full" asChild>
+                  <Link href={`/project/${slug}/analytics`}>
+                    <BarChart3 className="mr-2 size-4" />
+                    View Analytics
+                  </Link>
+                </Button>
               </CardContent>
             </Card>
           </div>
