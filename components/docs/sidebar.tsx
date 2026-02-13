@@ -63,6 +63,7 @@ function SidebarContent({
   chapters,
   audiences,
   languages,
+  logoUrl,
 }: SidebarProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -122,8 +123,12 @@ function SidebarContent({
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      <Link href={`/${projectSlug}`} className="font-semibold text-lg">
-        {projectName}
+      <Link href={`/${projectSlug}`} className="flex items-center gap-2 font-semibold text-lg">
+        {logoUrl ? (
+          <img src={logoUrl} alt={projectName} className="max-h-8 object-contain" />
+        ) : (
+          projectName
+        )}
       </Link>
 
       <SearchDialog projectId={projectId} projectSlug={projectSlug} />
