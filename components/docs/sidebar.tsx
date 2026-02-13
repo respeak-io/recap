@@ -226,13 +226,13 @@ export function Sidebar(props: SidebarProps) {
               <Menu className="h-4 w-4" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="w-[260px] p-0">
+          <SheetContent side="left" className="w-[260px] p-0 bg-sidebar text-sidebar-foreground">
             <SidebarContent {...props} />
           </SheetContent>
         </Sheet>
       </div>
 
-      <aside className="hidden lg:block w-[260px] border-r h-screen sticky top-0 overflow-y-auto flex-shrink-0">
+      <aside className="hidden lg:block w-[260px] border-r h-screen sticky top-0 overflow-y-auto flex-shrink-0 bg-sidebar text-sidebar-foreground">
         <SidebarContent {...props} />
       </aside>
     </>
