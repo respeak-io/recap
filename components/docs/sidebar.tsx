@@ -107,8 +107,8 @@ function SidebarContent({
 
       <SearchDialog projectId={projectId} projectSlug={projectSlug} />
 
-      {/* Audience switcher — segmented control */}
-      {displayAudiences.length > 1 && (
+      {/* Audience switcher — segmented control or static label */}
+      {displayAudiences.length > 1 ? (
         <div className="flex rounded-lg border p-0.5 bg-muted">
           {displayAudiences.map((a) => (
             <Link
@@ -125,7 +125,13 @@ function SidebarContent({
             </Link>
           ))}
         </div>
-      )}
+      ) : displayAudiences.length === 1 ? (
+        <div className="flex rounded-lg border p-0.5 bg-muted">
+          <div className="flex-1 rounded-md px-3 py-1.5 text-center text-xs font-medium bg-background text-foreground shadow-sm">
+            {AUDIENCE_LABELS[displayAudiences[0]] ?? displayAudiences[0]}
+          </div>
+        </div>
+      ) : null}
 
       {/* Language selector — dropdown with flags */}
       {languages.length > 1 && (
