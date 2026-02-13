@@ -28,23 +28,15 @@ export default async function DocsLayout({
     (a: { order: number }, b: { order: number }) => a.order - b.order
   );
 
-  // Collect unique audiences
-  const audiences = [
-    ...new Set(
-      chapters.flatMap((ch: { articles: { audience: string }[] }) =>
-        ch.articles.map((a: { audience: string }) => a.audience)
-      )
-    ),
-  ] as string[];
+  // Only consider published articles for audience/language options
+  type ArticleInfo = { audience: string; language: string; status: string };
+  const publishedArticles: ArticleInfo[] = chapters.flatMap(
+    (ch: { articles: ArticleInfo[] }) =>
+      ch.articles.filter((a) => a.status === "published")
+  );
 
-  // Collect unique languages
-  const languages = [
-    ...new Set(
-      chapters.flatMap((ch: { articles: { language: string }[] }) =>
-        ch.articles.map((a: { language: string }) => a.language)
-      )
-    ),
-  ] as string[];
+  const audiences = [...new Set(publishedArticles.map((a) => a.audience))];
+  const languages = [...new Set(publishedArticles.map((a) => a.language))];
 
   return (
     <div className="flex min-h-screen">
