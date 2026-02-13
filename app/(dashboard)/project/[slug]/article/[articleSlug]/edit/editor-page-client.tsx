@@ -7,9 +7,18 @@ import { VideoPlayer, type VideoPlayerHandle } from "@/components/video-player";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ExternalLink } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ChevronDown, ExternalLink } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { BreadcrumbNav } from "@/components/dashboard/breadcrumb-nav";
-import { saveArticleAction, togglePublishAction } from "./actions";
+import { saveArticleAction, togglePublishAction, batchTogglePublishAction } from "./actions";
 
 interface ArticleData {
   id: string;
@@ -54,6 +63,9 @@ export function EditorPageClient({
   const [translating, setTranslating] = useState(false);
   const [translateError, setTranslateError] = useState<string | null>(null);
   const [status, setStatus] = useState(article.status);
+  const [languageStatuses, setLanguageStatuses] = useState<Record<string, string>>(
+    Object.fromEntries(siblingLanguages.map((lang) => [lang.id, lang.status]))
+  );
   const contentRef = useRef(article.content_json);
   const playerRef = useRef<VideoPlayerHandle>(null);
 
@@ -78,6 +90,35 @@ export function EditorPageClient({
     const newStatus = status === "published" ? "draft" : "published";
     await togglePublishAction(article.id, newStatus === "published");
     setStatus(newStatus);
+  }
+
+  async function handleLanguagePublishToggle(langId: string) {
+    const currentStatus = languageStatuses[langId];
+    const newPublish = currentStatus !== "published";
+    // Optimistic update
+    setLanguageStatuses((prev) => ({
+      ...prev,
+      [langId]: newPublish ? "published" : "draft",
+    }));
+    if (langId === article.id) {
+      setStatus(newPublish ? "published" : "draft");
+    }
+    await batchTogglePublishAction([{ id: langId, publish: newPublish }]);
+  }
+
+  async function handlePublishAll(publish: boolean) {
+    const updates = siblingLanguages.map((lang) => ({
+      id: lang.id,
+      publish,
+    }));
+    // Optimistic update
+    setLanguageStatuses(
+      Object.fromEntries(
+        siblingLanguages.map((lang) => [lang.id, publish ? "published" : "draft"])
+      )
+    );
+    setStatus(publish ? "published" : "draft");
+    await batchTogglePublishAction(updates);
   }
 
   async function handleTranslate() {
@@ -117,7 +158,10 @@ export function EditorPageClient({
           <TabsList>
             {siblingLanguages.map((lang) => (
               <TabsTrigger key={lang.language} value={lang.language} asChild>
-                <Link href={`/project/${projectSlug}/article/${article.slug}/edit?audience=${article.audience}&lang=${lang.language}`}>
+                <Link href={`/project/${projectSlug}/article/${article.slug}/edit?audience=${article.audience}&lang=${lang.language}`} className="flex items-center gap-1.5">
+                  <span className={cn("h-1.5 w-1.5 rounded-full",
+                    languageStatuses[lang.id] === "published" ? "bg-green-500" : "bg-muted-foreground/40"
+                  )} />
                   {lang.language.toUpperCase()}
                 </Link>
               </TabsTrigger>
@@ -160,9 +204,56 @@ export function EditorPageClient({
           >
             {saving ? "Saving..." : saved ? "Saved" : "Save"}
           </Button>
-          <Button size="sm" onClick={handleTogglePublish}>
-            {status === "published" ? "Unpublish" : "Publish"}
-          </Button>
+          {siblingLanguages.length <= 1 ? (
+            <Button size="sm" onClick={handleTogglePublish}>
+              {status === "published" ? "Unpublish" : "Publish"}
+            </Button>
+          ) : (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm">
+                  {(() => {
+                    const publishedCount = Object.values(languageStatuses).filter(
+                      (s) => s === "published"
+                    ).length;
+                    if (publishedCount === siblingLanguages.length) return "Published";
+                    if (publishedCount > 0) return "Partially published";
+                    return "Publish";
+                  })()}
+                  <ChevronDown className="ml-1.5 h-3.5 w-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Publish languages</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {siblingLanguages.map((lang) => (
+                  <DropdownMenuCheckboxItem
+                    key={lang.id}
+                    checked={languageStatuses[lang.id] === "published"}
+                    onCheckedChange={() => handleLanguagePublishToggle(lang.id)}
+                  >
+                    {lang.language.toUpperCase()}
+                    {lang.id === article.id && (
+                      <span className="ml-1 text-muted-foreground">(current)</span>
+                    )}
+                  </DropdownMenuCheckboxItem>
+                ))}
+                <DropdownMenuSeparator />
+                <DropdownMenuCheckboxItem
+                  checked={
+                    Object.values(languageStatuses).every((s) => s === "published")
+                      ? true
+                      : Object.values(languageStatuses).some((s) => s === "published")
+                        ? "indeterminate"
+                        : false
+                  }
+                  onCheckedChange={(checked) => handlePublishAll(!!checked)}
+                >
+                  All languages
+                </DropdownMenuCheckboxItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
       </div>
       {translateError && (
