@@ -315,6 +315,76 @@ export function ThemeEditor({
           {saving ? "Saving..." : saved ? "Saved!" : "Save Theme"}
         </Button>
       </div>
+
+      {/* Preview */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Preview</CardTitle>
+          <CardDescription>Live preview of your theme settings</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div
+            className="rounded-lg border overflow-hidden"
+            style={{
+              "--preview-bg": theme.colors.background ?? "oklch(1 0 0)",
+              "--preview-fg": theme.colors.foreground ?? "oklch(0.145 0 0)",
+              "--preview-primary": theme.colors.primary ?? "oklch(0.205 0 0)",
+              "--preview-sidebar-bg": theme.colors.sidebar_background ?? "oklch(0.985 0 0)",
+              "--preview-sidebar-fg": theme.colors.sidebar_foreground ?? "oklch(0.145 0 0)",
+              "--preview-accent": theme.colors.accent ?? "oklch(0.97 0 0)",
+            } as React.CSSProperties}
+          >
+            <div className="flex h-[200px]">
+              {/* Sidebar preview */}
+              <div
+                className="w-[160px] border-r p-3 flex flex-col gap-2"
+                style={{ backgroundColor: "var(--preview-sidebar-bg)", color: "var(--preview-sidebar-fg)" }}
+              >
+                {logoUrl ? (
+                  <img src={logoUrl} alt="Logo" className="max-h-6 object-contain self-start" />
+                ) : (
+                  <span className="text-xs font-semibold">Your Project</span>
+                )}
+                <div className="space-y-1 mt-2">
+                  <div
+                    className="text-[10px] rounded px-2 py-1"
+                    style={{ backgroundColor: "var(--preview-accent)" }}
+                  >
+                    Getting Started
+                  </div>
+                  <div className="text-[10px] px-2 py-1 opacity-60">Installation</div>
+                  <div className="text-[10px] px-2 py-1 opacity-60">Configuration</div>
+                </div>
+              </div>
+              {/* Content preview */}
+              <div
+                className="flex-1 p-4"
+                style={{
+                  backgroundColor: "var(--preview-bg)",
+                  color: "var(--preview-fg)",
+                  fontFamily: FONT_OPTIONS.find((f) => f.id === theme.font)?.family ?? "system-ui",
+                }}
+              >
+                <h2 className="text-sm font-bold mb-2" style={{ color: "var(--preview-fg)" }}>
+                  Getting Started
+                </h2>
+                <p className="text-[10px] leading-relaxed opacity-80">
+                  Welcome to the documentation. This is a preview of how your docs will look with the current theme settings applied.
+                </p>
+                <button
+                  className="mt-3 text-[10px] px-3 py-1 rounded"
+                  style={{
+                    backgroundColor: "var(--preview-primary)",
+                    color: theme.colors.primary_foreground ?? "oklch(0.985 0 0)",
+                  }}
+                >
+                  Primary Button
+                </button>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
