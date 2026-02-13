@@ -17,8 +17,7 @@ export function DocsThemeProvider({
   projectName,
   children,
 }: DocsThemeProviderProps) {
-  // Build inline style for CSS custom properties
-  const cssVars: Record<string, string> = {};
+  // Build CSS variable declarations for :root override
   const colorMap: Record<keyof ProjectThemeColors, string> = {
     primary: "--primary",
     primary_foreground: "--primary-foreground",
@@ -29,21 +28,32 @@ export function DocsThemeProvider({
     sidebar_foreground: "--sidebar-foreground",
   };
 
+  const declarations: string[] = [];
   for (const [key, cssVar] of Object.entries(colorMap)) {
     const value = theme.colors[key as keyof ProjectThemeColors];
     if (value) {
-      cssVars[cssVar] = value;
+      declarations.push(`${cssVar}: ${value};`);
     }
   }
 
   // Font family override
   const fontOption = FONT_OPTIONS.find((f) => f.id === theme.font);
   if (fontOption && theme.font !== "geist") {
-    cssVars["--font-sans"] = fontOption.family;
+    declarations.push(`--font-sans: ${fontOption.family};`);
   }
+
+  // Build a :root override stylesheet so body and all elements pick up the theme
+  const themeStylesheet = declarations.length > 0
+    ? `:root { ${declarations.join(" ")} }`
+    : "";
 
   return (
     <>
+      {/* Override :root CSS variables so body bg/fg and all elements update */}
+      {themeStylesheet && (
+        <style dangerouslySetInnerHTML={{ __html: themeStylesheet }} />
+      )}
+
       {/* Google Font link if needed */}
       {fontOption && "googleFont" in fontOption && fontOption.googleFont && (
         <link
@@ -57,12 +67,7 @@ export function DocsThemeProvider({
         <link rel="icon" href={faviconUrl} />
       )}
 
-      <div
-        style={cssVars as React.CSSProperties}
-        className="contents"
-      >
-        {children}
-      </div>
+      {children}
 
       {/* Custom CSS injection */}
       {theme.custom_css && (

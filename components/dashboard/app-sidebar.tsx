@@ -22,6 +22,7 @@ interface Project {
   id: string;
   name: string;
   slug: string;
+  logoUrl?: string | null;
 }
 
 interface AppSidebarProps {

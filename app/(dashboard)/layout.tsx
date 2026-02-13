@@ -18,10 +18,22 @@ export default async function DashboardLayout({
 
   const projects = await getProjects();
 
+  // Resolve logo URLs from theme data for each project
+  const projectsWithLogos = projects.map((p) => {
+    const theme = p.theme as Record<string, unknown> | null;
+    const logoPath = theme?.logo_path as string | undefined;
+    let logoUrl: string | null = null;
+    if (logoPath) {
+      const { data } = supabase.storage.from("assets").getPublicUrl(logoPath);
+      logoUrl = data.publicUrl;
+    }
+    return { id: p.id, name: p.name, slug: p.slug, logoUrl };
+  });
+
   return (
     <SidebarProvider>
       <AppSidebar
-        projects={projects}
+        projects={projectsWithLogos}
         userEmail={user.email ?? ""}
       />
       <SidebarInset>
