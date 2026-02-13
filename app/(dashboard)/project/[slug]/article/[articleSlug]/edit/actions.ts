@@ -26,3 +26,28 @@ export async function togglePublishAction(id: string, publish: boolean) {
 
   revalidatePath("/");
 }
+
+export async function batchTogglePublishAction(
+  updates: { id: string; publish: boolean }[]
+) {
+  const supabase = await createClient();
+
+  const toPublish = updates.filter((u) => u.publish).map((u) => u.id);
+  const toUnpublish = updates.filter((u) => !u.publish).map((u) => u.id);
+
+  if (toPublish.length > 0) {
+    await supabase
+      .from("articles")
+      .update({ status: "published" })
+      .in("id", toPublish);
+  }
+
+  if (toUnpublish.length > 0) {
+    await supabase
+      .from("articles")
+      .update({ status: "draft" })
+      .in("id", toUnpublish);
+  }
+
+  revalidatePath("/");
+}
