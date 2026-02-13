@@ -18,13 +18,13 @@ export default async function DashboardLayout({
 
   const projects = await getProjects();
 
-  // Resolve logo URLs from theme data for each project
+  // Resolve logo URLs from theme data for each project (favicon as fallback)
   const projectsWithLogos = projects.map((p) => {
     const theme = p.theme as Record<string, unknown> | null;
-    const logoPath = theme?.logo_path as string | undefined;
+    const assetPath = (theme?.logo_path ?? theme?.favicon_path) as string | undefined;
     let logoUrl: string | null = null;
-    if (logoPath) {
-      const { data } = supabase.storage.from("assets").getPublicUrl(logoPath);
+    if (assetPath) {
+      const { data } = supabase.storage.from("assets").getPublicUrl(assetPath);
       logoUrl = data.publicUrl;
     }
     return { id: p.id, name: p.name, slug: p.slug, logoUrl };

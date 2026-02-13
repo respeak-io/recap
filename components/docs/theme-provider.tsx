@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { type ProjectTheme, type ProjectThemeColors, FONT_OPTIONS } from "@/lib/theme";
 
 interface DocsThemeProviderProps {
@@ -17,7 +18,6 @@ export function DocsThemeProvider({
   projectName,
   children,
 }: DocsThemeProviderProps) {
-  // Build CSS variable declarations for :root override
   const colorMap: Record<keyof ProjectThemeColors, string> = {
     primary: "--primary",
     primary_foreground: "--primary-foreground",
@@ -28,33 +28,46 @@ export function DocsThemeProvider({
     sidebar_foreground: "--sidebar-foreground",
   };
 
-  const declarations: string[] = [];
+  // Collect CSS variable overrides
+  const cssVars: [string, string][] = [];
   for (const [key, cssVar] of Object.entries(colorMap)) {
     const value = theme.colors[key as keyof ProjectThemeColors];
     if (value) {
-      declarations.push(`${cssVar}: ${value};`);
+      cssVars.push([cssVar, value]);
     }
   }
 
-  // Font family override
   const fontOption = FONT_OPTIONS.find((f) => f.id === theme.font);
   if (fontOption && theme.font !== "geist") {
-    declarations.push(`--font-sans: ${fontOption.family};`);
+    cssVars.push(["--font-sans", fontOption.family]);
   }
 
-  // Build a :root override stylesheet so body and all elements pick up the theme
-  const themeStylesheet = declarations.length > 0
-    ? `:root { ${declarations.join(" ")} }`
+  // Apply CSS variables directly on <html> element to guarantee they override
+  // :root definitions regardless of stylesheet ordering (React 19 hoists <style>
+  // to <head> which can end up before global CSS, losing the cascade).
+  useEffect(() => {
+    const root = document.documentElement;
+    for (const [prop, value] of cssVars) {
+      root.style.setProperty(prop, value);
+    }
+    return () => {
+      for (const [prop] of cssVars) {
+        root.style.removeProperty(prop);
+      }
+    };
+  });
+
+  // Also emit a <style> block for SSR so the initial paint has correct colors
+  const themeStylesheet = cssVars.length > 0
+    ? `:root { ${cssVars.map(([p, v]) => `${p}: ${v} !important;`).join(" ")} }`
     : "";
 
   return (
     <>
-      {/* Override :root CSS variables so body bg/fg and all elements update */}
       {themeStylesheet && (
         <style dangerouslySetInnerHTML={{ __html: themeStylesheet }} />
       )}
 
-      {/* Google Font link if needed */}
       {fontOption && "googleFont" in fontOption && fontOption.googleFont && (
         <link
           rel="stylesheet"
@@ -62,14 +75,12 @@ export function DocsThemeProvider({
         />
       )}
 
-      {/* Custom favicon */}
       {faviconUrl && (
         <link rel="icon" href={faviconUrl} />
       )}
 
       {children}
 
-      {/* Custom CSS injection */}
       {theme.custom_css && (
         <style dangerouslySetInnerHTML={{ __html: theme.custom_css }} />
       )}
