@@ -262,6 +262,7 @@ export function EditorPageClient({
 
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <Editor
+          key={article.id}
           content={article.content_json}
           onUpdate={handleUpdate}
           onTimestampClick={handleTimestampClick}

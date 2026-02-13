@@ -96,6 +96,26 @@ function SidebarContent({
 
   function handleLanguageChange(lang: string) {
     const query = buildQuery({ lang });
+
+    // If currently viewing an article, try to stay on it
+    const articleSlug = pathname.replace(`/${projectSlug}/`, "").split("/")[0];
+    if (articleSlug) {
+      // Check if this article exists in the target language (and is published)
+      const exists = chapters.some((ch) =>
+        ch.articles.some(
+          (a) =>
+            a.slug === articleSlug &&
+            a.language === lang &&
+            a.audience === currentAudience &&
+            a.status === "published"
+        )
+      );
+      if (exists) {
+        window.location.href = `/${projectSlug}/${articleSlug}${query}`;
+        return;
+      }
+    }
+
     window.location.href = `/${projectSlug}${query}`;
   }
 
