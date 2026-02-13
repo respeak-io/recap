@@ -53,6 +53,7 @@ interface SidebarProps {
   chapters: Chapter[];
   audiences: string[];
   languages: string[];
+  logoUrl?: string | null;
 }
 
 function SidebarContent({
