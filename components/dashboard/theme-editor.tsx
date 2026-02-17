@@ -15,8 +15,113 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Upload, X, Save } from "lucide-react";
+import { Upload, X, Save, RotateCcw } from "lucide-react";
 import { type ProjectTheme, type ProjectThemeColors, FONT_OPTIONS } from "@/lib/theme";
+
+interface ThemePreset {
+  name: string;
+  colors: Partial<ProjectThemeColors>;
+  font: ProjectTheme["font"];
+}
+
+const THEME_PRESETS: ThemePreset[] = [
+  {
+    name: "Default",
+    colors: {},
+    font: "geist",
+  },
+  {
+    name: "Ocean",
+    colors: {
+      primary: "#1d4ed8",
+      primary_foreground: "#ffffff",
+      background: "#f0f4f8",
+      foreground: "#1e293b",
+      accent: "#dbeafe",
+      sidebar_background: "#0f2a5e",
+      sidebar_foreground: "#e0ecff",
+    },
+    font: "inter",
+  },
+  {
+    name: "Forest",
+    colors: {
+      primary: "#15803d",
+      primary_foreground: "#ffffff",
+      background: "#faf8f5",
+      foreground: "#1c1917",
+      accent: "#dcfce7",
+      sidebar_background: "#14532d",
+      sidebar_foreground: "#d9f7e0",
+    },
+    font: "geist",
+  },
+  {
+    name: "Sunset",
+    colors: {
+      primary: "#e05a3a",
+      primary_foreground: "#ffffff",
+      background: "#fdf6f0",
+      foreground: "#292524",
+      accent: "#fed7aa",
+      sidebar_background: "#2c1a14",
+      sidebar_foreground: "#fde8d8",
+    },
+    font: "source-serif",
+  },
+  {
+    name: "Lavender",
+    colors: {
+      primary: "#7c3aed",
+      primary_foreground: "#ffffff",
+      background: "#faf5ff",
+      foreground: "#1e1b2e",
+      accent: "#ede9fe",
+      sidebar_background: "#3b1d7e",
+      sidebar_foreground: "#e8dff5",
+    },
+    font: "inter",
+  },
+  {
+    name: "Slate",
+    colors: {
+      primary: "#475569",
+      primary_foreground: "#ffffff",
+      background: "#f8fafc",
+      foreground: "#0f172a",
+      accent: "#e2e8f0",
+      sidebar_background: "#1e293b",
+      sidebar_foreground: "#cbd5e1",
+    },
+    font: "ibm-plex",
+  },
+  {
+    name: "Midnight",
+    colors: {
+      primary: "#3b82f6",
+      primary_foreground: "#ffffff",
+      background: "#0f172a",
+      foreground: "#e2e8f0",
+      accent: "#1e293b",
+      sidebar_background: "#020617",
+      sidebar_foreground: "#94a3b8",
+    },
+    font: "geist",
+  },
+  {
+    name: "Rose",
+    colors: {
+      primary: "#e11d6d",
+      primary_foreground: "#ffffff",
+      background: "#fff1f3",
+      foreground: "#1c1017",
+      accent: "#ffe4e8",
+      sidebar_background: "#4c0d27",
+      sidebar_foreground: "#fdd4de",
+    },
+    font: "inter",
+  },
+];
 
 interface ThemeEditorProps {
   projectId: string;
@@ -201,6 +306,99 @@ export function ThemeEditor({
         </CardContent>
       </Card>
 
+      {/* Theme Presets */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Theme Presets</CardTitle>
+          <CardDescription>
+            Pick a starting point, then customize. Clicking a preset updates colors and font but does not save automatically.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            {THEME_PRESETS.map((preset) => {
+              const isActive =
+                theme.font === preset.font &&
+                Object.keys({ ...theme.colors, ...preset.colors }).every(
+                  (k) =>
+                    (theme.colors[k as keyof ProjectThemeColors] ?? undefined) ===
+                    (preset.colors[k as keyof ProjectThemeColors] ?? undefined)
+                );
+              return (
+                <button
+                  key={preset.name}
+                  type="button"
+                  onClick={() =>
+                    setTheme((prev) => ({
+                      ...prev,
+                      colors: { ...preset.colors },
+                      font: preset.font,
+                    }))
+                  }
+                  className={`rounded-lg border-2 overflow-hidden text-left transition-colors ${
+                    isActive
+                      ? "border-primary ring-2 ring-primary/20"
+                      : "border-muted hover:border-muted-foreground/30"
+                  }`}
+                >
+                  <div className="flex h-[80px]">
+                    {/* Mini sidebar */}
+                    <div
+                      className="w-[36px] border-r p-1.5 flex flex-col gap-1"
+                      style={{
+                        backgroundColor: preset.colors.sidebar_background ?? "oklch(0.985 0 0)",
+                        color: preset.colors.sidebar_foreground ?? "oklch(0.145 0 0)",
+                      }}
+                    >
+                      <div
+                        className="h-1 w-full rounded-sm"
+                        style={{ backgroundColor: preset.colors.sidebar_foreground ?? "oklch(0.145 0 0)", opacity: 0.6 }}
+                      />
+                      <div
+                        className="h-1 w-3/4 rounded-sm"
+                        style={{ backgroundColor: preset.colors.sidebar_foreground ?? "oklch(0.145 0 0)", opacity: 0.3 }}
+                      />
+                      <div
+                        className="h-1 w-3/4 rounded-sm"
+                        style={{ backgroundColor: preset.colors.sidebar_foreground ?? "oklch(0.145 0 0)", opacity: 0.3 }}
+                      />
+                    </div>
+                    {/* Mini content area */}
+                    <div
+                      className="flex-1 p-2 flex flex-col gap-1"
+                      style={{
+                        backgroundColor: preset.colors.background ?? "oklch(1 0 0)",
+                        color: preset.colors.foreground ?? "oklch(0.145 0 0)",
+                      }}
+                    >
+                      <div
+                        className="h-1.5 w-3/4 rounded-sm"
+                        style={{ backgroundColor: preset.colors.foreground ?? "oklch(0.145 0 0)", opacity: 0.7 }}
+                      />
+                      <div
+                        className="h-1 w-full rounded-sm"
+                        style={{ backgroundColor: preset.colors.foreground ?? "oklch(0.145 0 0)", opacity: 0.2 }}
+                      />
+                      <div
+                        className="h-1 w-5/6 rounded-sm"
+                        style={{ backgroundColor: preset.colors.foreground ?? "oklch(0.145 0 0)", opacity: 0.2 }}
+                      />
+                      <div
+                        className="mt-auto h-4 w-12 rounded-sm"
+                        style={{ backgroundColor: preset.colors.primary ?? "oklch(0.205 0 0)" }}
+                      />
+                    </div>
+                  </div>
+                  <div className="px-2 py-1.5 text-xs font-medium text-center border-t bg-muted/30">
+                    {preset.name}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Brand Colors */}
       <Card>
         <CardHeader>
@@ -306,7 +504,23 @@ export function ThemeEditor({
       </Card>
 
       {/* Save */}
-      <div className="flex justify-end gap-3">
+      <div className="flex gap-3">
+        <Button
+          variant="destructive"
+          onClick={() =>
+            setTheme((prev) => ({
+              ...prev,
+              colors: {},
+              font: "geist",
+              custom_css: null,
+              hide_powered_by: false,
+            }))
+          }
+        >
+          <RotateCcw className="size-4 mr-2" />
+          Reset to Default
+        </Button>
+        <div className="flex-1" />
         <Button variant="outline" onClick={() => router.refresh()}>
           Discard Changes
         </Button>

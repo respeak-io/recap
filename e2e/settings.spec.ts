@@ -130,6 +130,46 @@ test("breadcrumb navigation shows on settings page", async ({ page }) => {
   await expect(page.getByText("Settings").first()).toBeVisible();
 });
 
+test("theme presets section is visible with preset cards", async ({ page }) => {
+  await page.goto(`/project/${TEST_PROJECT.slug}/settings`);
+
+  await expect(page.getByText("Theme Presets")).toBeVisible();
+
+  // Verify some preset names are visible
+  const presetNames = ["Default", "Ocean", "Forest", "Sunset", "Lavender", "Slate", "Midnight", "Rose"];
+  for (const name of presetNames) {
+    await expect(page.getByText(name, { exact: true })).toBeVisible();
+  }
+});
+
+test("clicking a theme preset updates the preview colors", async ({ page }) => {
+  await page.goto(`/project/${TEST_PROJECT.slug}/settings`);
+
+  // Click the "Ocean" preset
+  await page.getByText("Ocean", { exact: true }).click();
+
+  // The primary color input should now reflect Ocean's primary color
+  const primaryInput = page.getByPlaceholder("Default").first();
+  await expect(primaryInput).toHaveValue("#1d4ed8");
+});
+
+test("reset to default button clears theme settings", async ({ page }) => {
+  await page.goto(`/project/${TEST_PROJECT.slug}/settings`);
+
+  // First apply a preset so we have non-default values
+  await page.getByText("Ocean", { exact: true }).click();
+
+  // Verify a color was set
+  const primaryInput = page.getByPlaceholder("Default").first();
+  await expect(primaryInput).toHaveValue("#1d4ed8");
+
+  // Click Reset to Default
+  await page.getByRole("button", { name: "Reset to Default" }).click();
+
+  // Color inputs should be cleared (back to default/empty)
+  await expect(primaryInput).toHaveValue("");
+});
+
 test("live preview updates when font is changed", async ({ page }) => {
   await page.goto(`/project/${TEST_PROJECT.slug}/settings`);
 

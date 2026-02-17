@@ -46,3 +46,9 @@ next-env.d.ts
 
 # worktrees
 .worktrees/
+
+# playwright mcp
+.playwright-mcp/
+
+# supabase local
+supabase/.branches/
