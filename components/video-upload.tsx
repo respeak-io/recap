@@ -12,12 +12,6 @@ import { Progress } from "@/components/ui/progress";
 import { ProcessingStatus } from "./processing-status";
 import { Upload } from "lucide-react";
 
-const AUDIENCES = [
-  { id: "developers", label: "Developers", description: "Technical docs with code snippets and API references" },
-  { id: "end-users", label: "End Users", description: "Step-by-step guides with simple language" },
-  { id: "ai-agents", label: "AI Agents", description: "LLM-optimized docs for coding assistants" },
-];
-
 const LANGUAGES = [
   { id: "en", label: "English", flag: "\u{1F1FA}\u{1F1F8}" },
   { id: "de", label: "Deutsch", flag: "\u{1F1E9}\u{1F1EA}" },
@@ -32,7 +26,6 @@ const LANGUAGES = [
 export function VideoUpload({ projectId }: { projectId: string }) {
   const [title, setTitle] = useState("");
   const [file, setFile] = useState<File | null>(null);
-  const [audiences, setAudiences] = useState<string[]>(["developers"]);
   const [languages, setLanguages] = useState<string[]>(["en"]);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -41,12 +34,6 @@ export function VideoUpload({ projectId }: { projectId: string }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const supabase = createClient();
-
-  function toggleAudience(id: string) {
-    setAudiences((prev) =>
-      prev.includes(id) ? prev.filter((a) => a !== id) : [...prev, id]
-    );
-  }
 
   function toggleLanguage(id: string) {
     setLanguages((prev) => {
@@ -114,7 +101,6 @@ export function VideoUpload({ projectId }: { projectId: string }) {
         <CardContent>
           <ProcessingStatus
             videoId={processingVideoId}
-            audiences={audiences}
             languages={languages}
             onComplete={handleProcessingComplete}
           />
@@ -166,37 +152,6 @@ export function VideoUpload({ projectId }: { projectId: string }) {
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Getting Started Tutorial"
         />
-      </div>
-
-      <Separator />
-
-      {/* Audiences */}
-      <div className="grid gap-6 md:grid-cols-[1fr_1.5fr]">
-        <div>
-          <Label className="text-base font-medium">Target audiences</Label>
-          <p className="text-sm text-muted-foreground mt-1">
-            Each audience gets its own tailored documentation. Select at least one.
-          </p>
-        </div>
-        <div className="space-y-3">
-          {AUDIENCES.map((a) => (
-            <label
-              key={a.id}
-              className="flex items-start gap-3 rounded-lg border p-3 cursor-pointer hover:bg-accent/50 transition-colors"
-            >
-              <input
-                type="checkbox"
-                checked={audiences.includes(a.id)}
-                onChange={() => toggleAudience(a.id)}
-                className="mt-0.5 rounded"
-              />
-              <div>
-                <span className="text-sm font-medium">{a.label}</span>
-                <p className="text-xs text-muted-foreground">{a.description}</p>
-              </div>
-            </label>
-          ))}
-        </div>
       </div>
 
       <Separator />

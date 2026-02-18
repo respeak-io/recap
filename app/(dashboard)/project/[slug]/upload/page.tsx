@@ -29,7 +29,7 @@ export default async function UploadPage({
       <div className="p-6 max-w-4xl">
         <h1 className="text-2xl font-bold mb-2">Upload Video</h1>
         <p className="text-muted-foreground mb-8">
-          Upload a product video and we'll generate documentation for your selected audiences.
+          Upload a product video and we'll generate documentation automatically.
         </p>
         <VideoUpload projectId={project.id} />
       </div>

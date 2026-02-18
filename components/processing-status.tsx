@@ -8,7 +8,6 @@ interface ProcessingStep {
   step: string;
   message: string;
   progress: number;
-  audience?: string;
   language?: string;
 }
 
@@ -22,14 +21,12 @@ const STEP_ORDER = [
 
 interface ProcessingStatusProps {
   videoId: string;
-  audiences: string[];
   languages?: string[];
   onComplete?: () => void;
 }
 
 export function ProcessingStatus({
   videoId,
-  audiences,
   languages = ["en"],
   onComplete,
 }: ProcessingStatusProps) {
@@ -45,7 +42,7 @@ export function ProcessingStatus({
         const res = await fetch("/api/videos/process", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ videoId, audiences, languages }),
+          body: JSON.stringify({ videoId, languages }),
           signal: controller.signal,
         });
 
@@ -115,10 +112,7 @@ export function ProcessingStatus({
   const steps = [
     { key: "uploading", label: "Uploading video to AI" },
     { key: "transcribing", label: "Extracting content" },
-    ...audiences.map((a) => ({
-      key: `generating_docs_${a}`,
-      label: `Generating ${a} docs`,
-    })),
+    { key: "generating_docs", label: "Generating documentation" },
     ...targetLanguages.map((l) => ({
       key: `translating_${l}`,
       label: `Translating to ${l}`,
@@ -127,26 +121,11 @@ export function ProcessingStatus({
   ];
 
   function isStepCompleted(stepKey: string) {
-    if (stepKey.startsWith("generating_docs_")) {
-      const audience = stepKey.replace("generating_docs_", "");
-      const audienceIdx = audiences.indexOf(audience);
-      if (currentStep?.step === "generating_docs") {
-        const currentIdx = audiences.indexOf(currentStep.audience ?? "");
-        return audienceIdx < currentIdx;
-      }
-      return (
-        completedSteps.includes("generating_docs") ||
-        completedSteps.includes("translating") ||
-        completedSteps.includes("complete")
-      );
-    }
     if (stepKey.startsWith("translating_")) {
       const lang = stepKey.replace("translating_", "");
       const langIdx = targetLanguages.indexOf(lang);
       if (currentStep?.step === "translating") {
-        const currentIdx = targetLanguages.indexOf(
-          currentStep.language ?? ""
-        );
+        const currentIdx = targetLanguages.indexOf(currentStep.language ?? "");
         return langIdx < currentIdx;
       }
       return completedSteps.includes("translating") || completedSteps.includes("complete");
@@ -159,18 +138,9 @@ export function ProcessingStatus({
 
   function isStepActive(stepKey: string) {
     if (!currentStep) return false;
-    if (stepKey.startsWith("generating_docs_")) {
-      const audience = stepKey.replace("generating_docs_", "");
-      return (
-        currentStep.step === "generating_docs" &&
-        currentStep.audience === audience
-      );
-    }
     if (stepKey.startsWith("translating_")) {
       const lang = stepKey.replace("translating_", "");
-      return (
-        currentStep.step === "translating" && currentStep.language === lang
-      );
+      return currentStep.step === "translating" && currentStep.language === lang;
     }
     return currentStep.step === stepKey;
   }
