@@ -95,7 +95,10 @@ export function ActiveJobs({ projectId, initialJobs }: ActiveJobsProps) {
     }
   }
 
-  if (jobs.length === 0) return null;
+  // Hide retried jobs — they've been replaced by a new job
+  const visibleJobs = jobs.filter((j) => j.status !== "retried");
+
+  if (visibleJobs.length === 0) return null;
 
   return (
     <Card>
@@ -110,7 +113,7 @@ export function ActiveJobs({ projectId, initialJobs }: ActiveJobsProps) {
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          {jobs.map((job) => (
+          {visibleJobs.map((job) => (
             <div
               key={job.id}
               className="flex items-center justify-between rounded-md border p-3"

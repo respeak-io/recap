@@ -26,6 +26,12 @@ export async function POST(request: Request) {
     );
   }
 
+  // Mark old job as retried so it no longer shows the retry button
+  await supabase
+    .from("processing_jobs")
+    .update({ status: "retried" })
+    .eq("id", jobId);
+
   // Re-trigger processing by calling the main process endpoint logic.
   // The idempotent steps will skip any work that was already completed.
   const origin = new URL(request.url).origin;
@@ -50,5 +56,12 @@ export async function POST(request: Request) {
   }
 
   const { jobId: newJobId } = await processRes.json();
+
+  // Link the new job to the old one for history tracking
+  await supabase
+    .from("processing_jobs")
+    .update({ retry_of: jobId })
+    .eq("id", newJobId);
+
   return Response.json({ jobId: newJobId });
 }
