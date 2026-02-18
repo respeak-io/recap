@@ -8,10 +8,10 @@ export default async function DocsIndexPage({
   searchParams,
 }: {
   params: Promise<{ projectSlug: string }>;
-  searchParams: Promise<{ audience?: string; lang?: string }>;
+  searchParams: Promise<{ lang?: string }>;
 }) {
   const { projectSlug } = await params;
-  const { audience = "developers", lang = "en" } = await searchParams;
+  const { lang = "en" } = await searchParams;
   const supabase = await createClient();
 
   const { data: project } = await supabase
@@ -25,9 +25,8 @@ export default async function DocsIndexPage({
 
   const { data: articles } = await supabase
     .from("articles")
-    .select("id, title, slug, audience, chapter_id")
+    .select("id, title, slug, chapter_id")
     .eq("project_id", project.id)
-    .eq("audience", audience)
     .eq("language", lang)
     .eq("status", "published")
     .order("order");
@@ -43,7 +42,7 @@ export default async function DocsIndexPage({
           {articles.map((article) => (
             <Link
               key={article.id}
-              href={`/${projectSlug}/${article.slug}?audience=${audience}${lang !== "en" ? `&lang=${lang}` : ""}`}
+              href={`/${projectSlug}/${article.slug}${lang !== "en" ? `?lang=${lang}` : ""}`}
             >
               <Card className="hover:border-primary transition-colors">
                 <CardHeader className="py-3">
@@ -55,7 +54,7 @@ export default async function DocsIndexPage({
         </div>
       ) : (
         <p className="text-muted-foreground">
-          No published articles yet for this audience.
+          No published articles yet.
         </p>
       )}
     </div>

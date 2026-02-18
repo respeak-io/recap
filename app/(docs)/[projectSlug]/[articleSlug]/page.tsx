@@ -11,10 +11,10 @@ export default async function ArticlePage({
   searchParams,
 }: {
   params: Promise<{ projectSlug: string; articleSlug: string }>;
-  searchParams: Promise<{ audience?: string; lang?: string }>;
+  searchParams: Promise<{ lang?: string }>;
 }) {
   const { projectSlug, articleSlug } = await params;
-  const { audience = "developers", lang = "en" } = await searchParams;
+  const { lang = "en" } = await searchParams;
   const supabase = await createClient();
 
   const { data: article } = await supabase
@@ -22,7 +22,6 @@ export default async function ArticlePage({
     .select("*, videos(*), projects!inner(*), chapters(title)")
     .eq("projects.slug", projectSlug)
     .eq("slug", articleSlug)
-    .eq("audience", audience)
     .eq("language", lang)
     .eq("status", "published")
     .single();
@@ -60,7 +59,6 @@ export default async function ArticlePage({
         projectId={article.project_id}
         articleSlug={articleSlug}
         articleId={article.id}
-        audience={audience}
         language={lang}
       />
     </div>
