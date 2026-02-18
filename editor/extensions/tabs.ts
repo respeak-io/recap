@@ -1,4 +1,6 @@
 import { Node, mergeAttributes } from "@tiptap/core";
+import { ReactNodeViewRenderer } from "@tiptap/react";
+import { TabNodeView } from "./tab-node-view";
 
 declare module "@tiptap/core" {
   interface Commands<ReturnType> {
@@ -60,12 +62,15 @@ export const Tab = Node.create({
     return [{ tag: 'div[data-type="tab"]' }];
   },
 
-  renderHTML({ node, HTMLAttributes }) {
+  renderHTML({ HTMLAttributes }) {
     return [
       "div",
       mergeAttributes(HTMLAttributes, { "data-type": "tab" }),
-      ["p", { contenteditable: "false", class: "text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 select-none" }, node.attrs.title],
-      ["div", {}, 0],
+      0,
     ];
+  },
+
+  addNodeView() {
+    return ReactNodeViewRenderer(TabNodeView);
   },
 });
