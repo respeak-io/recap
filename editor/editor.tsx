@@ -1,6 +1,7 @@
 "use client";
 
 import { useEditor, EditorContent } from "@tiptap/react";
+import { BubbleMenu } from "@tiptap/react/menus";
 import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
 import { Table, TableRow, TableCell, TableHeader } from "@tiptap/extension-table";
@@ -11,6 +12,8 @@ import { TimestampLink } from "./extensions/timestamp-link";
 import { Callout } from "./extensions/callout";
 import { SlashCommand } from "./extensions/slash-command";
 import { slashCommandSuggestion } from "./slash-menu";
+import { BubbleMenuContent } from "./bubble-menu";
+import Link from "@tiptap/extension-link";
 import { Toolbar } from "./toolbar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
@@ -39,6 +42,7 @@ export function Editor({ content, onUpdate, onTimestampClick }: EditorProps) {
       Placeholder.configure({ placeholder: "Start writing..." }),
       TimestampLink.configure({ onTimestampClick }),
       Callout,
+      Link.configure({ openOnClick: false }),
       SlashCommand.configure({
         suggestion: slashCommandSuggestion(),
       }),
@@ -59,6 +63,17 @@ export function Editor({ content, onUpdate, onTimestampClick }: EditorProps) {
           editor={editor}
           className="prose prose-sm max-w-none p-4 min-h-[400px] focus-within:outline-none [&_.ProseMirror]:outline-none"
         />
+        <BubbleMenu
+          editor={editor}
+          shouldShow={({ editor, state }) => {
+            const { from, to } = state.selection;
+            if (from === to) return false;
+            if (editor.isActive("codeBlock")) return false;
+            return true;
+          }}
+        >
+          <BubbleMenuContent editor={editor} />
+        </BubbleMenu>
       </div>
     </TooltipProvider>
   );
