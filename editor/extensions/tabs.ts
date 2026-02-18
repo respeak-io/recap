@@ -1,6 +1,6 @@
 import { Node, mergeAttributes } from "@tiptap/core";
 import { ReactNodeViewRenderer } from "@tiptap/react";
-import { TabNodeView } from "./tab-node-view";
+import { TabNodeView, TabGroupNodeView } from "./tab-node-view";
 
 declare module "@tiptap/core" {
   interface Commands<ReturnType> {
@@ -44,6 +44,10 @@ export const TabGroup = Node.create({
           });
         },
     };
+  },
+
+  addNodeView() {
+    return ReactNodeViewRenderer(TabGroupNodeView);
   },
 });
 

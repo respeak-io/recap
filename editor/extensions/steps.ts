@@ -1,4 +1,6 @@
 import { Node, mergeAttributes } from "@tiptap/core";
+import { ReactNodeViewRenderer } from "@tiptap/react";
+import { StepNodeView, StepsNodeView } from "./step-node-view";
 
 declare module "@tiptap/core" {
   interface Commands<ReturnType> {
@@ -21,11 +23,7 @@ export const Steps = Node.create({
   renderHTML({ HTMLAttributes }) {
     return [
       "div",
-      mergeAttributes(HTMLAttributes, {
-        "data-type": "steps",
-        class:
-          "my-4 ml-4 border-l-2 border-muted-foreground/20 pl-6 space-y-6",
-      }),
+      mergeAttributes(HTMLAttributes, { "data-type": "steps" }),
       0,
     ];
   },
@@ -47,6 +45,10 @@ export const Steps = Node.create({
         },
     };
   },
+
+  addNodeView() {
+    return ReactNodeViewRenderer(StepsNodeView);
+  },
 });
 
 export const Step = Node.create({
@@ -64,22 +66,15 @@ export const Step = Node.create({
     return [{ tag: 'div[data-type="step"]' }];
   },
 
-  renderHTML({ node, HTMLAttributes }) {
+  renderHTML({ HTMLAttributes }) {
     return [
       "div",
-      mergeAttributes(HTMLAttributes, {
-        "data-type": "step",
-        class: "relative",
-      }),
-      [
-        "p",
-        {
-          contenteditable: "false",
-          class: "font-semibold text-sm text-foreground mb-1",
-        },
-        node.attrs.title,
-      ],
-      ["div", { class: "step-content" }, 0],
+      mergeAttributes(HTMLAttributes, { "data-type": "step" }),
+      0,
     ];
+  },
+
+  addNodeView() {
+    return ReactNodeViewRenderer(StepNodeView);
   },
 });

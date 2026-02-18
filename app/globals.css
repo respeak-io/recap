@@ -191,31 +191,45 @@
 }
 
 /* Accordion/Details in editor */
-.ProseMirror details {
+.ProseMirror div[data-type="details"] {
   border: 1px solid var(--border);
   border-radius: 0.5rem;
-  padding: 0.75rem 1rem;
   margin: 0.75rem 0;
+  overflow: hidden;
 }
-.ProseMirror details summary {
-  cursor: pointer;
-  font-weight: 600;
-  list-style: none;
+.ProseMirror div[data-type="details"] > button {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  cursor: pointer;
+  background: none;
+  border: none;
+  color: var(--muted-foreground);
+  position: absolute;
+  left: 0.5rem;
+  top: 0.6rem;
+  z-index: 1;
 }
-.ProseMirror details summary::before {
+.ProseMirror div[data-type="details"] > button::after {
   content: "▶";
   font-size: 0.65em;
   transition: transform 0.15s;
 }
-.ProseMirror details[open] summary::before {
+.ProseMirror div[data-type="details"].is-open > button::after {
   transform: rotate(90deg);
 }
-.ProseMirror details[open] > :not(summary) {
-  margin-top: 0.5rem;
-  padding-left: 1.25rem;
+.ProseMirror div[data-type="detailsSummary"] {
+  font-weight: 600;
+  padding: 0.6rem 0.75rem 0.6rem 2rem;
+  position: relative;
+}
+.ProseMirror div[data-type="detailsContent"] {
+  padding: 0 0.75rem 0.75rem 2rem;
+}
+.ProseMirror div[data-type="detailsContent"][hidden] {
+  display: none;
 }
 
 /* Tab group in editor */
@@ -239,4 +253,37 @@
   letter-spacing: 0.05em;
   color: var(--muted-foreground);
   margin-bottom: 0.25rem;
+}
+
+/* Steps in editor */
+.ProseMirror div[data-type="steps"] {
+  margin: 0.75rem 0;
+  margin-left: 1rem;
+  border-left: 2px solid var(--border);
+  padding-left: 1.5rem;
+}
+.ProseMirror div[data-type="step"] {
+  padding: 0.5rem 0;
+  position: relative;
+}
+.ProseMirror div[data-type="step"]::before {
+  content: counter(step-counter);
+  counter-increment: step-counter;
+  position: absolute;
+  left: -2.45rem;
+  top: 0.5rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  background: var(--background);
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--muted-foreground);
+}
+.ProseMirror div[data-type="steps"] {
+  counter-reset: step-counter;
 }
