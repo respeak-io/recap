@@ -6,7 +6,7 @@ export async function generateLlmsTxt(projectSlug: string) {
   const { data: project } = await supabase
     .from("projects")
     .select(
-      "*, chapters(*, articles(id, title, slug, audience, language, status, content_text))"
+      "*, chapters(*, articles(id, title, slug, language, status, content_text))"
     )
     .eq("slug", projectSlug)
     .eq("is_public", true)
@@ -15,10 +15,10 @@ export async function generateLlmsTxt(projectSlug: string) {
   if (!project) return null;
 
   const chapters = project.chapters
-    .map((ch: { title: string; articles: { audience: string; language: string; status: string; title: string; slug: string; content_text: string }[] }) => ({
+    .map((ch: { title: string; articles: { language: string; status: string; title: string; slug: string; content_text: string }[] }) => ({
       ...ch,
       articles: ch.articles.filter(
-        (a) => a.audience === "ai-agents" && a.language === "en" && a.status === "published"
+        (a) => a.language === "en" && a.status === "published"
       ),
     }))
     .filter((ch: { articles: unknown[] }) => ch.articles.length > 0);
@@ -33,7 +33,7 @@ export async function generateLlmsTxt(projectSlug: string) {
   for (const chapter of chapters) {
     lines.push(`## ${chapter.title}`);
     for (const article of chapter.articles) {
-      const url = `/${projectSlug}/${article.slug}?audience=ai-agents`;
+      const url = `/${projectSlug}/${article.slug}`;
       lines.push(
         `- [${article.title}](${url}): ${article.content_text.slice(0, 120)}`
       );
@@ -50,7 +50,7 @@ export async function generateLlmsFullTxt(projectSlug: string) {
   const { data: project } = await supabase
     .from("projects")
     .select(
-      "*, chapters(*, articles(id, title, slug, audience, language, status, content_text))"
+      "*, chapters(*, articles(id, title, slug, language, status, content_text))"
     )
     .eq("slug", projectSlug)
     .eq("is_public", true)
@@ -59,10 +59,10 @@ export async function generateLlmsFullTxt(projectSlug: string) {
   if (!project) return null;
 
   const chapters = project.chapters
-    .map((ch: { title: string; articles: { audience: string; language: string; status: string; title: string; content_text: string }[] }) => ({
+    .map((ch: { title: string; articles: { language: string; status: string; title: string; content_text: string }[] }) => ({
       ...ch,
       articles: ch.articles.filter(
-        (a) => a.audience === "ai-agents" && a.language === "en" && a.status === "published"
+        (a) => a.language === "en" && a.status === "published"
       ),
     }))
     .filter((ch: { articles: unknown[] }) => ch.articles.length > 0);
