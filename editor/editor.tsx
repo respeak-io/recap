@@ -9,6 +9,8 @@ import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
 import { common, createLowlight } from "lowlight";
 import { TimestampLink } from "./extensions/timestamp-link";
 import { Callout } from "./extensions/callout";
+import { SlashCommand } from "./extensions/slash-command";
+import { slashCommandSuggestion } from "./slash-menu";
 import { Toolbar } from "./toolbar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
@@ -37,6 +39,9 @@ export function Editor({ content, onUpdate, onTimestampClick }: EditorProps) {
       Placeholder.configure({ placeholder: "Start writing..." }),
       TimestampLink.configure({ onTimestampClick }),
       Callout,
+      SlashCommand.configure({
+        suggestion: slashCommandSuggestion(),
+      }),
     ],
     content,
     onUpdate: ({ editor }) => {
