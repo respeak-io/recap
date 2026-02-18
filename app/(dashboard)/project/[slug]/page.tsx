@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { FileText, Video, Globe, Upload, ExternalLink, BarChart3 } from "lucide-react";
 import Link from "next/link";
+import { getRecentJobs } from "@/lib/queries/processing-jobs";
+import { ActiveJobs } from "@/components/dashboard/active-jobs";
 import { notFound } from "next/navigation";
 
 export default async function ProjectOverviewPage({
@@ -54,6 +56,7 @@ export default async function ProjectOverviewPage({
   const publishedCount = allArticles.filter((a) => a.status === "published").length;
   const draftCount = allArticles.filter((a) => a.status === "draft").length;
   const recentArticles = Array.from(articleMap.values()).slice(0, 5);
+  const recentJobs = await getRecentJobs(project.id);
 
   return (
     <>
@@ -103,6 +106,10 @@ export default async function ProjectOverviewPage({
             </CardContent>
           </Card>
         </div>
+
+        {recentJobs.length > 0 && (
+          <ActiveJobs projectId={project.id} initialJobs={recentJobs} />
+        )}
 
         <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
           {/* Recent articles */}
