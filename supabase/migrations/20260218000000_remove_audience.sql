@@ -16,6 +16,7 @@ ALTER TABLE page_views DROP COLUMN audience;
 ALTER TABLE search_events DROP COLUMN audience;
 
 -- Drop and recreate analytics_top_articles without audience
+DROP FUNCTION IF EXISTS analytics_top_articles(uuid, timestamptz, integer);
 CREATE OR REPLACE FUNCTION analytics_top_articles(
   p_project_id uuid,
   p_since timestamptz,
