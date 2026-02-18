@@ -14,6 +14,7 @@ import { SlashCommand } from "./extensions/slash-command";
 import { slashCommandSuggestion } from "./slash-menu";
 import { BubbleMenuContent } from "./bubble-menu";
 import Link from "@tiptap/extension-link";
+import DragHandle from "@tiptap/extension-drag-handle";
 import { Toolbar } from "./toolbar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
@@ -43,6 +44,14 @@ export function Editor({ content, onUpdate, onTimestampClick }: EditorProps) {
       TimestampLink.configure({ onTimestampClick }),
       Callout,
       Link.configure({ openOnClick: false }),
+      DragHandle.configure({
+        render() {
+          const el = document.createElement("div");
+          el.classList.add("custom-drag-handle");
+          el.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/></svg>`;
+          return el;
+        },
+      }),
       SlashCommand.configure({
         suggestion: slashCommandSuggestion(),
       }),
