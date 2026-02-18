@@ -8,9 +8,8 @@ import slugify from "slugify";
 
 export async function POST(request: Request) {
   const supabase = await createClient();
-  const { videoId, audiences, languages = ["en"] } = await request.json();
+  const { videoId, languages = ["en"] } = await request.json();
 
-  // Always generate in English (most reliable for AI), then translate to all non-English languages
   const targetLanguages: string[] = languages.filter((l: string) => l !== "en");
 
   const { data: video } = await supabase
@@ -60,7 +59,6 @@ export async function POST(request: Request) {
         );
         await supabase.from("video_segments").insert(segmentRows);
 
-        // Generate VTT from segments
         const vtt = segmentsToVtt(
           segments.map((s: Record<string, unknown>) => ({
             start_time: s.start_time as number,
@@ -76,14 +74,24 @@ export async function POST(request: Request) {
           .update({ vtt_content: vtt, vtt_languages: vttLanguages })
           .eq("id", videoId);
 
-        // Calculate progress allocation
-        const totalAudienceSteps = audiences.length * (1 + targetLanguages.length);
-        const progressPerStep = 0.6 / Math.max(totalAudienceSteps, 1);
-        let currentProgress = 0.25;
+        // Generate docs
+        send({
+          step: "generating_docs",
+          message: "Generating documentation...",
+          progress: 0.3,
+        });
 
-        // Track created articles for translation
+        const prompt = getDocGenerationPrompt(segments);
+
+        const response = await getAI().models.generateContent({
+          model: "gemini-2.5-flash",
+          contents: [{ role: "user", parts: [{ text: prompt }] }],
+          config: { responseMimeType: "application/json" },
+        });
+
+        const doc = JSON.parse(response.text!);
+
         const createdArticles: {
-          audience: string;
           chapterId: string | null;
           title: string;
           slug: string;
@@ -91,85 +99,57 @@ export async function POST(request: Request) {
           contentText: string;
         }[] = [];
 
-        // Generate docs for each audience in primary language
-        for (const audience of audiences) {
-          send({
-            step: "generating_docs",
-            message: `Generating ${audience} documentation...`,
-            audience,
-            progress: currentProgress,
+        for (const chapter of doc.chapters) {
+          const chapterSlug = slugify(chapter.title, { lower: true, strict: true });
+
+          const { data: chapterRow } = await supabase
+            .from("chapters")
+            .upsert(
+              {
+                project_id: video.project_id,
+                title: chapter.title,
+                slug: chapterSlug,
+              },
+              { onConflict: "project_id,slug" }
+            )
+            .select()
+            .single();
+
+          const contentText = chapter.sections
+            .map(
+              (s: { heading: string; content: string }) =>
+                `${s.heading}\n${s.content}`
+            )
+            .join("\n\n");
+
+          const articleSlug = slugify(chapter.title, { lower: true, strict: true });
+          const contentJson = markdownToTiptap(chapter.sections);
+
+          await supabase.from("articles").insert({
+            project_id: video.project_id,
+            video_id: videoId,
+            chapter_id: chapterRow?.id,
+            title: chapter.title,
+            slug: articleSlug,
+            language: "en",
+            content_json: contentJson,
+            content_text: contentText,
+            status: "draft",
           });
 
-          const prompt = getDocGenerationPrompt(audience, segments);
-
-          const response = await getAI().models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: [{ role: "user", parts: [{ text: prompt }] }],
-            config: { responseMimeType: "application/json" },
+          createdArticles.push({
+            chapterId: chapterRow?.id ?? null,
+            title: chapter.title,
+            slug: articleSlug,
+            contentJson,
+            contentText,
           });
-
-          const doc = JSON.parse(response.text!);
-
-          for (const chapter of doc.chapters) {
-            const chapterSlug = slugify(chapter.title, {
-              lower: true,
-              strict: true,
-            });
-
-            const { data: chapterRow } = await supabase
-              .from("chapters")
-              .upsert(
-                {
-                  project_id: video.project_id,
-                  title: chapter.title,
-                  slug: chapterSlug,
-                },
-                { onConflict: "project_id,slug" }
-              )
-              .select()
-              .single();
-
-            const contentText = chapter.sections
-              .map(
-                (s: { heading: string; content: string }) =>
-                  `${s.heading}\n${s.content}`
-              )
-              .join("\n\n");
-
-            const articleSlug = slugify(chapter.title, {
-              lower: true,
-              strict: true,
-            });
-
-            const contentJson = markdownToTiptap(chapter.sections);
-
-            await supabase.from("articles").insert({
-              project_id: video.project_id,
-              video_id: videoId,
-              chapter_id: chapterRow?.id,
-              title: chapter.title,
-              slug: articleSlug,
-              audience,
-              language: "en",
-              content_json: contentJson,
-              content_text: contentText,
-              status: "draft",
-            });
-
-            createdArticles.push({
-              audience,
-              chapterId: chapterRow?.id ?? null,
-              title: chapter.title,
-              slug: articleSlug,
-              contentJson,
-              contentText,
-            });
-          }
-
-          currentProgress += progressPerStep;
         }
 
         // Translate to all non-English target languages
+        const progressPerLang = 0.4 / Math.max(targetLanguages.length, 1);
+        let currentProgress = 0.55;
+
         for (const lang of targetLanguages) {
           send({
             step: "translating",
@@ -178,7 +158,6 @@ export async function POST(request: Request) {
             progress: currentProgress,
           });
 
-          // Translate VTT
           try {
             const translatedVtt = await translateVtt(vtt, lang);
             vttLanguages[lang] = translatedVtt;
@@ -186,7 +165,6 @@ export async function POST(request: Request) {
             console.error(`VTT translation to ${lang} failed:`, e);
           }
 
-          // Translate each article
           for (const article of createdArticles) {
             try {
               const { json: translatedJson, text: translatedText, title: translatedTitle } =
@@ -203,7 +181,6 @@ export async function POST(request: Request) {
                 chapter_id: article.chapterId,
                 title: translatedTitle ?? article.title,
                 slug: article.slug,
-                audience: article.audience,
                 language: lang,
                 content_json: translatedJson,
                 content_text: translatedText,
@@ -217,10 +194,9 @@ export async function POST(request: Request) {
             }
           }
 
-          currentProgress += progressPerStep * audiences.length;
+          currentProgress += progressPerLang;
         }
 
-        // Save all VTT translations
         await supabase
           .from("videos")
           .update({ vtt_languages: vttLanguages })
