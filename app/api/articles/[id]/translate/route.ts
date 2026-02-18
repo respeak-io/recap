@@ -26,7 +26,6 @@ export async function POST(
     .select("*")
     .eq("project_id", article.project_id)
     .eq("slug", article.slug)
-    .eq("audience", article.audience)
     .eq("language", "en")
     .single();
 

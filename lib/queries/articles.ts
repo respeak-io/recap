@@ -2,8 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 
 export async function getArticle(
   projectSlug: string,
-  articleSlug: string,
-  audience: string
+  articleSlug: string
 ) {
   const supabase = await createClient();
   const { data } = await supabase
@@ -11,7 +10,6 @@ export async function getArticle(
     .select("*, projects!inner(*), videos(*)")
     .eq("projects.slug", projectSlug)
     .eq("slug", articleSlug)
-    .eq("audience", audience)
     .single();
 
   return data;
