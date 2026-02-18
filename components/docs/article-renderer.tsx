@@ -166,6 +166,45 @@ function renderNode(
       );
     case "hardBreak":
       return <br key={index} />;
+    case "details":
+      return (
+        <details key={index} className="my-4 rounded-lg border p-4 group">
+          {(node.content ?? []).map((child: TiptapNode, i: number) =>
+            renderNode(child, i, onTimestampClick)
+          )}
+        </details>
+      );
+    case "detailsSummary":
+      return (
+        <summary
+          key={index}
+          className="cursor-pointer font-medium list-none flex items-center gap-2"
+        >
+          <svg
+            className="size-4 shrink-0 transition-transform group-open:rotate-90"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <path d="m9 18 6-6-6-6" />
+          </svg>
+          {(node.content ?? []).flatMap((child: TiptapNode) =>
+            (child.content ?? []).map((inline: TiptapNode) =>
+              renderInline(inline, onTimestampClick)
+            )
+          )}
+        </summary>
+      );
+    case "detailsContent":
+      return (
+        <div key={index} className="mt-2 pl-6">
+          {(node.content ?? []).map((child: TiptapNode, i: number) =>
+            renderNode(child, i, onTimestampClick)
+          )}
+        </div>
+      );
     case "callout": {
       const type = (node.attrs?.type as string) ?? "info";
       const styles: Record<string, string> = {

@@ -23,6 +23,7 @@ import {
   Lightbulb,
   Image,
   Table,
+  ChevronRight,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -150,6 +151,19 @@ function getDefaultItems(): SlashCommandItem[] {
           .focus()
           .deleteRange(range)
           .setCallout("tip")
+          .run();
+      },
+    },
+    {
+      title: "Accordion",
+      description: "Collapsible content section",
+      icon: ChevronRight,
+      command: ({ editor, range }) => {
+        editor
+          .chain()
+          .focus()
+          .deleteRange(range)
+          .setDetails()
           .run();
       },
     },

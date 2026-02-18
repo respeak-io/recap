@@ -14,6 +14,7 @@ import { SlashCommand } from "./extensions/slash-command";
 import { slashCommandSuggestion } from "./slash-menu";
 import { BubbleMenuContent } from "./bubble-menu";
 import Link from "@tiptap/extension-link";
+import { Details, DetailsSummary, DetailsContent } from "@tiptap/extension-details";
 import { Toolbar } from "./toolbar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
@@ -43,6 +44,9 @@ export function Editor({ content, onUpdate, onTimestampClick }: EditorProps) {
       TimestampLink.configure({ onTimestampClick }),
       Callout,
       Link.configure({ openOnClick: false }),
+      Details,
+      DetailsSummary,
+      DetailsContent,
       SlashCommand.configure({
         suggestion: slashCommandSuggestion(),
       }),
