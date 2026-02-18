@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
   const body = await request.json();
-  const { type, projectId, articleSlug, articleId, audience, language, query, resultsCount } = body;
+  const { type, projectId, articleSlug, articleId, language, query, resultsCount } = body;
 
   if (!type || !projectId) {
     return NextResponse.json({ error: "Missing type or projectId" }, { status: 400 });
@@ -22,7 +22,6 @@ export async function POST(request: Request) {
       project_id: projectId,
       article_id: articleId ?? null,
       article_slug: articleSlug,
-      audience: audience ?? null,
       language: language ?? null,
       referrer,
     });
@@ -37,7 +36,6 @@ export async function POST(request: Request) {
       project_id: projectId,
       query,
       results_count: resultsCount ?? 0,
-      audience: audience ?? null,
       language: language ?? null,
     });
 

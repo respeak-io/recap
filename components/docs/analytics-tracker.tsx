@@ -6,7 +6,6 @@ interface AnalyticsTrackerProps {
   projectId: string;
   articleSlug: string;
   articleId: string;
-  audience: string;
   language: string;
 }
 
@@ -14,7 +13,6 @@ export function AnalyticsTracker({
   projectId,
   articleSlug,
   articleId,
-  audience,
   language,
 }: AnalyticsTrackerProps) {
   const tracked = useRef(false);
@@ -31,13 +29,12 @@ export function AnalyticsTracker({
         projectId,
         articleSlug,
         articleId,
-        audience,
         language,
       }),
     }).catch(() => {
       // Silently ignore tracking failures
     });
-  }, [projectId, articleSlug, articleId, audience, language]);
+  }, [projectId, articleSlug, articleId, language]);
 
   return null;
 }
