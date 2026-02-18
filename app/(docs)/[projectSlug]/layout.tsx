@@ -17,7 +17,7 @@ export default async function DocsLayout({
   const { data: project } = await supabase
     .from("projects")
     .select(
-      "*, chapters(id, title, slug, order, articles(id, title, slug, audience, language, status))"
+      "*, chapters(id, title, slug, order, articles(id, title, slug, language, status))"
     )
     .eq("slug", projectSlug)
     .eq("is_public", true)
@@ -45,14 +45,13 @@ export default async function DocsLayout({
     (a: { order: number }, b: { order: number }) => a.order - b.order
   );
 
-  // Only consider published articles for audience/language options
-  type ArticleInfo = { audience: string; language: string; status: string };
+  // Only consider published articles for language options
+  type ArticleInfo = { language: string; status: string };
   const publishedArticles: ArticleInfo[] = chapters.flatMap(
     (ch: { articles: ArticleInfo[] }) =>
       ch.articles.filter((a) => a.status === "published")
   );
 
-  const audiences = [...new Set(publishedArticles.map((a) => a.audience))];
   const languages = [...new Set(publishedArticles.map((a) => a.language))];
 
   return (
@@ -68,7 +67,6 @@ export default async function DocsLayout({
           projectName={project.name}
           projectSlug={projectSlug}
           chapters={chapters}
-          audiences={audiences}
           languages={languages}
           logoUrl={logoUrl}
         />

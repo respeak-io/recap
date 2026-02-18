@@ -27,11 +27,6 @@ const LANGUAGE_CONFIG: Record<string, { label: string; flag: string }> = {
   pt: { label: "Portugues", flag: "\u{1F1E7}\u{1F1F7}" },
 };
 
-const AUDIENCE_LABELS: Record<string, string> = {
-  developers: "Developer Docs",
-  "end-users": "User Guide",
-};
-
 interface Chapter {
   id: string;
   title: string;
@@ -40,7 +35,6 @@ interface Chapter {
     id: string;
     title: string;
     slug: string;
-    audience: string;
     language: string;
     status: string;
   }[];
@@ -51,7 +45,6 @@ interface SidebarProps {
   projectName: string;
   projectSlug: string;
   chapters: Chapter[];
-  audiences: string[];
   languages: string[];
   logoUrl?: string | null;
 }
@@ -61,13 +54,11 @@ function SidebarContent({
   projectName,
   projectSlug,
   chapters,
-  audiences,
   languages,
   logoUrl,
 }: SidebarProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const currentAudience = searchParams.get("audience") ?? "developers";
   const currentLang = searchParams.get("lang") ?? "en";
 
   const filteredChapters = chapters
@@ -75,23 +66,18 @@ function SidebarContent({
       ...ch,
       articles: ch.articles.filter(
         (a) =>
-          a.audience === currentAudience &&
           a.language === currentLang &&
           a.status === "published"
       ),
     }))
     .filter((ch) => ch.articles.length > 0);
 
-  const displayAudiences = audiences.filter((a) => a !== "ai-agents");
-
   function buildQuery(overrides: Record<string, string>) {
     const params: Record<string, string> = {
-      audience: currentAudience,
       lang: currentLang,
       ...overrides,
     };
     const parts: string[] = [];
-    if (params.audience !== "developers") parts.push(`audience=${params.audience}`);
     if (params.lang !== "en") parts.push(`lang=${params.lang}`);
     return parts.length > 0 ? `?${parts.join("&")}` : "";
   }
@@ -108,7 +94,6 @@ function SidebarContent({
           (a) =>
             a.slug === articleSlug &&
             a.language === lang &&
-            a.audience === currentAudience &&
             a.status === "published"
         )
       );
@@ -132,32 +117,6 @@ function SidebarContent({
       </Link>
 
       <SearchDialog projectId={projectId} projectSlug={projectSlug} />
-
-      {/* Audience switcher — segmented control or static label */}
-      {displayAudiences.length > 1 ? (
-        <div className="flex rounded-lg border p-0.5 bg-muted">
-          {displayAudiences.map((a) => (
-            <Link
-              key={a}
-              href={`/${projectSlug}${buildQuery({ audience: a })}`}
-              className={cn(
-                "flex-1 rounded-md px-3 py-1.5 text-center text-xs font-medium transition-all",
-                currentAudience === a
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              {AUDIENCE_LABELS[a] ?? a}
-            </Link>
-          ))}
-        </div>
-      ) : displayAudiences.length === 1 ? (
-        <div className="flex rounded-lg border p-0.5 bg-muted">
-          <div className="flex-1 rounded-md px-3 py-1.5 text-center text-xs font-medium bg-background text-foreground shadow-sm">
-            {AUDIENCE_LABELS[displayAudiences[0]] ?? displayAudiences[0]}
-          </div>
-        </div>
-      ) : null}
 
       {/* Language selector — dropdown with flags */}
       {languages.length > 1 && (
