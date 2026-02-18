@@ -15,6 +15,7 @@ import { slashCommandSuggestion } from "./slash-menu";
 import { BubbleMenuContent } from "./bubble-menu";
 import Link from "@tiptap/extension-link";
 import { Details, DetailsSummary, DetailsContent } from "@tiptap/extension-details";
+import { TabGroup, Tab } from "./extensions/tabs";
 import { Toolbar } from "./toolbar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
@@ -47,6 +48,8 @@ export function Editor({ content, onUpdate, onTimestampClick }: EditorProps) {
       Details,
       DetailsSummary,
       DetailsContent,
+      TabGroup,
+      Tab,
       SlashCommand.configure({
         suggestion: slashCommandSuggestion(),
       }),

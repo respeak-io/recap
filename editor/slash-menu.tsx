@@ -24,6 +24,7 @@ import {
   Image,
   Table,
   ChevronRight,
+  Columns,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -164,6 +165,19 @@ function getDefaultItems(): SlashCommandItem[] {
           .focus()
           .deleteRange(range)
           .setDetails()
+          .run();
+      },
+    },
+    {
+      title: "Tabs",
+      description: "Tabbed content sections",
+      icon: Columns,
+      command: ({ editor, range }) => {
+        editor
+          .chain()
+          .focus()
+          .deleteRange(range)
+          .insertTabs(["Tab 1", "Tab 2"])
           .run();
       },
     },

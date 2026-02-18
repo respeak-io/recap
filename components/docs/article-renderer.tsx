@@ -1,6 +1,7 @@
 "use client";
 
 import slugify from "slugify";
+import { TabsRenderer } from "./tabs-renderer";
 import { common, createLowlight } from "lowlight";
 import { toHtml } from "hast-util-to-html";
 
@@ -205,6 +206,25 @@ function renderNode(
           )}
         </div>
       );
+    case "tabGroup": {
+      const tabs = (node.content ?? []).map((tab: TiptapNode) => ({
+        title: (tab.attrs?.title as string) ?? "Tab",
+        content: tab.content ?? [],
+      }));
+      return (
+        <TabsRenderer
+          key={index}
+          tabs={tabs}
+          renderContent={(nodes, prefix) =>
+            nodes.map((n: TiptapNode, i: number) =>
+              renderNode(n, `${prefix}-${i}` as unknown as number, onTimestampClick)
+            )
+          }
+        />
+      );
+    }
+    case "tab":
+      return null;
     case "callout": {
       const type = (node.attrs?.type as string) ?? "info";
       const styles: Record<string, string> = {
