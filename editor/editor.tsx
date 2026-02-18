@@ -16,6 +16,7 @@ import { BubbleMenuContent } from "./bubble-menu";
 import Link from "@tiptap/extension-link";
 import { Details, DetailsSummary, DetailsContent } from "@tiptap/extension-details";
 import { TabGroup, Tab } from "./extensions/tabs";
+import { Steps, Step } from "./extensions/steps";
 import { Toolbar } from "./toolbar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
@@ -50,6 +51,8 @@ export function Editor({ content, onUpdate, onTimestampClick }: EditorProps) {
       DetailsContent,
       TabGroup,
       Tab,
+      Steps,
+      Step,
       SlashCommand.configure({
         suggestion: slashCommandSuggestion(),
       }),

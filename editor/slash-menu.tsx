@@ -25,6 +25,7 @@ import {
   Table,
   ChevronRight,
   Columns,
+  ListChecks,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -165,6 +166,19 @@ function getDefaultItems(): SlashCommandItem[] {
           .focus()
           .deleteRange(range)
           .setDetails()
+          .run();
+      },
+    },
+    {
+      title: "Steps",
+      description: "Numbered step-by-step guide",
+      icon: ListChecks,
+      command: ({ editor, range }) => {
+        editor
+          .chain()
+          .focus()
+          .deleteRange(range)
+          .insertSteps(3)
           .run();
       },
     },

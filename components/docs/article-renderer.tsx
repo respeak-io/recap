@@ -225,6 +225,31 @@ function renderNode(
     }
     case "tab":
       return null;
+    case "steps":
+      return (
+        <div
+          key={index}
+          className="my-6 ml-4 border-l-2 border-muted-foreground/20 pl-6 space-y-6"
+        >
+          {(node.content ?? []).map((step: TiptapNode, i: number) => (
+            <div key={i} className="relative">
+              <div className="absolute -left-[33px] flex size-6 items-center justify-center rounded-full border-2 border-muted-foreground/20 bg-background text-xs font-bold text-muted-foreground">
+                {i + 1}
+              </div>
+              <p className="font-semibold text-sm mb-1">
+                {(step.attrs?.title as string) ?? `Step ${i + 1}`}
+              </p>
+              <div>
+                {(step.content ?? []).map((child: TiptapNode, j: number) =>
+                  renderNode(child, j, onTimestampClick)
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    case "step":
+      return null;
     case "callout": {
       const type = (node.attrs?.type as string) ?? "info";
       const styles: Record<string, string> = {
