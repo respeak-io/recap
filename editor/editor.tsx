@@ -17,6 +17,7 @@ import Link from "@tiptap/extension-link";
 import { Details, DetailsSummary, DetailsContent } from "@tiptap/extension-details";
 import { TabGroup, Tab } from "./extensions/tabs";
 import { Steps, Step } from "./extensions/steps";
+import Typography from "@tiptap/extension-typography";
 import { Toolbar } from "./toolbar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
@@ -53,6 +54,7 @@ export function Editor({ content, onUpdate, onTimestampClick }: EditorProps) {
       Tab,
       Steps,
       Step,
+      Typography,
       SlashCommand.configure({
         suggestion: slashCommandSuggestion(),
       }),
