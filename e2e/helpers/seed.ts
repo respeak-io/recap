@@ -19,7 +19,6 @@ export const TEST_ARTICLES = {
   en: {
     title: "Installation Guide",
     slug: "installation-guide",
-    audience: "developers",
     language: "en",
     status: "published" as const,
     content_json: {
@@ -66,7 +65,6 @@ export const TEST_ARTICLES = {
   de: {
     title: "Installationsanleitung",
     slug: "installation-guide",
-    audience: "developers",
     language: "de",
     status: "published" as const,
     content_json: {
@@ -159,7 +157,6 @@ export async function seedTestData(supabase: SupabaseClient, userId: string) {
     chapter_id: chapter.id,
     title: TEST_ARTICLES.en.title,
     slug: TEST_ARTICLES.en.slug,
-    audience: TEST_ARTICLES.en.audience,
     language: TEST_ARTICLES.en.language,
     status: TEST_ARTICLES.en.status,
     content_json: TEST_ARTICLES.en.content_json,
@@ -177,7 +174,6 @@ export async function seedTestData(supabase: SupabaseClient, userId: string) {
     chapter_id: chapter.id,
     title: TEST_ARTICLES.de.title,
     slug: TEST_ARTICLES.de.slug,
-    audience: TEST_ARTICLES.de.audience,
     language: TEST_ARTICLES.de.language,
     status: TEST_ARTICLES.de.status,
     content_json: TEST_ARTICLES.de.content_json,

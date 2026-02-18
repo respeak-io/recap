@@ -1,10 +1,10 @@
 import { test, expect } from "@playwright/test";
 import { TEST_PROJECT, TEST_ARTICLES } from "./helpers/seed";
 
-const editorUrl = `/project/${TEST_PROJECT.slug}/article/${TEST_ARTICLES.en.slug}/edit?audience=${TEST_ARTICLES.en.audience}&lang=en`;
-const editorUrlDe = `/project/${TEST_PROJECT.slug}/article/${TEST_ARTICLES.de.slug}/edit?audience=${TEST_ARTICLES.de.audience}&lang=de`;
+const editorUrl = `/project/${TEST_PROJECT.slug}/article/${TEST_ARTICLES.en.slug}/edit?lang=en`;
+const editorUrlDe = `/project/${TEST_PROJECT.slug}/article/${TEST_ARTICLES.de.slug}/edit?lang=de`;
 
-test("editor loads with article title, audience badge, and action buttons", async ({
+test("editor loads with article title and action buttons", async ({
   page,
 }) => {
   await page.goto(editorUrl);
@@ -12,7 +12,6 @@ test("editor loads with article title, audience badge, and action buttons", asyn
   await expect(
     page.getByRole("heading", { name: TEST_ARTICLES.en.title })
   ).toBeVisible();
-  await expect(page.getByText(TEST_ARTICLES.en.audience)).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Save" })
   ).toBeVisible();
