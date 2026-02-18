@@ -1,27 +1,24 @@
 # Recap
 
-Record product videos, generate documentation for multiple audiences instantly.
+Record a product video, get documentation instantly.
 
-Recap is an open-source video-to-documentation platform. Upload a product video, select target audiences, and get polished documentation drafts in minutes. Edit in a rich text editor, publish to a Mintlify-style docs site.
-
-**Core value prop:** One recording session, multiple audience-tailored docs — for humans and AI agents alike.
+Recap is an open-source video-to-documentation platform. Upload a product video and get polished documentation drafts in minutes. Edit in a rich text editor, publish to a Mintlify-style docs site.
 
 ## How It Works
 
 1. **Record** a product video in any tool (Screen Studio, Loom, etc.)
-2. **Upload** the video to Recap and select target audiences
+2. **Upload** the video to Recap
 3. **AI processes** the video — extracts transcription, visual context, and structures it into segments
-4. **Generates docs** for each audience (developers, end-users, AI agents) with timestamp references back to the video
+4. **Generates docs** with timestamp references back to the video
 5. **Edit** in a rich text editor, then **publish** to your docs site
 
 ## Features
 
-- **Multi-audience generation** — Developer docs, user guides, and AI-optimized output from a single video
 - **Multi-language support** — Generate in English, translate to 7+ languages
 - **Rich text editor** — Tiptap-based with code blocks, tables, images, callouts, and video timestamp links
-- **Mintlify-style docs site** — Clean three-column layout with sidebar navigation, search, and audience/language switching
+- **Mintlify-style docs site** — Clean three-column layout with sidebar navigation, search, and language switching
 - **Corporate identity** — Custom logos, brand colors, fonts, and CSS overrides
-- **Analytics** — Page views, top articles, audience/language breakdowns, search query tracking
+- **Analytics** — Page views, top articles, language breakdowns, search query tracking
 - **Multi-tenant** — Organizations with roles (owner, editor, viewer), multiple projects per org
 - **llms.txt** — Auto-generated machine-readable docs for AI coding tools
 
