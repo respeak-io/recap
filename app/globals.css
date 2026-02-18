@@ -189,17 +189,3 @@
 .prose table {
   font-size: 0.875rem;
 }
-
-/* Drag handle */
-.custom-drag-handle {
-  cursor: grab;
-  color: hsl(var(--muted-foreground));
-  opacity: 0;
-  transition: opacity 0.15s;
-  padding: 2px;
-  border-radius: 4px;
-}
-.custom-drag-handle:hover {
-  background: hsl(var(--accent));
-  color: hsl(var(--foreground));
-}
