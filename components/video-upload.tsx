@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
-import { ProcessingStatus } from "./processing-status";
+import { JobProgress } from "./job-progress";
 import { Upload } from "lucide-react";
 
 const LANGUAGES = [
@@ -30,7 +30,7 @@ export function VideoUpload({ projectId }: { projectId: string }) {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const [processingVideoId, setProcessingVideoId] = useState<string | null>(null);
+  const [processingJobId, setProcessingJobId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const supabase = createClient();
@@ -76,8 +76,17 @@ export function VideoUpload({ projectId }: { projectId: string }) {
         .eq("id", videoId);
 
       setUploadProgress(100);
+
+      // Start async processing
+      const processRes = await fetch("/api/videos/process", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ videoId, languages }),
+      });
+      const { jobId } = await processRes.json();
+
       setUploading(false);
-      setProcessingVideoId(videoId);
+      setProcessingJobId(jobId);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");
       setUploading(false);
@@ -85,25 +94,28 @@ export function VideoUpload({ projectId }: { projectId: string }) {
   }
 
   function handleProcessingComplete() {
-    setProcessingVideoId(null);
+    setProcessingJobId(null);
     setTitle("");
     setFile(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
     router.refresh();
   }
 
-  if (processingVideoId) {
+  if (processingJobId) {
     return (
       <Card>
         <CardHeader>
           <CardTitle>Processing video</CardTitle>
         </CardHeader>
-        <CardContent>
-          <ProcessingStatus
-            videoId={processingVideoId}
-            languages={languages}
+        <CardContent className="space-y-4">
+          <JobProgress
+            jobId={processingJobId}
             onComplete={handleProcessingComplete}
           />
+          <p className="text-sm text-muted-foreground">
+            You can navigate away — processing continues in the background.
+            Check progress on the project overview.
+          </p>
         </CardContent>
       </Card>
     );
