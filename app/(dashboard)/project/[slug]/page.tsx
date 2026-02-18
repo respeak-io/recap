@@ -28,16 +28,16 @@ export default async function ProjectOverviewPage({
 
   const { data: articles } = await supabase
     .from("articles")
-    .select("id, title, slug, audience, language, status, created_at")
+    .select("id, title, slug, language, status, created_at")
     .eq("project_id", project.id)
     .order("created_at", { ascending: false });
 
   const allArticles = articles ?? [];
 
-  // Deduplicate for display: one row per (slug, audience), prefer English
+  // Deduplicate for display: one row per slug, prefer English
   const articleMap = new Map<string, typeof allArticles[number] & { languages: string[] }>();
   for (const a of allArticles) {
-    const key = `${a.slug}::${a.audience}`;
+    const key = a.slug;
     const existing = articleMap.get(key);
     if (existing) {
       existing.languages.push(a.language);
@@ -123,8 +123,8 @@ export default async function ProjectOverviewPage({
                 <div className="space-y-3">
                   {recentArticles.map((article) => (
                     <Link
-                      key={`${article.slug}::${article.audience}`}
-                      href={`/project/${slug}/article/${article.slug}/edit?audience=${article.audience}&lang=${article.language}`}
+                      key={article.slug}
+                      href={`/project/${slug}/article/${article.slug}/edit?lang=${article.language}`}
                       className="flex items-center justify-between rounded-md border p-3 hover:bg-accent transition-colors"
                     >
                       <div className="flex items-center gap-3 min-w-0">
@@ -135,7 +135,6 @@ export default async function ProjectOverviewPage({
                         {article.languages.map((l: string) => (
                           <Badge key={l} variant="outline" className="text-xs">{l}</Badge>
                         ))}
-                        <Badge variant="outline" className="text-xs">{article.audience}</Badge>
                         <Badge variant={article.status === "published" ? "default" : "secondary"} className="text-xs">
                           {article.status}
                         </Badge>

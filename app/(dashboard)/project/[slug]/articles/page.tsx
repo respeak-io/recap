@@ -30,14 +30,13 @@ export default async function ArticlesPage({
 
   const { data: articles } = await supabase
     .from("articles")
-    .select("id, title, slug, audience, language, status, order, chapter_id")
+    .select("id, title, slug, language, status, order, chapter_id")
     .eq("project_id", project.id)
     .order("order");
 
   const videos = await getProjectVideos(project.id);
 
   const allArticles = articles ?? [];
-  const audiences = [...new Set(allArticles.map((a) => a.audience))];
   const languages = [...new Set(allArticles.map((a) => a.language))];
 
   return (
@@ -53,7 +52,6 @@ export default async function ArticlesPage({
           projectSlug={slug}
           chapters={chapters ?? []}
           articles={allArticles}
-          audiences={audiences}
           languages={languages}
         />
         <Separator className="my-6" />

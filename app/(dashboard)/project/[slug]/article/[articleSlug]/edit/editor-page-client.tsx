@@ -24,7 +24,6 @@ interface ArticleData {
   id: string;
   title: string;
   slug: string;
-  audience: string;
   status: string;
   content_json: Record<string, unknown>;
   videos: { storage_path: string } | null;
@@ -140,7 +139,7 @@ export function EditorPageClient({
     }
   }
 
-  const publicUrl = `/${projectSlug}/${article.slug}?audience=${article.audience}`;
+  const publicUrl = `/${projectSlug}/${article.slug}`;
 
   return (
     <>
@@ -158,7 +157,7 @@ export function EditorPageClient({
           <TabsList>
             {siblingLanguages.map((lang) => (
               <TabsTrigger key={lang.language} value={lang.language} asChild>
-                <Link href={`/project/${projectSlug}/article/${article.slug}/edit?audience=${article.audience}&lang=${lang.language}`} className="flex items-center gap-1.5">
+                <Link href={`/project/${projectSlug}/article/${article.slug}/edit?lang=${lang.language}`} className="flex items-center gap-1.5">
                   <span className={cn("h-1.5 w-1.5 rounded-full",
                     languageStatuses[lang.id] === "published" ? "bg-green-500" : "bg-muted-foreground/40"
                   )} />
@@ -172,7 +171,6 @@ export function EditorPageClient({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <h1 className="text-xl font-bold">{article.title}</h1>
-          <Badge variant="outline">{article.audience}</Badge>
           <Badge variant={status === "published" ? "default" : "secondary"}>
             {status}
           </Badge>

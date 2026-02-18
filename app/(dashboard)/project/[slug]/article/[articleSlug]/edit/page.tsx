@@ -7,10 +7,10 @@ export default async function ArticleEditPage({
   searchParams,
 }: {
   params: Promise<{ slug: string; articleSlug: string }>;
-  searchParams: Promise<{ audience?: string; lang?: string }>;
+  searchParams: Promise<{ lang?: string }>;
 }) {
   const { slug, articleSlug } = await params;
-  const { audience = "developers", lang = "en" } = await searchParams;
+  const { lang = "en" } = await searchParams;
   const supabase = await createClient();
 
   const { data: article } = await supabase
@@ -18,7 +18,6 @@ export default async function ArticleEditPage({
     .select("*, projects!inner(*), videos(*)")
     .eq("projects.slug", slug)
     .eq("slug", articleSlug)
-    .eq("audience", audience)
     .eq("language", lang)
     .single();
 
@@ -29,8 +28,7 @@ export default async function ArticleEditPage({
     .from("articles")
     .select("id, language, status")
     .eq("project_id", article.project_id)
-    .eq("slug", articleSlug)
-    .eq("audience", audience);
+    .eq("slug", articleSlug);
 
   // Get signed URL for video if present
   let videoUrl: string | null = null;
@@ -47,7 +45,6 @@ export default async function ArticleEditPage({
         id: article.id,
         title: article.title,
         slug: article.slug,
-        audience: article.audience,
         status: article.status,
         content_json: article.content_json,
         videos: article.videos,
