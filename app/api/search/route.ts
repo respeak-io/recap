@@ -5,7 +5,6 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("q");
   const projectId = searchParams.get("projectId");
-  const audience = searchParams.get("audience");
   const lang = searchParams.get("lang");
 
   if (!query || !projectId) {
@@ -16,15 +15,12 @@ export async function GET(request: Request) {
 
   let articlesQuery = supabase
     .from("articles")
-    .select("id, title, slug, audience, content_text, project_id")
+    .select("id, title, slug, content_text, project_id")
     .eq("project_id", projectId)
     .eq("status", "published")
     .textSearch("fts", query, { type: "websearch", config: "english" })
     .limit(10);
 
-  if (audience) {
-    articlesQuery = articlesQuery.eq("audience", audience);
-  }
   if (lang) {
     articlesQuery = articlesQuery.eq("language", lang);
   }
@@ -36,7 +32,6 @@ export async function GET(request: Request) {
     project_id: projectId,
     query: query,
     results_count: articles?.length ?? 0,
-    audience: audience ?? null,
     language: lang ?? null,
   }).then(() => {});
 

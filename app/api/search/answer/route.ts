@@ -10,8 +10,8 @@ export async function POST(request: Request) {
 
   const context = articles
     .map(
-      (a: { title: string; audience: string; content_text: string }) =>
-        `### ${a.title} (${a.audience})\n${a.content_text.slice(0, 1000)}`
+      (a: { title: string; content_text: string }) =>
+        `### ${a.title}\n${a.content_text.slice(0, 1000)}`
     )
     .join("\n\n");
 

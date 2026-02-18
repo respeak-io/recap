@@ -10,13 +10,11 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Badge } from "@/components/ui/badge";
 
 interface SearchResult {
   id: string;
   title: string;
   slug: string;
-  audience: string;
   content_text: string;
 }
 
@@ -94,10 +92,10 @@ export function SearchDialog({ projectId, projectSlug }: SearchDialogProps) {
     [search]
   );
 
-  function handleSelect(slug: string, audience: string) {
+  function handleSelect(slug: string) {
     setOpen(false);
-    const langParam = currentLang !== "en" ? `&lang=${currentLang}` : "";
-    router.push(`/${projectSlug}/${slug}?audience=${audience}${langParam}`);
+    const langParam = currentLang !== "en" ? `?lang=${currentLang}` : "";
+    router.push(`/${projectSlug}/${slug}${langParam}`);
   }
 
   function snippet(text: string) {
@@ -155,14 +153,11 @@ export function SearchDialog({ projectId, projectSlug }: SearchDialogProps) {
                 <CommandItem
                   key={r.id}
                   value={r.title}
-                  onSelect={() => handleSelect(r.slug, r.audience)}
+                  onSelect={() => handleSelect(r.slug)}
                 >
                   <div className="flex flex-col gap-1">
                     <div className="flex items-center gap-2">
                       <span className="font-medium">{r.title}</span>
-                      <Badge variant="outline" className="text-[10px] px-1 py-0">
-                        {r.audience}
-                      </Badge>
                     </div>
                     <span className="text-xs text-muted-foreground">
                       {snippet(r.content_text)}
