@@ -40,7 +40,6 @@ interface Article {
   id: string;
   title: string;
   slug: string;
-  audience: string;
   language: string;
   status: string;
   order: number;
@@ -56,7 +55,6 @@ interface Chapter {
 
 interface ArticleGroup {
   slug: string;
-  audience: string;
   title: string;
   chapter_id: string | null;
   order: number;
@@ -67,14 +65,13 @@ interface ArticleTreeProps {
   projectSlug: string;
   chapters: Chapter[];
   articles: Article[];
-  audiences: string[];
   languages: string[];
 }
 
 function groupArticles(articles: Article[]): ArticleGroup[] {
   const map = new Map<string, ArticleGroup>();
   for (const a of articles) {
-    const key = `${a.slug}::${a.audience}`;
+    const key = a.slug;
     const existing = map.get(key);
     if (existing) {
       existing.languages.push({ language: a.language, id: a.id, status: a.status });
@@ -83,7 +80,6 @@ function groupArticles(articles: Article[]): ArticleGroup[] {
     } else {
       map.set(key, {
         slug: a.slug,
-        audience: a.audience,
         title: a.title,
         chapter_id: a.chapter_id,
         order: a.order,
@@ -98,15 +94,12 @@ export function ArticleTree({
   projectSlug,
   chapters,
   articles: initialArticles,
-  audiences,
 }: ArticleTreeProps) {
   const router = useRouter();
   const [articles, setArticles] = useState(initialArticles);
-  const [audienceFilter, setAudienceFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
   const filtered = articles.filter((a) => {
-    if (audienceFilter !== "all" && a.audience !== audienceFilter) return false;
     if (statusFilter !== "all" && a.status !== statusFilter) return false;
     return true;
   });
@@ -175,18 +168,6 @@ export function ArticleTree({
     <div className="space-y-4">
       {/* Filters */}
       <div className="flex gap-3 flex-wrap">
-        <Select value={audienceFilter} onValueChange={setAudienceFilter}>
-          <SelectTrigger className="w-[160px]">
-            <SelectValue placeholder="Audience" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All audiences</SelectItem>
-            {audiences.map((a) => (
-              <SelectItem key={a} value={a}>{a}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-[140px]">
             <SelectValue placeholder="Status" />
@@ -214,7 +195,7 @@ export function ArticleTree({
                   <div ref={provided.innerRef} {...provided.droppableProps} className="space-y-1 ml-4">
                     {chapter.groups.map((group, index) => (
                       <ArticleGroupRow
-                        key={`${group.slug}::${group.audience}`}
+                        key={group.slug}
                         group={group}
                         index={index}
                         projectSlug={projectSlug}
@@ -239,7 +220,7 @@ export function ArticleTree({
                 <div ref={provided.innerRef} {...provided.droppableProps} className="space-y-1 ml-4">
                   {uncategorized.map((group, index) => (
                     <ArticleGroupRow
-                      key={`${group.slug}::${group.audience}`}
+                      key={group.slug}
                       group={group}
                       index={index}
                       projectSlug={projectSlug}
@@ -282,7 +263,7 @@ function ArticleGroupRow({
           </div>
           <FileText className="size-4 text-muted-foreground flex-shrink-0" />
           <Link
-            href={`/project/${projectSlug}/article/${group.slug}/edit?audience=${group.audience}&lang=${primaryLang.language}`}
+            href={`/project/${projectSlug}/article/${group.slug}/edit?lang=${primaryLang.language}`}
             className="flex-1 text-sm font-medium truncate hover:underline"
           >
             {group.title}
@@ -290,14 +271,13 @@ function ArticleGroupRow({
           {group.languages.map((l) => (
             <Link
               key={l.language}
-              href={`/project/${projectSlug}/article/${group.slug}/edit?audience=${group.audience}&lang=${l.language}`}
+              href={`/project/${projectSlug}/article/${group.slug}/edit?lang=${l.language}`}
             >
               <Badge variant="outline" className="text-xs cursor-pointer hover:bg-accent">
                 {l.language}
               </Badge>
             </Link>
           ))}
-          <Badge variant="outline" className="text-xs">{group.audience}</Badge>
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button
