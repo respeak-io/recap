@@ -10,7 +10,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Check, AlertCircle, Video } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Loader2, Check, AlertCircle, Video, RotateCcw } from "lucide-react";
 
 interface Job {
   id: string;
@@ -31,6 +32,7 @@ interface ActiveJobsProps {
 
 export function ActiveJobs({ projectId, initialJobs }: ActiveJobsProps) {
   const [jobs, setJobs] = useState<Job[]>(initialJobs);
+  const [retrying, setRetrying] = useState<string | null>(null);
   const supabase = createClient();
 
   const hasActiveJobs = jobs.some(
@@ -69,6 +71,29 @@ export function ActiveJobs({ projectId, initialJobs }: ActiveJobsProps) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasActiveJobs, projectId]);
+
+  async function handleRetry(jobId: string) {
+    setRetrying(jobId);
+    try {
+      const res = await fetch("/api/videos/process/retry", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId }),
+      });
+      if (res.ok) {
+        // Refresh job list to pick up the new job
+        const { data } = await supabase
+          .from("processing_jobs")
+          .select("*, videos(title)")
+          .eq("project_id", projectId)
+          .order("created_at", { ascending: false })
+          .limit(5);
+        if (data) setJobs(data as Job[]);
+      }
+    } finally {
+      setRetrying(null);
+    }
+  }
 
   if (jobs.length === 0) return null;
 
@@ -124,6 +149,20 @@ export function ActiveJobs({ projectId, initialJobs }: ActiveJobsProps) {
                       }}
                     />
                   </div>
+                )}
+                {job.status === "failed" && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2"
+                    disabled={retrying === job.id}
+                    onClick={() => handleRetry(job.id)}
+                  >
+                    <RotateCcw
+                      className={`size-3 mr-1 ${retrying === job.id ? "animate-spin" : ""}`}
+                    />
+                    Retry
+                  </Button>
                 )}
                 <Badge
                   variant={
