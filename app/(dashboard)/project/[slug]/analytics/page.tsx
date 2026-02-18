@@ -3,7 +3,7 @@ import { getPageViewStats, getSearchStats, type TimeRange } from "@/lib/queries/
 import { BreadcrumbNav } from "@/components/dashboard/breadcrumb-nav";
 import { AnalyticsCharts } from "@/components/dashboard/analytics-charts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Eye, Search, TrendingUp, Globe } from "lucide-react";
+import { Eye, Search, Globe } from "lucide-react";
 import { notFound } from "next/navigation";
 
 export default async function AnalyticsPage({
@@ -60,7 +60,7 @@ export default async function AnalyticsPage({
         </div>
 
         {/* Summary cards */}
-        <div className="grid gap-4 md:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-3">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Total Views</CardTitle>
@@ -81,17 +81,6 @@ export default async function AnalyticsPage({
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Top Audience</CardTitle>
-              <TrendingUp className="size-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold capitalize">
-                {pageViewStats.audienceBreakdown[0]?.audience ?? "—"}
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Languages Used</CardTitle>
               <Globe className="size-4 text-muted-foreground" />
             </CardHeader>
@@ -106,7 +95,6 @@ export default async function AnalyticsPage({
         <AnalyticsCharts
           dailyViews={pageViewStats.dailyViews}
           topArticles={pageViewStats.topArticles}
-          audienceBreakdown={pageViewStats.audienceBreakdown}
           languageBreakdown={pageViewStats.languageBreakdown}
           topQueries={searchStats.topQueries}
           zeroResultQueries={searchStats.zeroResultQueries}

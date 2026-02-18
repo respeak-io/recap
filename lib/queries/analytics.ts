@@ -28,10 +28,6 @@ export async function getPageViewStats(projectId: string, range: TimeRange) {
   const { data: topArticles } = await supabase
     .rpc("analytics_top_articles", { p_project_id: projectId, p_since: since, p_limit: 10 });
 
-  // Audience breakdown
-  const { data: audienceBreakdown } = await supabase
-    .rpc("analytics_audience_breakdown", { p_project_id: projectId, p_since: since });
-
   // Language breakdown
   const { data: languageBreakdown } = await supabase
     .rpc("analytics_language_breakdown", { p_project_id: projectId, p_since: since });
@@ -40,7 +36,6 @@ export async function getPageViewStats(projectId: string, range: TimeRange) {
     totalViews: totalViews ?? 0,
     dailyViews: dailyViews ?? [],
     topArticles: topArticles ?? [],
-    audienceBreakdown: audienceBreakdown ?? [],
     languageBreakdown: languageBreakdown ?? [],
   };
 }
