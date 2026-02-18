@@ -117,7 +117,12 @@ export async function POST(request: Request) {
         config: { responseMimeType: "application/json" },
       });
 
-      const doc = JSON.parse(response.text!);
+      // Gemini sometimes emits control characters inside JSON string values.
+      // Strip them before parsing to avoid SyntaxError.
+      const sanitizedJson = response.text!.replace(/[\x00-\x1f\x7f]/g, (ch) =>
+        ch === "\n" || ch === "\r" || ch === "\t" ? ch : ""
+      );
+      const doc = JSON.parse(sanitizedJson);
 
       const createdArticles: {
         chapterId: string | null;
