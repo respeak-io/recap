@@ -60,69 +60,100 @@ export async function POST(request: Request) {
         progress: 0.05,
       });
 
-      const { data: urlData } = await db.storage
+      // --- Checkpoint 1: Segments ---
+      // Check if segments already exist from a previous attempt
+      const { count: existingSegmentCount } = await db
+        .from("video_segments")
+        .select("id", { count: "exact", head: true })
+        .eq("video_id", videoId);
+
+      let segments: Record<string, unknown>[];
+
+      if (existingSegmentCount && existingSegmentCount > 0) {
+        // Reuse existing segments — skip the expensive Gemini upload + extraction
+        await updateJob({
+          step: "transcribing",
+          step_message: "Reusing existing content extraction...",
+          progress: 0.2,
+        });
+
+        const { data: existingSegments } = await db
+          .from("video_segments")
+          .select("*")
+          .eq("video_id", videoId)
+          .order("order", { ascending: true });
+
+        segments = (existingSegments ?? []).map((s) => ({
+          start_time: s.start_time,
+          end_time: s.end_time,
+          spoken_content: s.spoken_content,
+          visual_context: s.visual_context,
+        }));
+      } else {
+        const { data: urlData } = await db.storage
+          .from("videos")
+          .createSignedUrl(video.storage_path, 3600);
+
+        const fileInfo = await uploadAndProcessVideo(urlData!.signedUrl);
+
+        await updateJob({
+          step: "transcribing",
+          step_message: "Extracting content from video...",
+          progress: 0.2,
+        });
+
+        segments = await extractVideoContent(fileInfo.uri!, fileInfo.mimeType!);
+
+        const segmentRows = segments.map(
+          (seg: Record<string, unknown>, i: number) => ({
+            video_id: videoId,
+            start_time: seg.start_time,
+            end_time: seg.end_time,
+            spoken_content: seg.spoken_content,
+            visual_context: seg.visual_context,
+            order: i,
+          })
+        );
+        await db.from("video_segments").insert(segmentRows);
+      }
+
+      // --- Checkpoint 2: VTT ---
+      // Generate VTT if not already present
+      const { data: currentVideo } = await db
         .from("videos")
-        .createSignedUrl(video.storage_path, 3600);
+        .select("vtt_content, vtt_languages")
+        .eq("id", videoId)
+        .single();
 
-      const fileInfo = await uploadAndProcessVideo(urlData!.signedUrl);
+      let vtt: string;
+      const vttLanguages: Record<string, string> =
+        (currentVideo?.vtt_languages as Record<string, string>) ?? {};
 
-      await updateJob({
-        step: "transcribing",
-        step_message: "Extracting content from video...",
-        progress: 0.2,
-      });
+      if (currentVideo?.vtt_content) {
+        vtt = currentVideo.vtt_content;
+      } else {
+        vtt = segmentsToVtt(
+          segments.map((s: Record<string, unknown>) => ({
+            start_time: s.start_time as number,
+            end_time: s.end_time as number,
+            spoken_content: s.spoken_content as string,
+          }))
+        );
+        vttLanguages["en"] = vtt;
 
-      const segments = await extractVideoContent(fileInfo.uri!, fileInfo.mimeType!);
+        await db
+          .from("videos")
+          .update({ vtt_content: vtt, vtt_languages: vttLanguages })
+          .eq("id", videoId);
+      }
 
-      const segmentRows = segments.map(
-        (seg: Record<string, unknown>, i: number) => ({
-          video_id: videoId,
-          start_time: seg.start_time,
-          end_time: seg.end_time,
-          spoken_content: seg.spoken_content,
-          visual_context: seg.visual_context,
-          order: i,
-        })
-      );
-      await db.from("video_segments").insert(segmentRows);
-
-      // Generate VTT from segments
-      const vtt = segmentsToVtt(
-        segments.map((s: Record<string, unknown>) => ({
-          start_time: s.start_time as number,
-          end_time: s.end_time as number,
-          spoken_content: s.spoken_content as string,
-        }))
-      );
-
-      const vttLanguages: Record<string, string> = { en: vtt };
-
-      await db
-        .from("videos")
-        .update({ vtt_content: vtt, vtt_languages: vttLanguages })
-        .eq("id", videoId);
-
-      // Generate docs
-      await updateJob({
-        step: "generating_docs",
-        step_message: "Generating documentation...",
-        progress: 0.3,
-      });
-
-      const prompt = getDocGenerationPrompt(segments);
-
-      const response = await getAI().models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        config: { responseMimeType: "application/json" },
-      });
-
-      // Gemini sometimes emits control characters inside JSON string values.
-      // Strip them before parsing to avoid SyntaxError.
-      const sanitizedJson = response.text!.replace(/[\x00-\x1f\x7f]/g, (ch) =>
-        ch === "\n" || ch === "\r" || ch === "\t" ? ch : ""
-      );
-      const doc = JSON.parse(sanitizedJson);
+      // --- Checkpoint 3: English articles ---
+      // Check if English articles already exist for this video
+      const { data: existingEnArticles } = await db
+        .from("articles")
+        .select("id, title, slug, chapter_id, content_json, content_text")
+        .eq("video_id", videoId)
+        .eq("language", "en");
 
       const createdArticles: {
         chapterId: string | null;
@@ -132,70 +163,133 @@ export async function POST(request: Request) {
         contentText: string;
       }[] = [];
 
-      for (const chapter of doc.chapters) {
-        const chapterSlug = slugify(chapter.title, { lower: true, strict: true });
-
-        const { data: chapterRow } = await db
-          .from("chapters")
-          .upsert(
-            {
-              project_id: projectId,
-              title: chapter.title,
-              slug: chapterSlug,
-            },
-            { onConflict: "project_id,slug" }
-          )
-          .select()
-          .single();
-
-        const contentText = chapter.sections
-          .map(
-            (s: { heading: string; content: string }) =>
-              `${s.heading}\n${s.content}`
-          )
-          .join("\n\n");
-
-        const articleSlug = slugify(chapter.title, { lower: true, strict: true });
-        const contentJson = markdownToTiptap(chapter.sections);
-
-        await db.from("articles").insert({
-          project_id: projectId,
-          video_id: videoId,
-          chapter_id: chapterRow?.id,
-          title: chapter.title,
-          slug: articleSlug,
-          language: "en",
-          content_json: contentJson,
-          content_text: contentText,
-          status: "draft",
+      if (existingEnArticles && existingEnArticles.length > 0) {
+        // Reuse existing English articles — skip doc generation
+        await updateJob({
+          step: "generating_docs",
+          step_message: "Reusing existing documentation...",
+          progress: 0.5,
         });
 
-        createdArticles.push({
-          chapterId: chapterRow?.id ?? null,
-          title: chapter.title,
-          slug: articleSlug,
-          contentJson,
-          contentText,
+        for (const a of existingEnArticles) {
+          createdArticles.push({
+            chapterId: a.chapter_id,
+            title: a.title,
+            slug: a.slug,
+            contentJson: a.content_json as Record<string, unknown>,
+            contentText: a.content_text,
+          });
+        }
+      } else {
+        await updateJob({
+          step: "generating_docs",
+          step_message: "Generating documentation...",
+          progress: 0.3,
         });
+
+        const prompt = getDocGenerationPrompt(segments);
+
+        const response = await getAI().models.generateContent({
+          model: "gemini-2.5-flash",
+          contents: [{ role: "user", parts: [{ text: prompt }] }],
+          config: { responseMimeType: "application/json" },
+        });
+
+        // Gemini sometimes emits control characters inside JSON string values.
+        // Strip them before parsing to avoid SyntaxError.
+        const sanitizedJson = response.text!.replace(
+          /[\x00-\x1f\x7f]/g,
+          (ch) => (ch === "\n" || ch === "\r" || ch === "\t" ? ch : "")
+        );
+        const doc = JSON.parse(sanitizedJson);
+
+        for (const chapter of doc.chapters) {
+          const chapterSlug = slugify(chapter.title, {
+            lower: true,
+            strict: true,
+          });
+
+          const { data: chapterRow } = await db
+            .from("chapters")
+            .upsert(
+              {
+                project_id: projectId,
+                title: chapter.title,
+                slug: chapterSlug,
+              },
+              { onConflict: "project_id,slug" }
+            )
+            .select()
+            .single();
+
+          const contentText = chapter.sections
+            .map(
+              (s: { heading: string; content: string }) =>
+                `${s.heading}\n${s.content}`
+            )
+            .join("\n\n");
+
+          const articleSlug = slugify(chapter.title, {
+            lower: true,
+            strict: true,
+          });
+          const contentJson = markdownToTiptap(chapter.sections);
+
+          await db.from("articles").insert({
+            project_id: projectId,
+            video_id: videoId,
+            chapter_id: chapterRow?.id,
+            title: chapter.title,
+            slug: articleSlug,
+            language: "en",
+            content_json: contentJson,
+            content_text: contentText,
+            status: "draft",
+          });
+
+          createdArticles.push({
+            chapterId: chapterRow?.id ?? null,
+            title: chapter.title,
+            slug: articleSlug,
+            contentJson,
+            contentText,
+          });
+        }
       }
 
-      // Translate to all non-English target languages
+      // --- Checkpoint 4: Translations ---
       const targetLanguages = languages.filter((l: string) => l !== "en");
       const progressPerLang = 0.4 / Math.max(targetLanguages.length, 1);
       let currentProgress = 0.55;
 
       for (const lang of targetLanguages) {
+        // Check if translations already exist for this language
+        const { count: existingTranslationCount } = await db
+          .from("articles")
+          .select("id", { count: "exact", head: true })
+          .eq("video_id", videoId)
+          .eq("language", lang);
+
+        if (existingTranslationCount && existingTranslationCount > 0) {
+          // Skip — translations for this language already exist
+          currentProgress += progressPerLang;
+          continue;
+        }
+
         await updateJob({
           step: "translating",
           step_message: `Translating to ${lang}...`,
           progress: currentProgress,
         });
 
-        try {
-          const translatedVtt = await translateVtt(vtt, lang);
-          vttLanguages[lang] = translatedVtt;
-        } catch (e) {
-          console.error(`VTT translation to ${lang} failed:`, e);
+        // Translate VTT if not already done
+        if (!vttLanguages[lang]) {
+          try {
+            const translatedVtt = await translateVtt(vtt, lang);
+            vttLanguages[lang] = translatedVtt;
+          } catch (e) {
+            console.error(`VTT translation to ${lang} failed:`, e);
+          }
         }
 
         for (const article of createdArticles) {
