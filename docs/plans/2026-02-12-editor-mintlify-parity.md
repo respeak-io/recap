@@ -1,5 +1,7 @@
 # Editor UX: Mintlify-Parity Implementation Plan
 
+> **Status:** Complete (2026-02-19)
+
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Upgrade the Tiptap editor to offer the block insertion, inline formatting, and content structure features that Mintlify users expect — slash commands, bubble menu, accordions, tabs, steps, and drag handles — so users can transition from Mintlify without losing muscle memory.
