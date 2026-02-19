@@ -1,5 +1,7 @@
 import { initAI, uploadVideo, extractVideoContent, getAI } from "./gemini.js";
 import { getDocGenerationPrompt } from "./prompts.js";
+import { isYouTubeUrl, downloadYouTube } from "../download.js";
+import { unlink } from "node:fs/promises";
 
 export interface Segment {
   start_time: number;
@@ -39,21 +41,36 @@ export async function processVideo(
 
   initAI(apiKey);
 
-  log("upload", "Uploading video to Gemini...");
-  const { uri, mimeType } = await uploadVideo(source);
+  let videoPath = source;
+  let tempFile: string | null = null;
 
-  log("extract", "Extracting content from video...");
-  const segments: Segment[] = await extractVideoContent(uri, mimeType);
+  if (isYouTubeUrl(source)) {
+    log("download", "Downloading video from YouTube...");
+    videoPath = await downloadYouTube(source);
+    tempFile = videoPath;
+  }
 
-  log("generate", "Generating documentation...");
-  const prompt = getDocGenerationPrompt(segments as unknown as Record<string, unknown>[]);
-  const response = await getAI().models.generateContent({
-    model: "gemini-2.5-flash",
-    contents: [{ role: "user", parts: [{ text: prompt }] }],
-    config: { responseMimeType: "application/json" },
-  });
+  try {
+    log("upload", "Uploading video to Gemini...");
+    const { uri, mimeType } = await uploadVideo(videoPath);
 
-  const doc = JSON.parse(response.text!);
+    log("extract", "Extracting content from video...");
+    const segments: Segment[] = await extractVideoContent(uri, mimeType);
 
-  return { title: doc.title, chapters: doc.chapters, segments };
+    log("generate", "Generating documentation...");
+    const prompt = getDocGenerationPrompt(segments as unknown as Record<string, unknown>[]);
+    const response = await getAI().models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      config: { responseMimeType: "application/json" },
+    });
+
+    const doc = JSON.parse(response.text!);
+
+    return { title: doc.title, chapters: doc.chapters, segments };
+  } finally {
+    if (tempFile) {
+      await unlink(tempFile).catch(() => {});
+    }
+  }
 }
