@@ -1,0 +1,47 @@
+---
+title: "4. Basic Usage and File Conversions"
+sidebar:
+  order: 4
+---
+
+## Installation and Getting Started
+
+Before using FFmpeg, ensure it is installed on your system. You can typically find packages for most operating systems or compile it from source. Once installed, open your terminal or command prompt. [video:01:03]
+
+The basic syntax for FFmpeg commands is:
+```bash
+ffmpeg [global options] {[input file options] -i input_url} ... {[output file options] output_url} ...
+```
+
+## Simple File Conversion
+
+To convert a multimedia file from one format to another, specify the input file using the `-i` flag, followed by the desired output filename. FFmpeg will automatically detect the file extension of the output and attempt to convert it to the appropriate codec and container format. [video:01:10]
+
+**Example: Convert MP4 to MOV**
+```bash
+ffmpeg -i input.mp4 output.mov
+```
+This command converts `input.mp4` into `output.mov`. FFmpeg handles the re-encoding automatically based on the `.mov` extension.
+
+## Specifying Codecs
+
+For more control, you can explicitly specify the video and audio codecs using the `-c:v` (for video codec) and `-c:a` (for audio codec) flags. [video:01:18]
+
+**Example: Convert to MPEG4 video and MP3 audio**
+```bash
+ffmpeg -i input.mp4 -c:v mpeg4 -c:a mp3 output.mp4
+```
+This command transcodes the video stream to MPEG4 and the audio stream to MP3, while keeping the output in an MP4 container.
+
+## Adjusting Output Quality (Bitrate, Framerate, Resolution)
+
+FFmpeg provides options to control the quality and characteristics of the output file [video:01:25]:
+
+*   **Bitrate (`-b` or `-b:v`, `-b:a`):** Adjusts the video or audio bitrate, which directly impacts file size and quality. For video, use `-b:v` followed by the bitrate (e.g., `1M` for 1 Megabit/second).
+*   **Frame Rate (`-r`):** Changes the number of frames per second. For example, `-r 30` sets the frame rate to 30 FPS.
+*   **Resolution (`-s`):** Modifies the width and height of the video. For example, `-s 640x480` sets the resolution to 640 pixels wide by 480 pixels high.
+
+**Example: Change video bitrate, framerate, and resolution**
+```bash
+ffmpeg -i input.mp4 -b:v 1M -r 30 -s 640x480 output.mp4
+```

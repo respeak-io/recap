@@ -1,0 +1,46 @@
+---
+title: "Core Functionality and Healthcare Professional Integration"
+sidebar:
+  order: 2
+---
+
+## Automatic Setup and Key Benefits
+
+The ePA for all will be automatically set up for all legally insured individuals in Germany. [video:00:36] This digital record offers substantial benefits for both medical personnel and patients by centralizing critical health information. It enables medical professionals to access a patient's complete health history, facilitating more individualized therapies and aiding in quicker, more informed diagnostic and treatment decisions. [video:01:25]
+
+## Data Collection and Secure Access Mechanism
+
+The ePA digitally aggregates a wide range of relevant health data for each patient, including medication data derived from e-prescriptions and various doctor's letters. [video:00:55] This comprehensive data is made readily available for medical personnel. 
+
+To ensure secure and authorized access, medical personnel must first verify a legitimate treatment context. This verification is primarily achieved when the patient presents their health insurance card for reading at the medical facility. [video:01:05] The act of inserting the card serves as a technical proof of the ongoing treatment, granting temporary access to the patient's ePA data.
+
+### Developer Integration: Treatment Context Verification
+Integrating health card verification into medical systems is crucial for ePA access. Below is a conceptual API flow and step-by-step guide:
+
+**API Endpoint for Treatment Context Verification (Hypothetical):**
+```json
+POST /api/v1/patient/{patientId}/treatment-context/verify
+Content-Type: application/json
+
+{
+  "healthCardData": "ENCRYPTED_HEALTH_CARD_PAYLOAD",
+  "medicalFacilityId": "FACILITY_XYZ",
+  "professionalId": "DR_SMITH_123"
+}
+```
+
+**Expected Response (200 OK):**
+```json
+{
+  "isTreatmentContextValid": true,
+  "authorizedUntil": "2024-12-31T23:59:59Z",
+  "accessToken": "TEMPORARY_ACCESS_TOKEN"
+}
+```
+
+**Step-by-step for Integrating Health Card Verification:**
+1.  **Patient presents health card:** The patient inserts their health insurance card into a designated card reader within the medical facility. [video:01:15]
+2.  **System reads card data:** The facility's medical information system (MIS) securely reads encrypted data from the health card.
+3.  **API call for verification:** The MIS sends an API request to the ePA backend, including the health card data, facility ID, and professional ID, to verify the treatment context.
+4.  **Backend validation:** The ePA backend validates the card, confirms the facility's authorization, and establishes a secure, temporary treatment context.
+5.  **Access granted:** Upon successful verification, the medical professional's system receives an access token, granting temporary, context-specific access to the patient's ePA data.
