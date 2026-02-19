@@ -1,7 +1,7 @@
 # Async Video Processing Design — Reeldocs
 
 **Date:** 2026-02-18
-**Status:** Approved
+**Status:** Complete (2026-02-19)
 **Replaces:** `2026-02-12-async-processing-and-project-settings.md` (obsoleted by audience removal)
 
 ## Problem

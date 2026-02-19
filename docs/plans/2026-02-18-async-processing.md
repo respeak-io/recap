@@ -1,5 +1,7 @@
 # Async Video Processing Implementation Plan
 
+> **Status:** Complete (2026-02-19)
+
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Make video processing asynchronous so users can navigate away during processing, with a polling-based progress UI and a dashboard processing monitor.
