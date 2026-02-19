@@ -4,6 +4,7 @@ import { Command } from "commander";
 import ora from "ora";
 import { processVideo } from "./ai/pipeline.js";
 import { writeMarkdown } from "./output/markdown.js";
+import { writeMdx } from "./output/mdx.js";
 
 const program = new Command();
 
@@ -32,7 +33,12 @@ program
       });
 
       spinner.text = "Writing files...";
-      const files = await writeMarkdown(doc, opts.output);
+      let files: string[];
+      if (opts.format === "mdx") {
+        files = await writeMdx(doc, opts.output);
+      } else {
+        files = await writeMarkdown(doc, opts.output);
+      }
 
       spinner.succeed(`Generated ${files.length} doc(s) in ${opts.output}/`);
       console.log();
