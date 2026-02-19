@@ -191,7 +191,7 @@
 }
 
 /* Accordion/Details in editor —
-   DOM: div[data-type="details"] > button + div > (detailsSummary + detailsContent[hidden])
+   DOM: div[data-type="details"] > button + div > (summary + div[data-type="detailsContent"][hidden])
    The button is the toggle, .is-open is added to the outer div when expanded */
 .ProseMirror div[data-type="details"] {
   border: 1px solid var(--border);

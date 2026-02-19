@@ -80,7 +80,7 @@ export function EditorPageClient({
   async function handleSave() {
     setSaving(true);
     const text = extractText(contentRef.current);
-    await saveArticleAction(article.id, contentRef.current, text);
+    await saveArticleAction(article.id, JSON.stringify(contentRef.current), text);
     setSaving(false);
     setSaved(true);
   }

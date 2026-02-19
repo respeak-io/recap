@@ -15,6 +15,7 @@ import { slashCommandSuggestion } from "./slash-menu";
 import { BubbleMenuContent } from "./bubble-menu";
 import Link from "@tiptap/extension-link";
 import { Details, DetailsSummary, DetailsContent } from "@tiptap/extension-details";
+import { mergeAttributes } from "@tiptap/core";
 import { TabGroup, Tab } from "./extensions/tabs";
 import { Steps, Step } from "./extensions/steps";
 import Typography from "@tiptap/extension-typography";
@@ -22,6 +23,20 @@ import { Toolbar } from "./toolbar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 const lowlight = createLowlight(common);
+
+// Override DetailsSummary to render as div[data-type] instead of native <summary>,
+// because Tailwind v4 tree-shakes CSS rules targeting the bare `summary` element.
+const CustomDetailsSummary = DetailsSummary.extend({
+  renderHTML({ HTMLAttributes }) {
+    return ["div", mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, { "data-type": "detailsSummary" }), 0];
+  },
+  parseHTML() {
+    return [
+      { tag: 'div[data-type="detailsSummary"]' },
+      { tag: "summary" },
+    ];
+  },
+});
 
 interface EditorProps {
   content: Record<string, unknown>;
@@ -48,7 +63,7 @@ export function Editor({ content, onUpdate, onTimestampClick }: EditorProps) {
       Callout,
       Link.configure({ openOnClick: false }),
       Details,
-      DetailsSummary,
+      CustomDetailsSummary,
       DetailsContent,
       TabGroup,
       Tab,

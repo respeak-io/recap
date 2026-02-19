@@ -5,9 +5,10 @@ import { revalidatePath } from "next/cache";
 
 export async function saveArticleAction(
   id: string,
-  contentJson: Record<string, unknown>,
+  contentJsonStr: string,
   contentText: string
 ) {
+  const contentJson = JSON.parse(contentJsonStr);
   const supabase = await createClient();
   const { error } = await supabase
     .from("articles")
