@@ -3,21 +3,28 @@
 import { NodeViewContent, NodeViewWrapper, type ReactNodeViewProps } from "@tiptap/react";
 import { Plus, X } from "lucide-react";
 
-export function StepNodeView({ node, updateAttributes, deleteNode }: ReactNodeViewProps) {
+export function StepNodeView({ editor, getPos, deleteNode }: ReactNodeViewProps) {
+  const handleDelete = () => {
+    const pos = getPos();
+    if (pos === undefined) return;
+    const resolved = editor.state.doc.resolve(pos);
+    const parent = resolved.parent;
+    if (parent.childCount <= 1) {
+      const parentPos = resolved.before(resolved.depth);
+      editor.chain().focus().deleteRange({ from: parentPos, to: parentPos + parent.nodeSize }).run();
+    } else {
+      deleteNode();
+    }
+  };
+
   return (
     <NodeViewWrapper data-type="step" className="relative">
-      <div className="flex items-center gap-1">
-        <input
-          className="flex-1 bg-transparent text-sm font-semibold outline-none border-none p-0 mb-1"
-          value={node.attrs.title}
-          onChange={(e) => updateAttributes({ title: e.target.value })}
-          placeholder="Step title..."
-        />
+      <div className="flex items-center justify-end">
         <button
           type="button"
           contentEditable={false}
-          className="text-muted-foreground/50 hover:text-destructive transition-colors mb-1"
-          onClick={deleteNode}
+          className="text-muted-foreground/50 hover:text-destructive transition-colors"
+          onClick={handleDelete}
           title="Remove step"
         >
           <X className="size-3.5" />
@@ -33,13 +40,12 @@ export function StepsNodeView({ node, editor, getPos }: ReactNodeViewProps) {
     const p = getPos();
     if (p === undefined) return;
     const pos = p + node.nodeSize - 1;
-    const stepCount = node.content?.childCount ?? 0;
     editor
       .chain()
       .focus()
       .insertContentAt(pos, {
         type: "step",
-        attrs: { title: `Step ${stepCount + 1}` },
+        attrs: { title: "Step" },
         content: [{ type: "paragraph" }],
       })
       .run();

@@ -190,43 +190,59 @@
   font-size: 0.875rem;
 }
 
-/* Accordion/Details in editor */
+/* Accordion/Details in editor —
+   DOM: div[data-type="details"] > button + div > (detailsSummary + detailsContent[hidden])
+   The button is the toggle, .is-open is added to the outer div when expanded */
 .ProseMirror div[data-type="details"] {
   border: 1px solid var(--border);
   border-radius: 0.5rem;
   margin: 0.75rem 0;
-  overflow: hidden;
+  position: relative;
 }
 .ProseMirror div[data-type="details"] > button {
+  position: absolute;
+  left: 0.6rem;
+  top: 0.55rem;
+  width: 1.25rem;
+  height: 1.25rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 1.5rem;
-  height: 1.5rem;
   cursor: pointer;
   background: none;
-  border: none;
+  border: 1px solid var(--border);
+  border-radius: 0.25rem;
   color: var(--muted-foreground);
-  position: absolute;
-  left: 0.5rem;
-  top: 0.6rem;
+  font-size: 0;
   z-index: 1;
+  transition: background 0.1s;
+}
+.ProseMirror div[data-type="details"] > button:hover {
+  background: var(--accent);
 }
 .ProseMirror div[data-type="details"] > button::after {
-  content: "▶";
-  font-size: 0.65em;
+  content: "";
+  display: block;
+  width: 0;
+  height: 0;
+  border-left: 5px solid currentColor;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
   transition: transform 0.15s;
+  margin-left: 1px;
 }
 .ProseMirror div[data-type="details"].is-open > button::after {
   transform: rotate(90deg);
+  margin-left: 0;
+  margin-top: 1px;
 }
 .ProseMirror div[data-type="detailsSummary"] {
   font-weight: 600;
-  padding: 0.6rem 0.75rem 0.6rem 2rem;
-  position: relative;
+  padding: 0.5rem 0.75rem 0.5rem 2.5rem;
 }
 .ProseMirror div[data-type="detailsContent"] {
-  padding: 0 0.75rem 0.75rem 2rem;
+  padding: 0 0.75rem 0.75rem 2.5rem;
+  border-top: 1px dashed var(--border);
 }
 .ProseMirror div[data-type="detailsContent"][hidden] {
   display: none;

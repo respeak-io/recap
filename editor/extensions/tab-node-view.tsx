@@ -3,7 +3,22 @@
 import { NodeViewContent, NodeViewWrapper, type ReactNodeViewProps } from "@tiptap/react";
 import { Plus, X } from "lucide-react";
 
-export function TabNodeView({ node, updateAttributes, deleteNode }: ReactNodeViewProps) {
+export function TabNodeView({ node, editor, getPos, updateAttributes, deleteNode }: ReactNodeViewProps) {
+  const handleDelete = () => {
+    // If this is the last tab, delete the entire tab group
+    const pos = getPos();
+    if (pos === undefined) return;
+    const resolved = editor.state.doc.resolve(pos);
+    const parent = resolved.parent;
+    if (parent.childCount <= 1) {
+      // Delete the parent tabGroup
+      const parentPos = resolved.before(resolved.depth);
+      editor.chain().focus().deleteRange({ from: parentPos, to: parentPos + parent.nodeSize }).run();
+    } else {
+      deleteNode();
+    }
+  };
+
   return (
     <NodeViewWrapper data-type="tab">
       <div className="flex items-center gap-1">
@@ -17,7 +32,7 @@ export function TabNodeView({ node, updateAttributes, deleteNode }: ReactNodeVie
           type="button"
           contentEditable={false}
           className="text-muted-foreground/50 hover:text-destructive transition-colors mb-1"
-          onClick={deleteNode}
+          onClick={handleDelete}
           title="Remove tab"
         >
           <X className="size-3.5" />
