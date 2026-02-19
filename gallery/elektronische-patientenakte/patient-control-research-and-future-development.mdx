@@ -1,0 +1,65 @@
+---
+title: "Patient Control, Research, and Future Development"
+sidebar_position: 4
+---
+
+## Patient Data Sovereignty and Access Management
+
+Patients retain ultimate control over their ePA data. Access is strictly limited to the patient themselves and medical personnel explicitly authorized by the patient. [video:02:42] Patients can manage these permissions directly, typically via a dedicated mobile application, allowing them to grant or revoke access to specific healthcare providers as needed. [video:02:50]
+
+### Developer Integration: Patient Access Management
+Systems integrating with ePA must provide mechanisms for patients to manage access. Below are conceptual API endpoints for this functionality:
+
+**API Endpoint for Granting Access (Hypothetical):**
+```json
+POST /api/v1/patient/{patientId}/access-grants
+Authorization: Bearer {patientAuthToken}
+Content-Type: application/json
+
+{
+  "granteeId": "DOCTOR_ID_123",
+  "granteeType": "medical_professional",
+  "permissions": ["read_medication_list", "read_doctor_letters"],
+  "validUntil": "2025-01-01T00:00:00Z"
+}
+```
+
+**API Endpoint for Revoking Access (Hypothetical):**
+```json
+DELETE /api/v1/patient/{patientId}/access-grants/{grantId}
+Authorization: Bearer {patientAuthToken}
+```
+
+## Enabling Medical Research and Continuous Evolution
+
+The next phase of ePA development will enable the use of patient data for vital medical research and other public welfare-oriented purposes. [video:03:00] For these objectives, data will be provided in a pseudonymized form, protecting individual identities while allowing for large-scale analysis. Insured individuals will have the option to opt-out if they do not wish their data to be used for these purposes. [video:03:05] This data foundation is expected to catalyze significant breakthroughs in treating severe or rare diseases by fostering the development of more effective therapies. [video:03:15]
+
+### Developer Integration: Research Consent Management
+Applications dealing with ePA should provide patients with interfaces to manage their research participation consent:
+
+**API Endpoint to Check Research Opt-Out Status (Hypothetical):**
+```json
+GET /api/v1/patient/{patientId}/research-consent
+Authorization: Bearer {patientAuthToken}
+```
+
+**Expected Response (200 OK):**
+```json
+{
+  "canParticipateInResearch": true, // 'true' if opted-in or not opted out, 'false' if opted out
+  "optOutOptionAvailable": true
+}
+```
+
+**API Endpoint to Update Research Opt-Out (Hypothetical):**
+```json
+PUT /api/v1/patient/{patientId}/research-consent
+Authorization: Bearer {patientAuthToken}
+Content-Type: application/json
+
+{
+  "participateInResearch": false // Set to 'false' to opt-out, 'true' to opt-in
+}
+```
+
+The ePA for all is subject to continuous, demand-driven development, adapting to the concrete needs of everyday healthcare. This ongoing evolution solidifies its role as the centerpiece of future healthcare provision. [video:03:30]

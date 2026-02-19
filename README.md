@@ -44,10 +44,21 @@ Use `--format mdx` for Docusaurus, Mintlify, or other MDX-based doc sites — ad
 
 ## Example Output
 
-See what Reeldocs generates from real product videos:
+Some things only have YouTube videos for docs. Reeldocs fixes that:
+
+- [BundID](gallery/bundid/) — Germany's digital identity system, docs scattered across government PDFs
+- [Elektronische Patientenakte](gallery/elektronische-patientenakte/) — Germany's digital health record, docs fragmented across dozens of sites
+- [ELSTER Tax Filing](gallery/elster-tax-filing/) — Germany's tax portal, so confusing it spawned an entire paid-software industry
+- [FFmpeg](gallery/ffmpeg/) — the most used multimedia tool in the world, famously impenetrable docs
+- [Respeak Document Intelligence](gallery/respeak-document-intelligence/) — our own platform, dogfooding Reeldocs
+
+<details>
+<summary>More examples</summary>
 
 - [n8n Workflow Automation](gallery/n8n-workflow-automation/) — from a 2-min tutorial
 - [Supabase Overview](gallery/supabase-overview/) — from the official product tour
+
+</details>
 
 ## Comparison
 

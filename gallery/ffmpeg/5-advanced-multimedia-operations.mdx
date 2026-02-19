@@ -1,0 +1,71 @@
+---
+title: "5. Advanced Multimedia Operations"
+sidebar_position: 5
+---
+
+## Concatenating Multiple Video Clips
+
+FFmpeg can combine multiple video clips into a single output file. For efficiency, especially with identical formats, you can use the `concat` demuxer and specify `copy` for the codec, which avoids re-encoding and speeds up the process significantly. [video:01:33]
+
+First, create a text file (e.g., `vids.txt`) listing each input video file to be concatenated, with `file 'filename'` on each line:
+
+```text
+# vids.txt
+file 'clip1.mp4'
+file 'clip2.mp4'
+file 'clip3.mp4'
+```
+
+Then, use the following command:
+```bash
+ffmpeg -f concat -i vids.txt -c copy output.mp4
+```
+Here, `-f concat` tells FFmpeg to use the concat demuxer, and `-c copy` ensures that the streams are copied without re-encoding, preserving original quality and processing speed.
+
+## Trimming Video Segments
+
+You can easily trim a specific segment from a video using the `-ss` (start time) and `-t` (duration) flags. Using `-c copy` with trimming allows for very fast, lossless cutting as it avoids re-encoding. [video:01:43]
+
+**Example: Trim 10 seconds starting from 30 seconds into the video**
+```bash
+ffmpeg -i input.mp4 -ss 00:00:30 -t 00:00:10 -c copy output.mp4
+```
+*   `-ss 00:00:30`: Starts the trim at 30 seconds into the input.
+*   `-t 00:00:10`: Specifies a duration of 10 seconds for the output clip.
+*   `-c copy`: Copies the video and audio streams directly, preventing quality loss and speeding up the process.
+
+## Applying Video Filters (`-vf`)
+
+The `-vf` (video filtergraph) option is one of FFmpeg's most powerful features, allowing for complex transformations and effects on video streams. Filters can be chained together in a graph. [video:01:52]
+
+**Examples of common video filters:**
+
+*   **Scaling:** Resize the video to a specific resolution.
+    ```bash
+    ffmpeg -i input.mp4 -vf scale=640:360 output.mp4
+    ```
+*   **Rotation:** Rotate the video (e.g., `transpose=1` for 90-degree clockwise).
+    ```bash
+    ffmpeg -i input.mp4 -vf transpose=1 output.mp4
+    ```
+*   **Color Modifications (e.g., brightness, contrast):** Adjust visual properties.
+    ```bash
+    ffmpeg -i input.mp4 -vf eq=brightness=0.5 output.mp4
+    ```
+    This command increases the brightness by 0.5.
+
+## Adding Subtitles
+
+FFmpeg can embed subtitles into a video. A common workflow involves converting an SRT (SubRip) subtitle file to an ASS (Advanced SubStation Alpha) file, which offers richer formatting options, and then overlaying the ASS file onto the video using the `ass` filter. [video:02:05]
+
+**Step 1: Convert SRT to ASS**
+```bash
+ffmpeg -i input.srt output.ass
+```
+This converts `input.srt` into `output.ass`.
+
+**Step 2: Embed ASS subtitles into video**
+```bash
+ffmpeg -i input.mp4 -vf ass=output.ass output_with_subtitles.mp4
+```
+This command uses the `ass` video filter to burn the `output.ass` subtitles directly into the `input.mp4` video stream, creating `output_with_subtitles.mp4`.
