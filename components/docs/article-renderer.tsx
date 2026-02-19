@@ -191,11 +191,7 @@ function renderNode(
           >
             <path d="m9 18 6-6-6-6" />
           </svg>
-          {(node.content ?? []).flatMap((child: TiptapNode) =>
-            (child.content ?? []).map((inline: TiptapNode) =>
-              renderInline(inline, onTimestampClick)
-            )
-          )}
+          {children}
         </summary>
       );
     case "detailsContent":

@@ -24,8 +24,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 
 const lowlight = createLowlight(common);
 
-// Override DetailsSummary to render as div[data-type] instead of native <summary>,
-// because Tailwind v4 tree-shakes CSS rules targeting the bare `summary` element.
+// Override DetailsSummary to render as div[data-type="detailsSummary"] instead of
+// native <summary>. The tiptap extension's own CSS targets this data-type selector,
+// but renders <summary> by default — causing a mismatch with Tailwind v4's compilation.
 const CustomDetailsSummary = DetailsSummary.extend({
   renderHTML({ HTMLAttributes }) {
     return ["div", mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, { "data-type": "detailsSummary" }), 0];
