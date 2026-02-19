@@ -6,6 +6,11 @@
     "reeldocs": "./dist/index.js"
   },
   "type": "module",
+  "exports": {
+    ".": "./dist/ai/pipeline.js",
+    "./ai": "./dist/ai/gemini.js",
+    "./prompts": "./dist/ai/prompts.js"
+  },
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch"

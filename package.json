@@ -12,6 +12,7 @@
     "test:e2e:headed": "playwright test --headed"
   },
   "dependencies": {
+    "reeldocs": "workspace:*",
     "@google/genai": "^1.40.0",
     "@hello-pangea/dnd": "^18.0.1",
     "@supabase/ssr": "^0.8.0",
