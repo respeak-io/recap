@@ -42,6 +42,13 @@ Options:
 
 Use `--format mdx` for Docusaurus, Mintlify, or other MDX-based doc sites — adds YAML frontmatter with `title` and `sidebar_position`.
 
+## Example Output
+
+See what Reeldocs generates from real product videos:
+
+- [n8n Workflow Automation](gallery/n8n-workflow-automation/) — from a 2-min tutorial
+- [Supabase Overview](gallery/supabase-overview/) — from the official product tour
+
 ## Comparison
 
 | | Reeldocs | Scribe | Tango | Manual |

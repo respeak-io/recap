@@ -1,0 +1,58 @@
+---
+title: "3. Getting Started and Advanced Database Features"
+sidebar_position: 3
+---
+
+## Deployment Options
+
+Supabase offers flexibility in how you deploy and manage your projects [video:1:04]:
+
+*   **Self-hosting with Docker:** For maximum control and local development, you can self-host Supabase using Docker. This option provides full ownership of your infrastructure.
+*   **Fully Managed Cloud Service:** Supabase provides a fully managed cloud platform, allowing you to quickly get started without managing servers. It includes a generous **free tier**, making it accessible for prototyping and small projects, with scalable paid plans for larger applications [video:1:07].
+
+## Managing Your PostgreSQL Database via Dashboard
+
+The Supabase dashboard provides an intuitive interface for interacting with your PostgreSQL database [video:1:11]:
+
+1.  **Table Creation:** Easily create new tables within your database schema.
+2.  **Schema Definition:** Define columns, their data types, and constraints to build out your database structure.
+3.  **Data Population:** Add and manage data rows directly through the UI, streamlining initial data entry and testing.
+
+An example of creating a `humans` table with columns like `id`, `created_at`, and `face` (with emojis) is demonstrated [video:1:11].
+
+## User Authentication and Row-Level Security Policies
+
+Each Supabase project includes an `auth` schema dedicated to user management [video:1:22]. This schema contains tables like `users` to store authenticated user data.
+
+To enable **Row-Level Security (RLS)** for a table [video:1:27]:
+1.  Navigate to the 'Authentication' section and then 'Policies'.
+2.  Select the desired table and toggle RLS on.
+3.  Create or choose from policy templates (e.g., 'Enable read access for all users', 'Enable insert for authenticated users', 'Enable update for owners') to define precise access rules. These policies ensure that data access is automatically restricted based on the user's authentication status and other criteria.
+
+## Advanced Database Functionality: Triggers and Functions
+
+Supabase leverages the advanced capabilities of PostgreSQL, supporting [video:1:34]:
+
+*   **Triggers:** Configure database triggers to automatically execute a function in response to specific events (e.g., `INSERT`, `UPDATE`, `DELETE`) on a table. This is useful for auditing, data integrity, or cascading operations.
+*   **PostgreSQL Functions (Stored Procedures):** Write and run custom functions directly on the database server. These allow you to encapsulate complex business logic, perform data transformations, or integrate with other database features, often improving performance by reducing client-server round trips.
+
+```sql
+-- Example PostgreSQL Function to set a timestamp
+CREATE OR REPLACE FUNCTION public.set_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$
+LANGUAGE plpgsql;
+
+-- Example Trigger to use the function on update
+CREATE TRIGGER on_table_update
+BEFORE UPDATE ON public.your_table
+FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+```
+
+## Auto-generated API Documentation
+
+Supabase automatically generates comprehensive API documentation tailored to your project's schema [video:1:43]. This 'Auto-Docs' feature provides ready-to-use code snippets and clear explanations for interacting with your tables, views, and functions via the generated REST and GraphQL APIs, accelerating client-side integration.
