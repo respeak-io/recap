@@ -16,7 +16,8 @@ program
   .option("-o, --output <dir>", "Output directory", "./docs")
   .option("-k, --api-key <key>", "Gemini API key (or set GEMINI_API_KEY env var)")
   .option("-f, --format <format>", "Output format: markdown, mdx", "markdown")
-  .action(async (source: string, opts: { output: string; apiKey?: string; format: string }) => {
+  .option("-m, --model <model>", "Gemini model to use", "gemini-2.5-flash")
+  .action(async (source: string, opts: { output: string; apiKey?: string; format: string; model: string }) => {
     const apiKey = opts.apiKey || process.env.GEMINI_API_KEY;
     if (!apiKey) {
       console.error("Error: Gemini API key required. Set GEMINI_API_KEY or use --api-key");
@@ -27,6 +28,7 @@ program
 
     try {
       const doc = await processVideo(source, apiKey, {
+        model: opts.model,
         onProgress: (_step, message) => {
           spinner.text = message;
         },

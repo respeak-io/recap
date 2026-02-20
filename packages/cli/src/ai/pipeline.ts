@@ -28,16 +28,18 @@ export interface GeneratedDoc {
   segments: Segment[];
 }
 
-export interface PipelineCallbacks {
+export interface PipelineOptions {
+  model?: string;
   onProgress?: (step: string, message: string) => void;
 }
 
 export async function processVideo(
   source: string,
   apiKey: string,
-  callbacks?: PipelineCallbacks
+  options?: PipelineOptions
 ): Promise<GeneratedDoc> {
-  const log = callbacks?.onProgress ?? (() => {});
+  const model = options?.model ?? "gemini-2.5-flash";
+  const log = options?.onProgress ?? (() => {});
 
   initAI(apiKey);
 
@@ -55,12 +57,12 @@ export async function processVideo(
     const { uri, mimeType } = await uploadVideo(videoPath);
 
     log("extract", "Extracting content from video...");
-    const segments: Segment[] = await extractVideoContent(uri, mimeType);
+    const segments: Segment[] = await extractVideoContent(uri, mimeType, model);
 
     log("generate", "Generating documentation...");
     const prompt = getDocGenerationPrompt(segments as unknown as Record<string, unknown>[]);
     const response = await getAI().models.generateContent({
-      model: "gemini-2.5-flash",
+      model,
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       config: { responseMimeType: "application/json" },
     });

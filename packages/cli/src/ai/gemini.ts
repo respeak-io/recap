@@ -41,10 +41,10 @@ export async function uploadVideo(source: string): Promise<{ uri: string; mimeTy
   return { uri: info.uri!, mimeType: info.mimeType! };
 }
 
-export async function extractVideoContent(fileUri: string, fileMimeType: string) {
+export async function extractVideoContent(fileUri: string, fileMimeType: string, model: string = "gemini-2.5-flash") {
   const ai = getAI();
   const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash",
+    model,
     contents: createUserContent([
       createPartFromUri(fileUri, fileMimeType),
       `Analyze this video and return a JSON array of segments. Each segment should cover a logical section of the video (30-120 seconds each).
