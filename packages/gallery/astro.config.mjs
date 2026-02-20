@@ -34,12 +34,12 @@ export default defineConfig({
           autogenerate: { directory: "elster-tax-filing" },
         },
         {
-          label: "BundID",
-          autogenerate: { directory: "bundid" },
+          label: "AusweisApp & Online-Ausweis",
+          autogenerate: { directory: "ausweisapp-online-id" },
         },
         {
-          label: "Elektronische Patientenakte",
-          autogenerate: { directory: "elektronische-patientenakte" },
+          label: "Elektronische Patientenakte (ePA)",
+          autogenerate: { directory: "epa-patientenakte" },
         },
         {
           label: "Respeak Document Intelligence",
