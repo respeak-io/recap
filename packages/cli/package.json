@@ -1,0 +1,31 @@
+{
+  "name": "reeldocs",
+  "version": "0.1.0",
+  "description": "Generate documentation from product videos",
+  "bin": {
+    "reeldocs": "./dist/index.js"
+  },
+  "type": "module",
+  "exports": {
+    ".": "./dist/ai/pipeline.js",
+    "./ai": "./dist/ai/gemini.js",
+    "./prompts": "./dist/ai/prompts.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "files": ["dist"],
+  "keywords": ["documentation", "video", "ai", "docs", "generator", "cli"],
+  "license": "AGPL-3.0",
+  "dependencies": {
+    "@google/genai": "^1.40.0",
+    "commander": "^13.0.0",
+    "marked": "^17.0.1",
+    "ora": "^8.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "typescript": "^5"
+  }
+}

@@ -1,0 +1,24 @@
+---
+title: "Testing and Data Referencing"
+sidebar_position: 3
+---
+
+## Initial Test Run and Identifying the Issue
+
+To test the workflow, click the 'Test run' button above the trigger [video:04:32]. Fill in the form with test data:
+*   Customer Name: 'Sarah Johnson' [video:04:47]
+*   Feedback: 'The new dashboard is fantastic! So much easier to use than the old version. My only wish is that it loaded a bit faster!' [video:04:50]
+*   Email: 'sarah@example.com' [video:04:52]
+
+Click 'Run full flow' [video:04:54]. The agent's output indicates 'no specific feedback included in the original request' [video:05:05]. This happens because the agent needs to be explicitly given the actual feedback data to analyze, which is where data referencing comes in [video:05:12].
+
+## Implementing Data Referencing
+
+Click on the agent node again and edit its prompt [video:05:15]. Inside the prompt editor, you can reference data from previous nodes. Update the prompt to include placeholders for the customer's name and feedback:
+'Analyze the customer feedback from {customer_name} from {feedback}' [video:05:28].
+
+Placeholders (e.g., `{customer_name}`, `{feedback}`) are inserted by clicking on the respective fields from the previous 'Form' node's output, visible in the reference data panel. A preview of the prompt with the filled-in test data is shown below the prompt field [video:05:39].
+
+## Successful Agent Analysis Test Run
+
+Retest only the Agent node by clicking the play button directly on the node [video:06:06]. The agent successfully processes the feedback, providing a summary, the 'product' category, and a 'positive' sentiment, demonstrating that it now receives the correct data for analysis [video:06:21]. This also illustrates how data flows through the workflow, with each node accessing outputs from its predecessors [video:06:36].

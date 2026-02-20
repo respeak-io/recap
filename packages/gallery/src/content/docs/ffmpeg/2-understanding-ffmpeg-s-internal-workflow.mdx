@@ -1,0 +1,15 @@
+---
+title: "2. Understanding FFmpeg's Internal Workflow"
+sidebar:
+  order: 2
+---
+
+## The Multimedia Processing Pipeline
+
+FFmpeg processes media through a well-defined pipeline [video:00:28]:
+
+1.  **Input and Demultiplexing:** An input file (`in.avi` as an example) is fed into a **demultiplexer**. The demultiplexer separates the multiplexed audio and video tracks into individual encoded data packets. [video:00:30]
+2.  **Decoding:** These encoded data packets are then passed to a **decoder**, which converts them into uncompressed frames (raw video frames and raw audio samples). [video:00:35]
+3.  **Processing and Filtering:** The uncompressed frames can then undergo various transformations and filters. This might include modifying brightness and contrast, adding subtitles, or visualizing audio as a waveform. [video:00:40]
+4.  **Encoding:** After processing, the frames are sent to an **encoder** to convert them back into compressed data packets, typically in a new format or with modified properties.
+5.  **Multiplexing and Output:** Finally, these re-encoded packets are fed into a **multiplexer**, which combines them into a single output file (e.g., `out.mp4`). [video:00:48]

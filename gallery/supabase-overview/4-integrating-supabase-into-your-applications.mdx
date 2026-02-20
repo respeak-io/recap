@@ -1,0 +1,120 @@
+---
+title: "4. Integrating Supabase into Your Applications"
+sidebar_position: 4
+---
+
+## Client-Side SDK Integration
+
+Integrating Supabase into a JavaScript project begins with installing the client SDK and initializing it [video:1:47]. The auto-generated API documentation provides exact query examples for your database.
+
+1.  **Install the SDK:**
+    ```bash
+    npm install @supabase/supabase-js
+    ```
+
+2.  **Initialize the Client:**
+    ```javascript
+    import { createClient } from '@supabase/supabase-js'
+
+    const supabaseUrl = 'YOUR_SUPABASE_URL'
+    const supabaseAnonKey = 'YOUR_SUPABASE_ANON_KEY'
+
+    export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+    ```
+
+## User Authentication Flow
+
+Supabase simplifies user authentication processes, from sign-up to session management [video:1:55].
+
+*   **Sign Up a User:**
+    ```javascript
+    async function signUpUser(email, password) {
+      const { data, error } = await supabase.auth.signUp({
+        email: email,
+        password: password,
+      })
+
+      if (error) console.error('Sign up error:', error.message)
+      else console.log('User signed up successfully:', data)
+    }
+    ```
+
+*   **Real-time Authentication State Changes:** Use `onAuthStateChange` to listen for user login, logout, and other session events, allowing your application to react dynamically.
+    ```javascript
+    supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth event:', event, 'Session:', session)
+      if (event === 'SIGNED_IN') {
+        // Handle user logged in
+      } else if (event === 'SIGNED_OUT') {
+        // Handle user logged out
+      }
+    })
+    ```
+
+## Interacting with the Database via SDK
+
+Supabase empowers developers to interact with the database without writing raw SQL code in their application [video:2:04]. The client SDK provides a fluent API to build queries, or you can use the auto-generated REST and GraphQL APIs directly.
+
+*   **Querying Data (JavaScript Client):**
+    ```javascript
+    // Fetching specific columns and related data from the 'humans' table
+    async function getHumanData() {
+      const { data, error } = await supabase
+        .from('humans')
+        .select('name, body_parts(human_id, type)') // Joins related 'body_parts'
+
+      if (error) console.error('Error fetching data:', error.message)
+      else console.log('Human data:', data)
+    }
+    ```
+
+*   **GraphQL API Example:** For more complex data fetching requirements.
+    ```graphql
+    query { 
+      humansCollection { 
+        edges { 
+          node { 
+            name 
+            body_partsCollection { 
+              edges { 
+                node { 
+                  type 
+                } 
+              } 
+            } 
+          } 
+        } 
+      } 
+    }
+    ```
+
+## Serverless Edge Functions
+
+For custom server-side logic, Supabase offers **serverless Edge Functions**. These functions are developed using Deno and TypeScript and are deployed globally, minimizing latency. They are ideal for tasks such as data validation, integrating with third-party APIs, or executing business logic that requires a secure, server-side environment [video:2:19].
+
+```typescript
+// Example Supabase Edge Function (Deno + TypeScript)
+import { createClient } from 'supabase';
+
+Deno.serve(async (req) => {
+  const supabase = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_ANON_KEY')!
+  );
+
+  const { name } = (await req.json());
+
+  // Example: Insert data into a 'logs' table
+  const { data, error } = await supabase.from('logs').insert({ message: `Edge function called by ${name}` });
+
+  if (error) {
+    return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+  }
+
+  return new Response(JSON.stringify({ success: true, message: `Hello, ${name}!` }), { status: 200 });
+});
+```
+
+## Further Learning and Resources
+
+To dive deeper into building powerful applications with Supabase, explore the extensive documentation and educational resources available. Platforms like Fireship.io offer comprehensive courses that can help you master the platform and build awesome projects [video:2:29].

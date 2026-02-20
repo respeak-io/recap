@@ -1,0 +1,54 @@
+---
+title: "4. Analytics, API, and Security"
+sidebar:
+  order: 4
+---
+
+## 4.1 Monitoring and Optimizing with Analytics
+
+The Respeak Expert Platform provides comprehensive analytics for both individual experts and the entire workspace, offering insights into usage and performance [video:07:44]:
+
+*   **Questions Asked**: Total number of queries [video:07:50].
+*   **Average Response Time**: Performance metric for query processing [video:07:55].
+*   **Sources Used**: Tracks how many unique sources contribute to answers [video:08:00].
+*   **Most Relevant Sources**: Identifies the most frequently utilized documents [video:08:05].
+*   **Individual Question History**: Detailed log of all questions asked, including source, date, rating, bad rating reasons, and extracted keywords [video:08:15].
+*   **Unanswered Questions**: Filter to view queries where the system failed to provide an answer, highlighting knowledge gaps that can be addressed by adding new data [video:08:35].
+*   **Source Usage & Ratings**: Visualizations showing how often different sources are queried and the overall user feedback ratings [video:08:50].
+
+These analytics empower administrators to optimize their knowledge bases, identify areas for improvement, and understand user behavior.
+
+## 4.2 API Integration and Security Principles
+
+Respeak offers robust integration capabilities through its API, allowing developers to embed the platform's functionality directly into their applications.
+
+**API Access:**
+All functionalities available through the Respeak web frontend are also accessible via a comprehensive API. This enables developers to programmatically:
+*   Ingest and manage data sources.
+*   Create and configure experts.
+*   Submit queries and retrieve AI-generated responses.
+*   Access analytics and user feedback.
+
+**Conceptual API Example (Querying an Expert):**
+```json
+{
+  "endpoint": "/api/v1/expert/{expert_id}/query",
+  "method": "POST",
+  "headers": {
+    "Authorization": "Bearer YOUR_API_KEY",
+    "Content-Type": "application/json"
+  },
+  "body": {
+    "question": "What are the main features of the Respeak Expert Platform?",
+    "fallback_to_llm": true
+  }
+}
+```
+
+**Security and Data Privacy:**
+Respeak places a high priority on data privacy and compliance:
+*   **GDPR Compliant**: The platform is fully compliant with GDPR regulations [video:09:40].
+*   **EU Hosting**: All data processing and storage occur exclusively on servers located within the European Union [video:09:45].
+*   **Data Separation**: Customer data is strictly separated between organizations and individual accounts. There are stringent measures in place to prevent any cross-customer data access, ensuring complete isolation and protection of proprietary information [video:09:55].
+
+For custom demos or to evaluate the system with a two-week trial, interested parties are encouraged to reach out to the Respeak team [video:10:05].

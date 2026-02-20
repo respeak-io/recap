@@ -1,0 +1,31 @@
+---
+title: "3. Managing Knowledge: Creating and Customizing Experts"
+sidebar_position: 3
+---
+
+## 3.1 Structuring Knowledge with Experts
+
+Within the Respeak platform, knowledge is organized into **Experts**. Each expert acts as a dedicated knowledge base, akin to a 'folder' containing specific information that the AI can leverage to generate responses [video:04:40]. Companies typically organize their entire knowledge base within a 'Workspace', and then create multiple experts to structure different domains of knowledge (e.g., 'Product Documentation Expert', 'HR Policies Expert').
+
+**Creating an Expert:**
+1.  Navigate to the 'Manage your expert' section [video:04:35].
+2.  Click 'New expert' and provide a name (e.g., 'Testpert') [video:04:50].
+3.  Begin adding data sources to populate the expert.
+
+## 3.2 Ingesting Data Sources
+
+Respeak supports a variety of data ingestion methods to build your expert's knowledge base:
+
+*   **Websites**: Add a URL (e.g., `https://www.respeak.io/`). The system automatically analyzes the sitemap, allowing you to select specific pages or the entire domain for inclusion [video:05:05]. Data is quickly vectorized for search.
+*   **Documents**: Upload files such as PDFs (e.g., `Megatrend Gaming - Whitepaper.pdf`) [video:05:25]. For PDFs, there's an option to 'Extract images'. Enabling this feature allows the system to describe images as text, making their content searchable [video:05:35]. Processing large PDFs with image extraction can take several minutes.
+*   **Integrations**: Connect directly to existing knowledge platforms. Current integrations include Confluence and SharePoint. Respeak plans to add further connectors based on customer demand [video:06:00]. The UI visually suggests other potential integrations like Airtable, Azure, Box, Delta Table, Discord, Dropbox, Elasticsearch, GitHub, GitLab, Google Cloud Storage, Google Drive, Jira, MongoDB, and Notion.
+
+## 3.3 Enhancing Experts: Questions, Sharing, and Fallback
+
+Beyond basic data ingestion, experts can be enhanced with additional features:
+
+*   **Example Questions**: Manually add specific questions or use the 'Generate' feature to automatically create example questions based on the expert's content [video:06:15]. These can guide users on how to query the expert effectively.
+*   **Public Sharing Links**: Generate public access links to share specific expert knowledge with users who may not have a Respeak account, or to make certain information publicly available [video:06:25].
+*   **LLM Fallback Mechanism ('Answer without expert knowledge')**: This crucial setting determines the system's behavior when a query cannot be answered by the expert's knowledge base. 
+    *   **Disabled (Default)**: If information is not found in the expert's data, the system will explicitly state it's 'unable to find a direct answer' [video:06:55].
+    *   **Enabled**: When activated, if the expert cannot find a direct answer, the system will fall back to using the pre-trained knowledge of the underlying LLM to generate a response. Importantly, it will clearly indicate that this is an 'AI-generated answer... that IS NOT based on your knowledge base' [video:07:25], maintaining transparency about the source of information.

@@ -1,0 +1,31 @@
+---
+title: "Advanced Features and Customization"
+sidebar_position: 3
+---
+
+## Pre-built Integrations and HTTP APIs
+
+n8n offers a wide array of pre-built nodes to handle common services such as Gmail, Slack, Shopify, and AWS [video:00:28]. These nodes abstract away much of the complexity, allowing for rapid integration. For services without a dedicated node, or for custom interactions, n8n provides an **HTTP Request** node, enabling you to call any HTTP API [video:00:32]. This ensures connectivity with virtually any web-enabled service.
+
+## Custom Logic with JavaScript and Control Flow
+
+One of n8n's key differentiators is its flexibility and powerful customization options [video:00:38]. It supports advanced control flow mechanisms essential for handling complex logic and 'weird edge cases' [video:00:43]:
+
+*   **Conditionals (`If` nodes)**: Execute different paths based on specified conditions.
+*   **Loops (`Loop Over Items` nodes)**: Process multiple items iteratively or in batches.
+*   **Code Nodes**: Run custom JavaScript code directly within your workflow for specialized parsing, data manipulation, or logic implementation [video:00:45]. This prevents developers from being forced into a 'one-size-fits-all' solution [video:00:47].
+
+#### Example: Custom JavaScript Code Node
+For intricate data transformations or custom business logic, the Code node is invaluable. Below is a conceptual example of a JavaScript snippet that might be used within a Code node to modify incoming data:
+
+```javascript
+// In a 'Code' node, 'items' represents the incoming data array
+return items.map(item => {
+  // Access properties through item.json
+  if (item.json.status === 'pending') {
+    item.json.priority = 'high';
+  }
+  item.json.processedTimestamp = new Date().toISOString();
+  return item;
+});
+```

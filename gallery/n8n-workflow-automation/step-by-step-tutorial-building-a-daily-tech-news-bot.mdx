@@ -1,0 +1,54 @@
+---
+title: "Step-by-Step Tutorial: Building a Daily Tech News Bot"
+sidebar_position: 5
+---
+
+## 1. Initial Setup: Trigger and Sources
+
+The workflow begins with a **Schedule Trigger** node [video:01:17], configured to run daily. Following this, an **Edit Fields** node is used to define a list of news sources. These sources are provided as an array of URLs [video:01:21].
+
+#### Example: News Sources in 'Edit Fields' Node
+```json
+[
+  "https://www.theverge.com/rss/index.xml",
+  "https://techcrunch.com/feed/",
+  "https://arstechnica.com/feed/"
+]
+```
+
+## 2. Data Retrieval and Filtering
+
+Next, a **Split Out** node [video:01:24] processes the array of news sources, outputting each URL as a separate item. These individual URLs then feed into an **RSS Read** node [video:01:28], which fetches all the latest articles from each source. 
+
+To manage the volume of articles, a **Sort** node is applied to randomize the order [video:01:33], followed by a **Limit** node to select only the first 15 articles [video:01:36]. This ensures a curated, manageable list of news items.
+
+## 3. Summarization with LLM
+
+The selected articles are then passed to a **Basic LLM Chain** node [video:01:40]. Here, a custom prompt is defined to summarize the content of each article and extract its original link. For the Large Language Model (LLM) backend, a **Google Gemini Chat Model** node is integrated [video:01:47], requiring a free API key obtained from Google AI Studio.
+
+#### API Reference: Google AI Studio
+To use the Google Gemini Chat Model, you need to obtain an API key from Google AI Studio. This key authenticates your requests to the Gemini model for content generation.
+
+#### Example: LLM Prompt Configuration
+```plaintext
+"Summarize the following tech news article in exactly three sentences, then provide the original article link immediately after the summary. Ensure the summary is concise and highlights the main points. 
+
+Title: {{ $json.title }}
+Content: {{ $json.content }}
+Link: {{ $json.link }}"
+```
+
+## 4. Sending to Discord
+
+Finally, a **Discord** node [video:01:54] is used to publish the summarized news to a designated Discord server. This node is configured with a webhook URL obtained from the Discord server settings, and the message content is dynamically populated using data from the previous LLM node, creating a rich message with summaries and links [video:01:58].
+
+#### Example: Discord Message Payload
+```json
+{
+  "content": "### Daily Tech News Update \n\n**{{ $json.title }}**\n{{ $json.summary }}\n[Read more]({{ $json.link }})\n",
+  "username": "n8n Tech News Bot",
+  "avatar_url": "https://example.com/n8n-icon.png" 
+}
+```
+
+Upon execution, this workflow delivers a daily digest of tech news directly to your Discord server, complete with succinct summaries and direct links to the full articles [video:02:07].

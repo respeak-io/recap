@@ -1,0 +1,37 @@
+---
+title: "3. Complementary Tools and Libraries"
+sidebar:
+  order: 3
+---
+
+## FFplay: Command-Line Media Player
+
+FFplay is a simple and portable media player included with FFmpeg, allowing users to quickly play media files directly from the command line. It's useful for previewing output or quickly checking media content. [video:00:50]
+
+**Usage Example:**
+```bash
+ffplay badger.mp4
+```
+
+## FFprobe: Media Metadata Inspector
+
+FFprobe is a powerful tool for extracting comprehensive metadata from multimedia files. It provides detailed information about streams, codecs, formats, duration, bitrate, and more, which is invaluable for analysis and debugging. [video:00:55]
+
+**Usage Example:**
+```bash
+ffprobe badger.mp4
+```
+This command will output detailed information about the video, audio, and container properties of `badger.mp4`.
+
+## FFmpeg Libraries for Developers
+
+Beyond the command-line tools, FFmpeg provides a rich set of low-level libraries that developers can leverage to build their own multimedia processing software. These libraries offer granular control over various aspects of media handling. [video:01:00]
+
+Key libraries include:
+*   `libavutil`: Utility library (for common functions).
+*   `libavcodec`: Codec library (for encoding/decoding audio/video).
+*   `libavformat`: Format library (for multiplexing/demultiplexing).
+*   `libavdevice`: Device library (for capturing/rendering from/to devices).
+*   `libavfilter`: Filter library (for media manipulation).
+*   `libswscale`: Swscaler library (for image scaling and pixel format conversion).
+*   `libswresample`: Swresampler library (for audio resampling and format conversion).

@@ -1,0 +1,45 @@
+---
+title: "2. Supabase Architecture and Core Features"
+sidebar:
+  order: 2
+---
+
+## Architectural Overview
+
+At a high level, Supabase provides two main components: robust backend infrastructure and flexible client-side SDKs [video:0:28].
+
+## Backend Services
+
+The Supabase backend includes essential infrastructure services that run in the cloud [video:0:30]:
+
+*   **PostgreSQL Database:** A powerful, scalable relational database forms the core of Supabase, offering reliability and advanced features.
+*   **File Storage:** Provides secure and scalable storage for large objects like images, videos, and documents.
+*   **Edge Functions:** Serverless functions, powered by Deno, that run globally distributed, offering low-latency execution for your custom backend logic.
+
+## Frontend Integration with SDKs
+
+Supabase offers client-side SDKs that enable seamless connectivity between your frontend application and the backend services. These SDKs support popular JavaScript frameworks (e.g., React, Vue, Svelte), mobile development platforms (React Native, Flutter), and other environments, allowing for easy data manipulation and authentication management [video:0:37].
+
+## Database Management and Auto-generated APIs
+
+Developers can manage their PostgreSQL database through an easy-to-understand User Interface (UI) [video:0:44]. A standout feature is the automatic generation of **REST** and **GraphQL APIs** directly from your database schema. This eliminates the need to manually build API layers for common database operations, significantly speeding up development.
+
+```javascript
+// Example: Fetching all rows from a 'countries' table
+async function getCountries() {
+  const { data, error } = await supabase
+    .from('countries')
+    .select('*')
+
+  if (error) console.error(error.message)
+  else console.log(data)
+}
+```
+
+## Integrated User Authentication and Row-Level Security
+
+Supabase integrates user authentication directly with the PostgreSQL database, making it almost trivial to implement sophisticated security measures like **Row-Level Security (RLS)** [video:0:52]. RLS allows you to define policies that control granular access to data rows based on the authenticated user's identity, roles, or other custom logic, enforced directly by the database.
+
+## Real-time Capabilities and Scalability
+
+Similar to other modern BaaS platforms, Supabase provides real-time capabilities. Your applications can subscribe to database changes and receive updates instantly, enabling dynamic and collaborative user experiences. The underlying PostgreSQL database is designed to scale efficiently to virtually any workload [video:0:59], ensuring high performance as your application grows.

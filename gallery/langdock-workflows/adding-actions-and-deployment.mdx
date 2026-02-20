@@ -1,0 +1,30 @@
+---
+title: "Adding Actions and Deployment"
+sidebar_position: 4
+---
+
+## Integrating Slack with an Action Node
+
+To utilize the analysis, add an Action node. Click the '+' button after the Agent node, select 'Actions' [video:06:42]. Search for 'Slack' and choose 'Send message' [video:06:56]. Actions are essential for connecting to external tools like email or Slack [video:07:05].
+
+Configure the Slack action:
+1.  Authenticate with Slack or select an existing connection [video:07:12].
+2.  Keep 'Human in the loop' off for automatic execution [video:07:18].
+3.  For 'Channel ID', manually set it to '#customer-feedback' [video:07:29].
+
+## Crafting the Slack Message with AI and Data References
+
+For the message text, select 'Prompt AI' [video:07:37]. Paste the following detailed prompt, which references data from both the Form trigger and the Agent output:
+'Write a message to post the new customer feedback from {customer_name} in Slack. Include sentiment, category, summary, and the original feedback given, and some formatting instructions.' [video:07:51]
+
+This creates a rich and informative message. Select 'Sonnet 4.5' as the model for this action [video:08:08].
+
+## Full Workflow Test Run and Slack Verification
+
+Initiate a complete test run by clicking the 'Test run' button and selecting 'Run full flow' with the saved test event [video:08:12]. Observe the workflow as it executes each node: the trigger receives data, the agent analyzes it, and the action sends it to Slack [video:08:24]. The output of each node, including the structured output, is visible. Finally, check Slack to confirm the message, correctly formatted with the analyzed feedback, is posted in the '#customer-feedback' channel [video:08:49]. The workflow is now working perfectly.
+
+## Deploying the Workflow and Sharing the Form
+
+With testing complete, deploy the workflow by clicking the 'Deploy' button in the top right [video:08:57]. Langdock keeps track of every change, providing deployment history and version control. For this first version, enter 'Initial setup' as the description [video:09:11]. Click 'Deploy'. The workflow will automatically be 'On' [video:09:21], ready to receive real events.
+
+For the form trigger, Langdock generates a shareable URL. Copy this URL [video:09:29] and open it in a new tab to see the live feedback form [video:09:37]. This URL can be shared with teammates for submitting customer feedback, which will then trigger the deployed workflow [video:09:44]. You have now successfully built, tested, and deployed your first automated workflow [video:09:50].
