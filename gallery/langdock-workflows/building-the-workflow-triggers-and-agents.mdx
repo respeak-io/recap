@@ -1,0 +1,28 @@
+---
+title: "Building the Workflow: Triggers and Agents"
+sidebar_position: 2
+---
+
+## Selecting the Form Trigger
+
+Every automation starts with a trigger. Langdock offers various trigger options: 'Integrations' and 'Webhooks' for external systems, 'Scheduled' for time-based events, 'Manual' for a push of a button, and 'Form' for submissions [video:01:17]. For this workflow, select the 'Form' trigger to allow teammates to submit customer feedback [video:01:34].
+
+## Configuring Form Fields
+
+The 'Form' trigger node is now on the canvas. When a node is selected, its details appear in the right panel [video:01:42]. Click 'Add Fields' to define the form's input. Add the following fields:
+*   **Customer Name**: Type 'Text', set as 'Required' [video:01:54].
+*   **Feedback**: Type 'Multi-line Text', set as 'Required' [video:02:08].
+*   **Email**: Type 'Text', set as 'Optional' [video:02:18].
+
+## Adding and Configuring the Agent Node
+
+With the trigger ready, the next step is to add an Agent node to analyze the feedback using AI [video:02:25]. Click the '+' button next to the Form trigger, then select 'Agent' and 'Create new' [video:02:32]. Agent nodes are powerful as they use Large Language Models (LLMs) to process information, make decisions, and generate outputs [video:02:44]. Rename this agent to 'Feedback Analyzer Agent' [video:02:54] and select 'Sonnet 4' as its model [video:03:00].
+
+## Defining the Agent Prompt and Structured Output
+
+A specific prompt is crucial for directing the AI. The prepared prompt is: 'Analyze the customer feedback, determine the sentiment, primary category, and write a brief summary.' [video:03:05]
+
+An important feature is structured output, which allows you to define the exact format and fields the AI should return, rather than free-form text. Delete the default fields [video:03:32] and add new ones:
+*   **sentiment**: Select type, with options 'positive', 'neutral', and 'negative'. Set as 'Required' [video:03:52].
+*   **category**: Select type, with options 'product', 'service', 'pricing', and 'other'. Set as 'Required' [video:04:13].
+*   **summary**: String type, with the description 'A brief one-sentence summary'. [video:04:26]

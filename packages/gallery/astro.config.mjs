@@ -42,6 +42,10 @@ export default defineConfig({
           autogenerate: { directory: "epa-patientenakte" },
         },
         {
+          label: "Langdock Workflows",
+          autogenerate: { directory: "langdock-workflows" },
+        },
+        {
           label: "Respeak Document Intelligence",
           autogenerate: { directory: "respeak-document-intelligence" },
         },
