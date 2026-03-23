@@ -1,4 +1,5 @@
-import { writeFile } from "node:fs/promises";
+import { writeFile, mkdir } from "node:fs/promises";
+import { dirname } from "node:path";
 import yaml from "js-yaml";
 import { initAI, generateJson } from "../ai/gemini.js";
 import { getFeatureDiscoveryPrompt } from "../ai/prompts.js";
@@ -74,6 +75,7 @@ export async function analyzeCodebase(options: AnalyzeOptions): Promise<Plan> {
 
   // Step 4: Write YAML
   const yamlContent = yaml.dump(plan, { lineWidth: 120, noRefs: true });
+  await mkdir(dirname(outputPath), { recursive: true });
   await writeFile(outputPath, yamlContent, "utf-8");
 
   onProgress(`Plan written to ${outputPath}`);
