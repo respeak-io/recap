@@ -26,7 +26,7 @@ Extend Reeldocs with automated video generation: AI analyzes a codebase to disco
 └─────────────┘      └─────────────┘      └──────────────┘
 ```
 
-Three stages connected by a **plan file** — a structured YAML/JSON artifact that describes what to record, how to narrate it, and how to output it. Each stage is independently runnable. The plan file is human-reviewable, editable, and version-controllable.
+Three stages connected by a **plan file** — a YAML artifact (Phase 1) that describes what to record, how to narrate it, and how to output it. Each stage is independently runnable. The plan file is human-reviewable, editable, and version-controllable.
 
 ## The Plan File
 
@@ -41,8 +41,11 @@ app:
     credentials:
       email: "demo@respeak.io"
       password: "demo-password"
-    setup_script: "./scripts/seed-demo-data.ts"  # optional, runs before recording
+    setup_script: "./scripts/seed-demo-data.ts"  # optional, runs once before entire session
   viewport: { width: 1280, height: 720 }
+
+recording:
+  max_concurrent: 3                  # configurable parallelism (default: 3)
 
 features:
   - id: "create-project"
@@ -51,15 +54,16 @@ features:
     steps:
       - action: "navigate to /dashboard"
         narration: "From your dashboard, you can see all your documentation projects."
-        wait: 2000
+        pause: 2000                  # post-action delay for pacing (ms)
+        timeout: 10000               # max wait for action to succeed (ms, default: 10000)
       - action: "click button 'New Project'"
         narration: "To create a new project, click the New Project button in the top right."
-        wait: 1500
+        pause: 1500
       - action: "fill input[name='name'] with 'My First Project'"
         narration: "Give your project a name that describes what you're documenting."
       - action: "click button 'Create'"
         narration: "Click Create, and your project is ready to go."
-        wait: 2000
+        pause: 2000
 
   - id: "upload-video"
     title: "Uploading a Video"
@@ -71,7 +75,7 @@ output:
   docs_dir: "./generated/docs"
   languages: ["en", "de"]            # multi-language from the start
   tts:
-    provider: "google"               # default: Google Cloud TTS
+    provider: "google"               # "google" | "openai" | "elevenlabs"
     voice: "en-US-Studio-O"
     speed: 1.0
   screenshots: true                  # capture per-step screenshots for text docs
@@ -80,14 +84,57 @@ output:
 ### Design decisions
 
 - **Actions are human-readable** — `"click button 'New Project'"` not `page.getByRole(...)`. An action translator layer maps these to Playwright calls.
-- **Co-generated steps** — each step is an `{action, narration, wait}` tuple. Action and narration are designed together by the AI so they're coherent.
+- **Co-generated steps** — each step is an `{action, narration, pause, timeout}` tuple. Action and narration are designed together by the AI so they're coherent.
+- **`pause` vs `timeout`** — Two separate concerns: `pause` is a post-action delay for video pacing (how long to linger). `timeout` is how long to wait for the action to succeed before it's considered failed (default: 10s).
 - **Categories** map to chapters in the existing Reeldocs article model.
-- **Wait times** control video pacing and give narration room to breathe.
 - **Plan file lives in the repo** (CLI use) or as a JSON column on the project (web platform use).
+- **`recording.max_concurrent`** is defined in the plan file (also overridable via CLI flag `--concurrency`).
+- **YAML for Phase 1** — human-readable, good for CLI editing. The web platform (Phase 2) stores as JSON column but uses the same zod schema. A simple YAML↔JSON converter bridges the formats.
+- **TTS provider is an enum** — Phase 1 ships with `"google"`, `"openai"`, and `"elevenlabs"` as known providers. Custom/external provider plugins are deferred to Phase 2+.
 
 ### Schema
 
 The plan file schema is defined as a TypeScript type and validated with zod. Shared between CLI and web app via the `packages/cli` exports.
+
+## Recording Manifest
+
+The record stage produces a **recording manifest** alongside the video files. This is the contract between the record and produce stages.
+
+Written to `{output.video_dir}/manifest.json`:
+
+```json
+{
+  "version": 1,
+  "recorded_at": "2026-03-23T14:30:00Z",
+  "features": {
+    "create-project": {
+      "video_path": "./generated/videos/create-project.webm",
+      "status": "success",
+      "steps": [
+        { "stepIndex": 0, "startedAt": 0, "completedAt": 1200, "screenshot": "create-project/step-0.png" },
+        { "stepIndex": 1, "startedAt": 3200, "completedAt": 4100, "screenshot": "create-project/step-1.png" },
+        { "stepIndex": 2, "startedAt": 5600, "completedAt": 6800, "screenshot": "create-project/step-2.png" },
+        { "stepIndex": 3, "startedAt": 6800, "completedAt": 7500, "screenshot": "create-project/step-3.png" }
+      ],
+      "duration_ms": 9500
+    },
+    "upload-video": {
+      "video_path": "./generated/videos/upload-video.webm",
+      "status": "failed",
+      "error": "Action failed at step 2: element not found — 'click button Upload'",
+      "error_screenshot": "upload-video/error-step-2.png",
+      "steps": [...]
+    }
+  }
+}
+```
+
+The produce stage reads this manifest to:
+- Know which features recorded successfully (skip failed ones)
+- Align TTS audio clips to the correct timestamps in the video
+- Reference screenshots for embedding in text docs
+
+The manifest schema is also defined in zod and exported from the CLI package.
 
 ## Stage 1: Analyze
 
@@ -103,7 +150,7 @@ The plan file schema is defined as a TypeScript type and validated with zod. Sha
 
 1. Scan the codebase for route definitions, page components, and navigation structures
 2. Build a summary of the app's feature surface
-3. Send to Gemini 3 Flash with a prompt: "Here are the routes and components of this web app. Identify user-facing features and for each, generate a walkthrough script as action/narration pairs."
+3. Send to Gemini with a prompt: "Here are the routes and components of this web app. Identify user-facing features and for each, generate a walkthrough script as action/narration pairs."
 4. If user provided free-text requests (e.g., "Show how to invite a team member"), include these as additional features to script
 5. Parse and validate the AI response against the plan file schema
 
@@ -127,18 +174,19 @@ This covers the most common case. Additional framework support (Vue, Svelte, etc
 
 ### Process
 
-For each feature in the plan (concurrently, up to `max_concurrent_recordings`):
+For each feature in the plan (concurrently, up to `recording.max_concurrent`):
 
 1. Launch a Playwright browser context with `video: { mode: 'on', dir: tempDir }`
 2. Run the auth setup (login with provided credentials, execute setup script if configured)
 3. For each step:
    a. Translate the human-readable action to a Playwright call (see Action Translation below)
-   b. Execute the action
+   b. Execute the action (with `timeout` from step config, default 10s)
    c. Log the timestamp: `{ stepIndex, startedAt, completedAt }`
    d. Take a screenshot (if `output.screenshots` is enabled)
-   e. Wait for the configured `wait` duration
+   e. Wait for the configured `pause` duration
 4. Close the browser context (Playwright saves the WebM automatically)
 5. Move the video file to `output.video_dir/{feature.id}.webm`
+6. Write the recording manifest to `output.video_dir/manifest.json`
 
 ### Action Translation
 
@@ -151,7 +199,7 @@ Two-layer system:
    - `"wait N"` → `page.waitForTimeout(N)`
 
 2. **AI-driven fallback** for complex or ambiguous actions:
-   - Capture Playwright accessibility snapshot (`page.accessibility.snapshot()`)
+   - Capture Playwright ARIA snapshot (`locator.ariaSnapshot()`)
    - Send to Gemini: "Given this page structure, translate this action to a Playwright call: {action}"
    - Execute the returned Playwright call
 
@@ -162,30 +210,34 @@ This is resilient to UI changes — if button text shifts, the AI can still find
 - If an action fails (element not found, timeout): take a screenshot, log the failure, skip to the next feature
 - Do not abort the entire run for a single feature failure
 - Output a report at the end listing which features succeeded and which need attention
+- Failed features are marked in the recording manifest so the produce stage can skip them
 
 ### Concurrency
 
-- Configurable via `max_concurrent_recordings` setting (default: 3)
+- Configurable via `recording.max_concurrent` in plan file or `--concurrency` CLI flag
 - Each feature runs in its own browser context (isolated state)
+- The `setup_script` runs once globally before the recording session, not per-context. It must be idempotent (safe to re-run). For features that need isolated state, use separate setup scripts per feature (future enhancement) or design the demo data to be shared safely.
 - Admin-adjustable for resource management during hosted/web platform use
 
 ## Stage 3: Produce
 
 **CLI:** `reeldocs produce --plan ./plan.yaml`
 
+Reads the recording manifest from `output.video_dir/manifest.json` to find video files and timestamps.
+
 ### Process
 
-For each feature (concurrently):
+For each successfully recorded feature (concurrently):
 
 1. **Generate TTS audio:**
    - For each target language in `output.languages`:
-     - If non-English: translate narration text via Gemini (reuse existing `lib/ai/translate.ts` approach)
+     - If non-English: translate narration text via Gemini
      - Call TTS provider with the narration text for each step
      - Output: one audio clip per step per language
 
 2. **Merge audio + video:**
    - Using ffmpeg (required runtime dependency)
-   - Place each audio clip at the corresponding step's `startedAt` timestamp (from recording phase)
+   - Place each audio clip at the corresponding step's `startedAt` timestamp (from recording manifest)
    - If narration is longer than step duration: pad with a still frame
    - If shorter: fill gap with silence
    - Output: `{feature.id}.{lang}.mp4` per language
@@ -197,7 +249,7 @@ For each feature (concurrently):
    - For non-English languages: translate the polished text via Gemini
    - Output formats:
      - Markdown/MDX for standalone CLI use
-     - Tiptap JSON for web platform import (via existing `markdown-to-tiptap.ts`)
+     - Tiptap JSON for web platform import
 
 ### TTS Provider Interface
 
@@ -214,7 +266,7 @@ interface TTSOptions {
 }
 ```
 
-Default implementation: Google Cloud TTS. Pluggable — users implement the interface and register via the plan file's `output.tts.provider` field.
+Default implementation: Google Cloud TTS. Phase 1 ships with three built-in providers: `"google"`, `"openai"`, `"elevenlabs"`. Custom/external provider plugins deferred to Phase 2+.
 
 ### ffmpeg dependency
 
@@ -224,7 +276,21 @@ Required at runtime. The CLI checks for it on startup and provides a clear insta
 
 **CLI:** `reeldocs generate --codebase ./src --app http://localhost:3000`
 
-Runs all three stages in sequence: analyze → (auto-approve plan) → record → produce. For users who want the one-command experience. The plan file is still generated and saved so they can re-run individual stages later.
+Runs all three stages in sequence: analyze → record → produce. By default, prints the generated plan and prompts for confirmation before recording. Use `--yes` to skip confirmation for CI/automation use cases. The plan file is always generated and saved so users can re-run individual stages later.
+
+## Shared Utilities: Cross-Package Strategy
+
+The existing web app has translation (`lib/ai/translate.ts`) and Markdown-to-Tiptap conversion (`lib/ai/markdown-to-tiptap.ts`) utilities that the produce stage needs. These currently live in the web app root and import from the web app's Gemini module.
+
+**Phase 1 approach:** Rewrite translation and doc polish logic directly in the CLI package's produce module (`packages/cli/src/produce/`). This duplicates some prompt logic but avoids premature refactoring and keeps the CLI fully self-contained — important since it's also published to npm as a standalone tool.
+
+**Phase 2 approach (web integration):** When the web app needs to call these same functions, extract shared prompts into a `packages/shared` package or have the web app import from the CLI package's exports. This refactoring is natural at that point since web integration requires tighter coupling anyway.
+
+The CLI package already has its own `getAI()` singleton and Gemini integration — all new AI calls go through that.
+
+### Model configuration
+
+All Gemini calls (codebase analysis, action translation, narration generation, translation, doc polish) use the model configured via the existing `--model` CLI flag. Default: `gemini-2.5-flash` (upgrade to Gemini 3 Flash when available and stable). A single model flag controls all AI calls — no per-stage model config in Phase 1.
 
 ## Module Structure
 
@@ -238,23 +304,26 @@ packages/cli/src/
 │   ├── scanners/
 │   │   ├── nextjs.ts           # Next.js route scanner
 │   │   └── generic.ts          # Generic file-based scanner
-│   └── plan-schema.ts          # Zod schema + TypeScript types for plan file
+│   └── plan-schema.ts          # Zod schema + TypeScript types for Plan + RecordingManifest
 ├── record/
-│   ├── index.ts                # recordFeatures(plan): Promise<RecordingResult[]>
-│   ├── action-translator.ts    # Human-readable → Playwright calls
+│   ├── index.ts                # recordFeatures(plan): Promise<RecordingManifest>
+│   ├── action-translator.ts    # Human-readable → Playwright calls (deterministic + AI fallback)
 │   └── browser-session.ts      # Playwright context management, auth, recording
 ├── produce/
-│   ├── index.ts                # produceOutput(plan, recordings): Promise<void>
+│   ├── index.ts                # produceOutput(plan, manifest): Promise<void>
 │   ├── tts/
 │   │   ├── interface.ts        # TTSProvider interface
 │   │   ├── google.ts           # Google Cloud TTS implementation
-│   │   └── registry.ts         # Provider registration/lookup
+│   │   ├── openai.ts           # OpenAI TTS implementation
+│   │   ├── elevenlabs.ts       # ElevenLabs TTS implementation
+│   │   └── registry.ts         # Provider lookup by name
+│   ├── translate.ts            # Narration translation (self-contained, CLI's own Gemini client)
 │   ├── merge.ts                # ffmpeg audio/video merge
-│   └── docs-generator.ts       # Text documentation generation
+│   └── docs-generator.ts       # Text documentation generation + polish
 ├── ai/
-│   ├── gemini.ts               # (existing) — add codebase analysis prompts
+│   ├── gemini.ts               # (existing) — add codebase analysis + action translation calls
 │   ├── pipeline.ts             # (existing)
-│   └── prompts.ts              # (existing) — add new prompts for feature discovery + narration
+│   └── prompts.ts              # (existing) — add prompts for feature discovery, narration, action translation
 ├── download.ts                 # (existing)
 └── output/
     ├── markdown.ts             # (existing)
@@ -281,10 +350,10 @@ The web app imports these directly via `workspace:*` dependency — same as it c
 
 ### Phase 1 — Automated Video Creation (this spec)
 - `reeldocs analyze` — codebase → plan file
-- `reeldocs record` — plan file → raw videos + timestamps + screenshots
-- `reeldocs produce` — raw videos + narration → final .mp4 + text docs
-- `reeldocs generate` — convenience wrapper
-- Google Cloud TTS default, pluggable interface
+- `reeldocs record` — plan file → raw videos + recording manifest + screenshots
+- `reeldocs produce` — recording manifest + narration → final .mp4 + text docs
+- `reeldocs generate` — convenience wrapper with confirmation prompt
+- Google Cloud TTS default, three built-in providers
 - Configurable auth, viewport, setup scripts
 - Multi-language TTS + docs from the start
 - Concurrent recording with configurable parallelism
@@ -293,10 +362,12 @@ The web app imports these directly via `workspace:*` dependency — same as it c
 - Plan editor UI in dashboard (visual editor for plan file)
 - Free-text feature requests → LLM → plan entries
 - Background recording jobs via existing `processing_jobs` infrastructure
+  - Note: the existing `processing_jobs` table has a non-null `video_id` FK. Recording jobs produce videos as output, not input. Phase 2 needs either a new `recording_jobs` table or a nullable `video_id` column. Decision deferred to Phase 2 design.
 - Results flow into existing articles/videos pipeline
 - Storage management view with usage visibility and cleanup
 - Auto-offer to delete old version when a feature is re-recorded
 - Plan stored as JSON column on the project table
+- Extract shared utilities to `packages/shared` if duplication becomes painful
 
 ### Phase 3 — Auto-updating Docs on Code Changes
 - Git diff analysis to detect which features changed
@@ -356,13 +427,14 @@ This phase depends on Phases 1-2 being stable and the managed service having an 
 | Playwright | Browser automation + video recording | 1 |
 | ffmpeg | Audio/video merging | 1 |
 | Google Cloud TTS | Text-to-speech (default provider) | 1 |
-| Gemini 3 Flash | Codebase analysis, narration generation, action translation, doc polish | 1 |
-| zod | Plan file schema validation | 1 |
+| Gemini (2.5 Flash, upgrading to 3 Flash when stable) | Codebase analysis, narration generation, action translation, doc polish, translation | 1 |
+| zod | Plan file + recording manifest schema validation | 1 |
+| js-yaml | YAML parsing/serialization for plan files | 1 |
 
 ## Open Questions (to resolve during implementation)
 
-1. **Plan file format preference** — YAML for human editing (CLI) vs JSON for programmatic use (web platform). Could support both with a simple converter.
-2. **Screenshot format/quality** — PNG (lossless, larger) vs WebP (smaller, good enough for docs)?
-3. **Video resolution defaults** — 1280x720 as default viewport. Should we also support 1920x1080 for higher quality?
-4. **TTS voice selection UX** — How do users preview/choose voices? List available voices in the CLI? Audio samples in the web UI?
-5. **Rate limiting** — Gemini + TTS API rate limits during large batch runs. Retry/backoff strategy needed.
+1. **Screenshot format/quality** — PNG (lossless, larger) vs WebP (smaller, good enough for docs)?
+2. **Video resolution defaults** — 1280x720 as default viewport. Should we also support 1920x1080 for higher quality?
+3. **TTS voice selection UX** — How do users preview/choose voices? List available voices in the CLI? Audio samples in the web UI?
+4. **Rate limiting** — Gemini + TTS API rate limits during large batch runs. Retry/backoff strategy needed.
+5. **Action translation DSL strictness** — The deterministic layer handles a small set of known patterns; everything else falls through to AI. If AI-generated plans consistently use patterns outside the deterministic set, we may want to expand it or standardize the action format more strictly. Monitor during dogfooding.
