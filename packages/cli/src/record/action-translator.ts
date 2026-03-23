@@ -15,7 +15,7 @@ export type ParsedAction =
 
 const PATTERNS: Array<{ regex: RegExp; parse: (m: RegExpMatchArray) => ParsedAction }> = [
   {
-    regex: /^navigate to (\/\S+)$/i,
+    regex: /^navigate to (\/\S*)$/i,
     parse: (m) => ({ type: "navigate", path: m[1] }),
   },
   {
