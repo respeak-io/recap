@@ -63,3 +63,22 @@ Return ONLY valid JSON, no markdown fences.`,
 
   return JSON.parse(response.text!);
 }
+
+export async function generateText(prompt: string, model: string = "gemini-2.5-flash"): Promise<string> {
+  const ai = getAI();
+  const response = await ai.models.generateContent({
+    model,
+    contents: [{ role: "user", parts: [{ text: prompt }] }],
+  });
+  return response.text ?? "";
+}
+
+export async function generateJson<T = unknown>(prompt: string, model: string = "gemini-2.5-flash"): Promise<T> {
+  const ai = getAI();
+  const response = await ai.models.generateContent({
+    model,
+    contents: [{ role: "user", parts: [{ text: prompt }] }],
+    config: { responseMimeType: "application/json" },
+  });
+  return JSON.parse(response.text!);
+}

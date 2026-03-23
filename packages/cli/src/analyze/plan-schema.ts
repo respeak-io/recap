@@ -46,7 +46,7 @@ export const ViewportSchema = z.object({
 export const AppSchema = z.object({
   url: z.url(),
   auth: AuthSchema,
-  viewport: ViewportSchema.default({ width: 1280, height: 720 }),
+  viewport: ViewportSchema.optional().default({ width: 1280, height: 720 }),
 });
 
 // --- Recording schema ---
@@ -69,7 +69,11 @@ export const OutputSchema = z.object({
   video_dir: z.string().default("./generated/videos"),
   docs_dir: z.string().default("./generated/docs"),
   languages: z.array(z.string()).min(1).default(["en"]),
-  tts: TTSConfigSchema.default({}),
+  tts: TTSConfigSchema.optional().default({
+    provider: "google",
+    voice: "en-US-Studio-O",
+    speed: 1.0,
+  }),
   screenshots: z.boolean().default(true),
 });
 
@@ -78,9 +82,15 @@ export const OutputSchema = z.object({
 export const PlanSchema = z.object({
   version: z.literal(1),
   app: AppSchema,
-  recording: RecordingConfigSchema.default({}),
+  recording: RecordingConfigSchema.optional().default({ max_concurrent: 3 }),
   features: z.array(FeatureSchema).min(1),
-  output: OutputSchema.default({}),
+  output: OutputSchema.optional().default({
+    video_dir: "./generated/videos",
+    docs_dir: "./generated/docs",
+    languages: ["en"],
+    tts: { provider: "google", voice: "en-US-Studio-O", speed: 1.0 },
+    screenshots: true,
+  }),
 });
 
 export type Plan = z.infer<typeof PlanSchema>;
