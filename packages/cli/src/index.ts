@@ -21,7 +21,7 @@ program
 
 program
   .argument("[source]", "Video file path or URL")
-  .option("-o, --output <dir>", "Output directory", "./docs")
+  .option("--output <dir>", "Output directory", "./docs")
   .option("-k, --api-key <key>", "Gemini API key (or set GEMINI_API_KEY env var)")
   .option("-f, --format <format>", "Output format: markdown, mdx", "markdown")
   .option("-m, --model <model>", "Gemini model to use", "gemini-2.5-flash")
