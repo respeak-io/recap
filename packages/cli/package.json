@@ -3,17 +3,17 @@
   "version": "0.1.0",
   "description": "Generate documentation from product videos",
   "bin": {
-    "reeldocs": "./dist/index.js"
+    "reeldocs": "./dist/src/index.js"
   },
   "type": "module",
   "exports": {
-    ".": "./dist/ai/pipeline.js",
-    "./ai": "./dist/ai/gemini.js",
-    "./prompts": "./dist/ai/prompts.js",
-    "./analyze": "./dist/analyze/index.js",
-    "./record": "./dist/record/index.js",
-    "./produce": "./dist/produce/index.js",
-    "./plan": "./dist/analyze/plan-schema.js"
+    ".": "./dist/src/ai/pipeline.js",
+    "./ai": "./dist/src/ai/gemini.js",
+    "./prompts": "./dist/src/ai/prompts.js",
+    "./analyze": "./dist/src/analyze/index.js",
+    "./record": "./dist/src/record/index.js",
+    "./produce": "./dist/src/produce/index.js",
+    "./plan": "./dist/src/analyze/plan-schema.js"
   },
   "scripts": {
     "build": "tsc",
