@@ -76,11 +76,11 @@ packages/cli/tsconfig.json        # Possibly add paths for test files
 
 ```bash
 cd packages/cli
-pnpm add zod js-yaml playwright @google-cloud/text-to-speech openai
+pnpm add zod js-yaml playwright
 pnpm add -D @types/js-yaml vitest
 ```
 
-Note: `playwright` (the library, not `@playwright/test`) is for programmatic browser control. The existing root-level `@playwright/test` is for e2e tests — this is different.
+Note: `playwright` (the library, not `@playwright/test`) is for programmatic browser control. The existing root-level `@playwright/test` is for e2e tests — this is different. TTS providers use the REST API via `fetch()` — no SDK dependencies needed.
 
 - [ ] **Step 2: Add vitest config**
 
@@ -129,7 +129,30 @@ Replace the `"exports"` field in `packages/cli/package.json`:
 }
 ```
 
-- [ ] **Step 5: Create placeholder test to verify vitest works**
+- [ ] **Step 5: Update tsconfig.json to include test files**
+
+Add `"tests"` to the `include` array in `packages/cli/tsconfig.json`:
+
+```json
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "outDir": "./dist",
+    "rootDir": ".",
+    "strict": true,
+    "esModuleInterop": true,
+    "declaration": true,
+    "sourceMap": true
+  },
+  "include": ["src", "tests"]
+}
+```
+
+Note: `rootDir` changes from `"./src"` to `"."` to accommodate both `src/` and `tests/` directories. The `outDir` stays `"./dist"` so compiled output is unaffected (test files are only run by vitest, not compiled to dist).
+
+- [ ] **Step 6: Create placeholder test to verify vitest works**
 
 Create `packages/cli/tests/plan-schema.test.ts`:
 
@@ -143,7 +166,7 @@ describe("plan-schema", () => {
 });
 ```
 
-- [ ] **Step 6: Run test to verify setup**
+- [ ] **Step 7: Run test to verify setup**
 
 ```bash
 cd packages/cli && pnpm test
@@ -151,7 +174,7 @@ cd packages/cli && pnpm test
 
 Expected: 1 test passing.
 
-- [ ] **Step 7: Build to verify no TS errors**
+- [ ] **Step 8: Build to verify no TS errors**
 
 ```bash
 cd packages/cli && pnpm build
@@ -159,10 +182,10 @@ cd packages/cli && pnpm build
 
 Expected: Clean build with no errors.
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 9: Commit**
 
 ```bash
-git add packages/cli/package.json packages/cli/vitest.config.ts packages/cli/tests/ pnpm-lock.yaml
+git add packages/cli/package.json packages/cli/tsconfig.json packages/cli/vitest.config.ts packages/cli/tests/ pnpm-lock.yaml
 git commit --no-gpg-sign -m "feat(cli): add dependencies and vitest setup for auto-generation"
 ```
 
@@ -183,12 +206,15 @@ import { describe, it, expect } from "vitest";
 import {
   PlanSchema,
   RecordingManifestSchema,
-  type Plan,
   type RecordingManifest,
 } from "../src/analyze/plan-schema.js";
+import type { z } from "zod";
+
+// Use z.input type since we're testing input parsing (before defaults are applied)
+type PlanInput = z.input<typeof PlanSchema>;
 
 describe("PlanSchema", () => {
-  const validPlan: Plan = {
+  const validPlan: PlanInput = {
     version: 1,
     app: {
       url: "http://localhost:3000",
@@ -1193,7 +1219,7 @@ export type ParsedAction =
 
 const PATTERNS: Array<{ regex: RegExp; parse: (m: RegExpMatchArray) => ParsedAction }> = [
   {
-    regex: /^navigate to (.+)$/i,
+    regex: /^navigate to (\/\S+)$/i,
     parse: (m) => ({ type: "navigate", path: m[1] }),
   },
   {
@@ -1840,8 +1866,10 @@ export class ElevenLabsTTSProvider implements TTSProvider {
 
     const voiceId = options.voice || DEFAULT_VOICE_ID;
 
+    const outputFormat = options.format === "wav" ? "pcm_16000" : "mp3_44100_128";
+
     const response = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
+      `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=${outputFormat}`,
       {
         method: "POST",
         headers: {
@@ -1854,6 +1882,7 @@ export class ElevenLabsTTSProvider implements TTSProvider {
           voice_settings: {
             stability: 0.5,
             similarity_boost: 0.5,
+            speed: options.speed,
           },
         }),
       }
@@ -2117,7 +2146,8 @@ export function buildMergeCommand(input: MergeInput): MergeCommand {
   args.push("-map", "[aout]");
   args.push("-c:v", "libx264");
   args.push("-c:a", "aac");
-  args.push("-shortest");
+  // Do NOT use -shortest: if narration extends beyond video, ffmpeg will
+  // hold the last video frame (still frame padding) which matches the spec.
   args.push(outputPath);
 
   return { binary: "ffmpeg", args };
@@ -2311,8 +2341,8 @@ export async function generateDocs(
           polished = await translateNarration(polished, lang, model);
         }
 
-        // Write markdown file
-        const filename = `${slugify(feature.title)}.md`;
+        // Write markdown file (use feature.id for uniqueness, not title)
+        const filename = `${feature.id}.md`;
         const filepath = join(langDir, filename);
         await writeFile(filepath, polished, "utf-8");
         writtenFiles.push(filepath);
@@ -3016,3 +3046,5 @@ git commit --no-gpg-sign -m "chore(cli): final build verification for auto-gener
 | 15 | Final build & cleanup | Full verification |
 
 Total: 15 tasks, ~39 automated tests, 15 commits.
+
+**Note:** Tiptap JSON output (for web platform import) is deferred to Phase 2 when the web platform integration is built. Phase 1 produces Markdown only. The existing `markdown-to-tiptap.ts` in the web app can be used at that point.
