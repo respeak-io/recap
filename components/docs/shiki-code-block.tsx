@@ -31,8 +31,8 @@ export function ShikiCodeBlock({ code, language }: ShikiCodeBlockProps) {
         },
       });
       if (!cancelled) setHtml(result);
-    }).catch(() => {
-      // Shiki failed to load — keep showing plain fallback
+    }).catch((err) => {
+      if (process.env.NODE_ENV !== "production") console.warn("[ShikiCodeBlock]", err);
     });
     return () => { cancelled = true; };
   }, [code, language]);
@@ -40,14 +40,14 @@ export function ShikiCodeBlock({ code, language }: ShikiCodeBlockProps) {
   if (html) {
     return (
       <div
-        className="rounded-lg overflow-x-auto text-sm leading-relaxed [&_pre]:p-4 [&_pre]:m-0"
+        className="not-prose rounded-lg overflow-x-auto text-sm leading-relaxed [&_pre]:p-4 [&_pre]:m-0"
         dangerouslySetInnerHTML={{ __html: html }}
       />
     );
   }
 
   return (
-    <pre className="rounded-lg bg-muted p-4 overflow-x-auto text-sm leading-relaxed">
+    <pre className="not-prose rounded-lg bg-muted p-4 overflow-x-auto text-sm leading-relaxed">
       <code>{code}</code>
     </pre>
   );
