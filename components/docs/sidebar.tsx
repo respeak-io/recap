@@ -13,6 +13,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  SidebarGroup,
+  SidebarGroupLabel,
+  SidebarGroupContent,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubItem,
+} from "@/components/ui/sidebar";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { Menu, ChevronRight } from "lucide-react";
 import { SearchDialog } from "./search-dialog";
 
@@ -31,6 +45,7 @@ interface Chapter {
   id: string;
   title: string;
   slug: string;
+  group?: string;
   articles: {
     id: string;
     title: string;
@@ -49,7 +64,7 @@ interface SidebarProps {
   logoUrl?: string | null;
 }
 
-function SidebarContent({
+function DocsSidebarContent({
   projectId,
   projectName,
   projectSlug,
@@ -73,7 +88,9 @@ function SidebarContent({
     .filter((ch) => ch.articles.length > 0);
 
   // Find which chapter contains the active article
-  const activeArticleSlug = pathname.replace(`/${projectSlug}/`, "").split("/")[0];
+  const activeArticleSlug = pathname.startsWith(`/${projectSlug}/`)
+    ? pathname.slice(`/${projectSlug}/`.length).split("/")[0]
+    : "";
   const activeChapterId = filteredChapters.find((ch) =>
     ch.articles.some((a) => a.slug === activeArticleSlug)
   )?.id;
@@ -115,7 +132,9 @@ function SidebarContent({
 
   function handleLanguageChange(lang: string) {
     const query = buildQuery({ lang });
-    const articleSlug = pathname.replace(`/${projectSlug}/`, "").split("/")[0];
+    const articleSlug = pathname.startsWith(`/${projectSlug}/`)
+      ? pathname.slice(`/${projectSlug}/`.length).split("/")[0]
+      : "";
     if (articleSlug) {
       const exists = chapters.some((ch) =>
         ch.articles.some(
@@ -133,6 +152,17 @@ function SidebarContent({
     window.location.href = `/${projectSlug}${query}`;
   }
 
+  // Group chapters by their optional `group` field
+  const groupedChapters: { group: string | undefined; chapters: typeof filteredChapters }[] = [];
+  for (const chapter of filteredChapters) {
+    const existing = groupedChapters.find((g) => g.group === chapter.group);
+    if (existing) {
+      existing.chapters.push(chapter);
+    } else {
+      groupedChapters.push({ group: chapter.group, chapters: [chapter] });
+    }
+  }
+
   return (
     <div className="flex flex-col h-full">
       {/* Top: logo + search */}
@@ -147,58 +177,65 @@ function SidebarContent({
         <SearchDialog projectId={projectId} projectSlug={projectSlug} />
       </div>
 
-      {/* Middle: collapsible nav */}
-      <nav className="flex-1 overflow-y-auto p-2">
-        {filteredChapters.map((chapter) => {
-          const isExpanded = expandedChapters.has(chapter.id);
-          return (
-            <div key={chapter.id} className="mb-1">
-              <button
-                type="button"
-                onClick={() => toggleChapter(chapter.id)}
-                className="flex items-center gap-1 w-full px-2 py-1.5 text-xs font-semibold uppercase text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <ChevronRight
-                  className={cn(
-                    "size-3.5 shrink-0 transition-transform duration-200",
-                    isExpanded && "rotate-90"
-                  )}
-                />
-                {chapter.title}
-              </button>
-              <div
-                className={cn(
-                  "grid transition-all duration-200",
-                  isExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-                )}
-              >
-                <div className="overflow-hidden">
-                  <div className="ml-2">
-                    {chapter.articles.map((article) => {
-                      const href = `/${projectSlug}/${article.slug}${buildQuery({})}`;
-                      const isActive = pathname === `/${projectSlug}/${article.slug}`;
-                      return (
-                        <Link
-                          key={article.id}
-                          href={href}
-                          className={cn(
-                            "block rounded-r-md px-3 py-1.5 text-sm transition-colors border-l-2",
-                            isActive
-                              ? "border-primary bg-primary/5 text-foreground font-medium"
-                              : "border-transparent text-muted-foreground hover:text-foreground hover:bg-accent/50"
-                          )}
-                        >
-                          {article.title}
-                        </Link>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </nav>
+      {/* Middle: nav using shadcn sidebar primitives */}
+      <div className="flex-1 overflow-y-auto">
+        {groupedChapters.map((group, groupIndex) => (
+          <SidebarGroup key={group.group ?? `ungrouped-${groupIndex}`}>
+            {group.group && (
+              <SidebarGroupLabel>{group.group}</SidebarGroupLabel>
+            )}
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {group.chapters.map((chapter) => {
+                  const isExpanded = expandedChapters.has(chapter.id);
+                  return (
+                    <Collapsible
+                      key={chapter.id}
+                      open={isExpanded}
+                      onOpenChange={() => toggleChapter(chapter.id)}
+                    >
+                      <SidebarMenuItem>
+                        <CollapsibleTrigger className="flex items-center w-full rounded-md p-2 text-sm font-medium hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors">
+                          <span className="flex-1 text-left truncate">{chapter.title}</span>
+                          <ChevronRight
+                            className={cn(
+                              "size-4 shrink-0 text-muted-foreground transition-transform duration-200",
+                              isExpanded && "rotate-90"
+                            )}
+                          />
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                          <SidebarMenuSub>
+                            {chapter.articles.map((article) => {
+                              const href = `/${projectSlug}/${article.slug}${buildQuery({})}`;
+                              const isActive = pathname === `/${projectSlug}/${article.slug}`;
+                              return (
+                                <SidebarMenuSubItem key={article.id}>
+                                  <Link
+                                    href={href}
+                                    className={cn(
+                                      "flex h-7 min-w-0 -translate-x-px items-center gap-2 overflow-hidden rounded-md px-2 text-sm transition-colors",
+                                      isActive
+                                        ? "bg-primary/10 text-primary font-medium"
+                                        : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                                    )}
+                                  >
+                                    <span className="truncate">{article.title}</span>
+                                  </Link>
+                                </SidebarMenuSubItem>
+                              );
+                            })}
+                          </SidebarMenuSub>
+                        </CollapsibleContent>
+                      </SidebarMenuItem>
+                    </Collapsible>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
+      </div>
 
       {/* Bottom: language selector */}
       {languages.length > 1 && (
@@ -242,13 +279,13 @@ export function Sidebar(props: SidebarProps) {
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="w-[260px] p-0 bg-sidebar text-sidebar-foreground">
-            <SidebarContent {...props} />
+            <DocsSidebarContent {...props} />
           </SheetContent>
         </Sheet>
       </div>
 
       <aside className="hidden lg:block w-[260px] border-r h-screen sticky top-0 flex-shrink-0 bg-sidebar text-sidebar-foreground">
-        <SidebarContent {...props} />
+        <DocsSidebarContent {...props} />
       </aside>
     </>
   );
