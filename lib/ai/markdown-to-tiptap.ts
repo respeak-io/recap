@@ -45,6 +45,38 @@ export function markdownToTiptap(
   return { type: "doc", content: nodes };
 }
 
+/**
+ * Convert a raw markdown string into Tiptap JSON document structure.
+ * Unlike markdownToTiptap (which takes pre-split sections), this takes
+ * a single markdown string — suitable for API input from agents.
+ * Also returns plain text for full-text search indexing.
+ */
+export function markdownToTiptapRaw(
+  markdown: string
+): { doc: { type: string; content: TiptapNode[] }; text: string } {
+  const tokens = new Lexer().lex(markdown);
+  const nodes = tokensToTiptap(tokens);
+  const doc = { type: "doc", content: nodes };
+
+  // Extract plain text for FTS content_text field
+  const text = extractPlainText(nodes);
+
+  return { doc, text };
+}
+
+function extractPlainText(nodes: TiptapNode[]): string {
+  const parts: string[] = [];
+  for (const node of nodes) {
+    if (node.text && typeof node.text === "string") {
+      parts.push(node.text);
+    }
+    if (node.content && Array.isArray(node.content)) {
+      parts.push(extractPlainText(node.content as TiptapNode[]));
+    }
+  }
+  return parts.join(" ").replace(/\s+/g, " ").trim();
+}
+
 function tokensToTiptap(tokens: Token[]): TiptapNode[] {
   const nodes: TiptapNode[] = [];
 
