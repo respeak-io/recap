@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, FileText, Upload, Settings, Globe, BarChart3 } from "lucide-react";
+import { LayoutDashboard, FileText, Upload, Settings, Globe, BarChart3, Key } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -114,6 +114,14 @@ export function AppSidebar({ projects, userEmail }: AppSidebarProps) {
                     <Link href="/dashboard">
                       <LayoutDashboard className="size-4" />
                       <span>All Projects</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname === "/dashboard/api-keys"}>
+                    <Link href="/dashboard/api-keys">
+                      <Key className="size-4" />
+                      <span>API Keys</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
