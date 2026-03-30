@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -78,22 +78,21 @@ function SidebarContent({
     ch.articles.some((a) => a.slug === activeArticleSlug)
   )?.id;
 
-  // Initialize expanded state: first chapter + chapter with active article
-  const initialExpanded = useMemo(() => {
+  const [expandedChapters, setExpandedChapters] = useState<Set<string>>(() => {
     const set = new Set<string>();
     if (filteredChapters.length > 0) set.add(filteredChapters[0].id);
     if (activeChapterId) set.add(activeChapterId);
     return set;
-  }, []);  // eslint-disable-line react-hooks/exhaustive-deps
-
-  const [expandedChapters, setExpandedChapters] = useState<Set<string>>(initialExpanded);
+  });
 
   // Auto-expand active chapter on navigation
   useEffect(() => {
-    if (activeChapterId && !expandedChapters.has(activeChapterId)) {
-      setExpandedChapters((prev) => new Set([...prev, activeChapterId]));
-    }
-  }, [activeChapterId]);  // eslint-disable-line react-hooks/exhaustive-deps
+    if (!activeChapterId) return;
+    setExpandedChapters((prev) => {
+      if (prev.has(activeChapterId)) return prev;
+      return new Set([...prev, activeChapterId]);
+    });
+  }, [activeChapterId]);
 
   function toggleChapter(id: string) {
     setExpandedChapters((prev) => {
