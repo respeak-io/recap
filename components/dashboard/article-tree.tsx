@@ -34,7 +34,8 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { ChevronRight, GripVertical, FileText, Trash2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { ChevronRight, GripVertical, FileText, Trash2, Tag } from "lucide-react";
 
 interface Article {
   id: string;
@@ -51,6 +52,7 @@ interface Chapter {
   title: string;
   slug: string;
   order: number;
+  group: string | null;
 }
 
 interface ArticleGroup {
@@ -92,12 +94,25 @@ function groupArticles(articles: Article[]): ArticleGroup[] {
 
 export function ArticleTree({
   projectSlug,
-  chapters,
+  chapters: initialChapters,
   articles: initialArticles,
 }: ArticleTreeProps) {
   const router = useRouter();
   const [articles, setArticles] = useState(initialArticles);
+  const [chapters, setChapters] = useState(initialChapters);
   const [statusFilter, setStatusFilter] = useState<string>("all");
+
+  async function handleGroupChange(chapterId: string, group: string) {
+    const trimmed = group.trim() || null;
+    setChapters((prev) =>
+      prev.map((ch) => (ch.id === chapterId ? { ...ch, group: trimmed } : ch))
+    );
+    await fetch(`/api/chapters/${chapterId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ group: trimmed }),
+    });
+  }
 
   const filtered = articles.filter((a) => {
     if (statusFilter !== "all" && a.status !== statusFilter) return false;
@@ -184,11 +199,25 @@ export function ArticleTree({
       <DragDropContext onDragEnd={handleDragEnd}>
         {grouped.map((chapter) => (
           <Collapsible key={chapter.id} defaultOpen>
-            <CollapsibleTrigger className="flex items-center gap-2 py-2 text-sm font-semibold uppercase text-muted-foreground hover:text-foreground w-full">
-              <ChevronRight className="size-4 transition-transform [[data-state=open]>&]:rotate-90" />
-              {chapter.title}
-              <span className="text-xs font-normal ml-auto">{chapter.groups.length}</span>
-            </CollapsibleTrigger>
+            <div className="flex items-center gap-2 py-2">
+              <CollapsibleTrigger className="flex items-center gap-2 text-sm font-semibold uppercase text-muted-foreground hover:text-foreground">
+                <ChevronRight className="size-4 transition-transform [[data-state=open]>&]:rotate-90" />
+                {chapter.title}
+              </CollapsibleTrigger>
+              <div className="ml-auto flex items-center gap-2">
+                <Tag className="size-3 text-muted-foreground" />
+                <Input
+                  className="h-6 w-28 text-xs"
+                  placeholder="Group"
+                  defaultValue={chapter.group ?? ""}
+                  onBlur={(e) => handleGroupChange(chapter.id, e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                  }}
+                />
+                <span className="text-xs text-muted-foreground">{chapter.groups.length}</span>
+              </div>
+            </div>
             <CollapsibleContent>
               <Droppable droppableId={chapter.id}>
                 {(provided) => (

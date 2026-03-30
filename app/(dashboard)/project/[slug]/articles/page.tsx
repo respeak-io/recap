@@ -24,7 +24,7 @@ export default async function ArticlesPage({
 
   const { data: chapters } = await supabase
     .from("chapters")
-    .select("id, title, slug, order")
+    .select("id, title, slug, order, group")
     .eq("project_id", project.id)
     .order("order");
 

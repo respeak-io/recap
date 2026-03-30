@@ -17,7 +17,7 @@ export default async function DocsLayout({
   const { data: project } = await supabase
     .from("projects")
     .select(
-      "*, chapters(id, title, slug, order, articles(id, title, slug, language, status))"
+      "*, chapters(id, title, slug, order, group, articles(id, title, slug, language, status))"
     )
     .eq("slug", projectSlug)
     .eq("is_public", true)
