@@ -62,7 +62,8 @@ export async function executeParsedAction(
 ): Promise<void> {
   switch (parsed.type) {
     case "navigate":
-      await page.goto(baseUrl + parsed.path, { timeout, waitUntil: "networkidle" });
+      await page.goto(baseUrl + parsed.path, { timeout, waitUntil: "domcontentloaded" });
+      await page.waitForLoadState("networkidle").catch(() => {});
       break;
     case "click_button":
       await page.getByRole("button", { name: parsed.name }).click({ timeout });

@@ -138,12 +138,14 @@ async function performAuth(page: Page, plan: Plan, model: string): Promise<void>
         await page.getByLabel(/email/i).fill(auth.credentials.email, { timeout: 5000 });
         await page.getByLabel(/password/i).fill(auth.credentials.password, { timeout: 5000 });
         await page.getByRole("button", { name: /sign in|log in|login|submit/i }).click({ timeout: 5000 });
-        await page.waitForURL("**/*", { timeout: 10000 });
+        await page.waitForURL((url) => !/\/login|\/signin|\/sign-in/i.test(url.pathname), { timeout: 15000 });
+        await page.waitForLoadState("networkidle");
       } catch {
         await translateAndExecute(page, `fill email field with '${auth.credentials.email}'`, baseUrl, model);
         await translateAndExecute(page, `fill password field with '${auth.credentials.password}'`, baseUrl, model);
         await translateAndExecute(page, "click the login or sign in button", baseUrl, model);
-        await page.waitForURL("**/*", { timeout: 10000 });
+        await page.waitForURL((url) => !/\/login|\/signin|\/sign-in/i.test(url.pathname), { timeout: 15000 });
+        await page.waitForLoadState("networkidle");
       }
       break;
 
