@@ -2,10 +2,7 @@
 
 import slugify from "slugify";
 import { TabsRenderer } from "./tabs-renderer";
-import { common, createLowlight } from "lowlight";
-import { toHtml } from "hast-util-to-html";
-
-const lowlight = createLowlight(common);
+import { ShikiCodeBlock } from "./shiki-code-block";
 
 interface TiptapNode {
   type: string;
@@ -108,29 +105,7 @@ function renderNode(
       const lang = (node.attrs?.language as string) || "";
       const codeText =
         node.content?.map((n) => n.text ?? "").join("") ?? "";
-      let highlighted: string | null = null;
-      try {
-        if (lang && lowlight.registered(lang)) {
-          highlighted = toHtml(lowlight.highlight(lang, codeText));
-        }
-      } catch {
-        // fallback to plain text
-      }
-      return (
-        <pre
-          key={index}
-          className="rounded-lg bg-muted p-4 overflow-x-auto text-sm leading-relaxed"
-        >
-          {highlighted ? (
-            <code
-              className={`language-${lang}`}
-              dangerouslySetInnerHTML={{ __html: highlighted }}
-            />
-          ) : (
-            <code>{codeText}</code>
-          )}
-        </pre>
-      );
+      return <ShikiCodeBlock key={index} code={codeText} language={lang} />;
     }
     case "blockquote":
       return <blockquote key={index}>{children}</blockquote>;
