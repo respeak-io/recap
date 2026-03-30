@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Menu } from "lucide-react";
+import { Menu, ChevronRight } from "lucide-react";
 import { SearchDialog } from "./search-dialog";
 
 const LANGUAGE_CONFIG: Record<string, { label: string; flag: string }> = {
@@ -72,6 +72,38 @@ function SidebarContent({
     }))
     .filter((ch) => ch.articles.length > 0);
 
+  // Find which chapter contains the active article
+  const activeArticleSlug = pathname.replace(`/${projectSlug}/`, "").split("/")[0];
+  const activeChapterId = filteredChapters.find((ch) =>
+    ch.articles.some((a) => a.slug === activeArticleSlug)
+  )?.id;
+
+  // Initialize expanded state: first chapter + chapter with active article
+  const initialExpanded = useMemo(() => {
+    const set = new Set<string>();
+    if (filteredChapters.length > 0) set.add(filteredChapters[0].id);
+    if (activeChapterId) set.add(activeChapterId);
+    return set;
+  }, []);  // eslint-disable-line react-hooks/exhaustive-deps
+
+  const [expandedChapters, setExpandedChapters] = useState<Set<string>>(initialExpanded);
+
+  // Auto-expand active chapter on navigation
+  useEffect(() => {
+    if (activeChapterId && !expandedChapters.has(activeChapterId)) {
+      setExpandedChapters((prev) => new Set([...prev, activeChapterId]));
+    }
+  }, [activeChapterId]);  // eslint-disable-line react-hooks/exhaustive-deps
+
+  function toggleChapter(id: string) {
+    setExpandedChapters((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
   function buildQuery(overrides: Record<string, string>) {
     const params: Record<string, string> = {
       lang: currentLang,
@@ -84,11 +116,8 @@ function SidebarContent({
 
   function handleLanguageChange(lang: string) {
     const query = buildQuery({ lang });
-
-    // If currently viewing an article, try to stay on it
     const articleSlug = pathname.replace(`/${projectSlug}/`, "").split("/")[0];
     if (articleSlug) {
-      // Check if this article exists in the target language (and is published)
       const exists = chapters.some((ch) =>
         ch.articles.some(
           (a) =>
@@ -102,73 +131,101 @@ function SidebarContent({
         return;
       }
     }
-
     window.location.href = `/${projectSlug}${query}`;
   }
 
   return (
-    <div className="flex flex-col gap-4 p-4">
-      <Link href={`/${projectSlug}`} className="flex items-center gap-2 font-semibold text-lg">
-        {logoUrl ? (
-          <img src={logoUrl} alt={projectName} className="max-h-8 object-contain" />
-        ) : (
-          projectName
-        )}
-      </Link>
+    <div className="flex flex-col h-full">
+      {/* Top: logo + search */}
+      <div className="p-4 pb-2 border-b border-border/50">
+        <Link href={`/${projectSlug}`} className="flex items-center gap-2 font-semibold text-lg mb-3">
+          {logoUrl ? (
+            <img src={logoUrl} alt={projectName} className="max-h-8 object-contain" />
+          ) : (
+            projectName
+          )}
+        </Link>
+        <SearchDialog projectId={projectId} projectSlug={projectSlug} />
+      </div>
 
-      <SearchDialog projectId={projectId} projectSlug={projectSlug} />
-
-      {/* Language selector — dropdown with flags */}
-      {languages.length > 1 && (
-        <Select value={currentLang} onValueChange={handleLanguageChange}>
-          <SelectTrigger className="w-full">
-            <SelectValue>
-              <span className="flex items-center gap-2">
-                <span>{LANGUAGE_CONFIG[currentLang]?.flag ?? "\u{1F310}"}</span>
-                <span>{LANGUAGE_CONFIG[currentLang]?.label ?? currentLang}</span>
-              </span>
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            {languages.map((l) => (
-              <SelectItem key={l} value={l}>
-                <span className="flex items-center gap-2">
-                  <span>{LANGUAGE_CONFIG[l]?.flag ?? "\u{1F310}"}</span>
-                  <span>{LANGUAGE_CONFIG[l]?.label ?? l}</span>
-                </span>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      )}
-
-      <nav className="flex flex-col gap-1">
-        {filteredChapters.map((chapter) => (
-          <div key={chapter.id}>
-            <p className="text-xs font-semibold uppercase text-muted-foreground mt-4 mb-1 px-2">
-              {chapter.title}
-            </p>
-            {chapter.articles.map((article) => {
-              const href = `/${projectSlug}/${article.slug}${buildQuery({})}`;
-              const isActive = pathname === `/${projectSlug}/${article.slug}`;
-              return (
-                <Link
-                  key={article.id}
-                  href={href}
+      {/* Middle: collapsible nav */}
+      <nav className="flex-1 overflow-y-auto p-2">
+        {filteredChapters.map((chapter) => {
+          const isExpanded = expandedChapters.has(chapter.id);
+          return (
+            <div key={chapter.id} className="mb-1">
+              <button
+                type="button"
+                onClick={() => toggleChapter(chapter.id)}
+                className="flex items-center gap-1 w-full px-2 py-1.5 text-xs font-semibold uppercase text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <ChevronRight
                   className={cn(
-                    "block rounded-md px-2 py-1.5 text-sm transition-colors",
-                    isActive
-                      ? "bg-accent text-accent-foreground font-medium"
-                      : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                    "size-3.5 shrink-0 transition-transform duration-200",
+                    isExpanded && "rotate-90"
                   )}
-                >
-                  {article.title}
-                </Link>
-              );
-            })}
-          </div>
-        ))}
+                />
+                {chapter.title}
+              </button>
+              <div
+                className={cn(
+                  "grid transition-all duration-200",
+                  isExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+                )}
+              >
+                <div className="overflow-hidden">
+                  <div className="ml-2">
+                    {chapter.articles.map((article) => {
+                      const href = `/${projectSlug}/${article.slug}${buildQuery({})}`;
+                      const isActive = pathname === `/${projectSlug}/${article.slug}`;
+                      return (
+                        <Link
+                          key={article.id}
+                          href={href}
+                          className={cn(
+                            "block rounded-r-md px-3 py-1.5 text-sm transition-colors border-l-2",
+                            isActive
+                              ? "border-primary bg-primary/5 text-foreground font-medium"
+                              : "border-transparent text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                          )}
+                        >
+                          {article.title}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </nav>
+
+      {/* Bottom: language selector */}
+      {languages.length > 1 && (
+        <div className="p-4 pt-2 border-t border-border/50">
+          <Select value={currentLang} onValueChange={handleLanguageChange}>
+            <SelectTrigger className="w-full">
+              <SelectValue>
+                <span className="flex items-center gap-2">
+                  <span>{LANGUAGE_CONFIG[currentLang]?.flag ?? "\u{1F310}"}</span>
+                  <span>{LANGUAGE_CONFIG[currentLang]?.label ?? currentLang}</span>
+                </span>
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {languages.map((l) => (
+                <SelectItem key={l} value={l}>
+                  <span className="flex items-center gap-2">
+                    <span>{LANGUAGE_CONFIG[l]?.flag ?? "\u{1F310}"}</span>
+                    <span>{LANGUAGE_CONFIG[l]?.label ?? l}</span>
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
     </div>
   );
 }
@@ -191,7 +248,7 @@ export function Sidebar(props: SidebarProps) {
         </Sheet>
       </div>
 
-      <aside className="hidden lg:block w-[260px] border-r h-screen sticky top-0 overflow-y-auto flex-shrink-0 bg-sidebar text-sidebar-foreground">
+      <aside className="hidden lg:block w-[260px] border-r h-screen sticky top-0 flex-shrink-0 bg-sidebar text-sidebar-foreground">
         <SidebarContent {...props} />
       </aside>
     </>
