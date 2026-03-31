@@ -174,7 +174,7 @@ function DocsSidebarContent({
         {groupedChapters.map((group, groupIndex) => (
           <div key={group.group ?? `ungrouped-${groupIndex}`} className="mt-6 first:mt-0">
             {group.group && (
-              <p className="px-2 mb-2 text-sm font-semibold text-foreground">
+              <p className="px-2 mb-2 text-sm font-semibold text-sidebar-foreground">
                 {group.group}
               </p>
             )}
@@ -187,7 +187,7 @@ function DocsSidebarContent({
                     open={isExpanded}
                     onOpenChange={() => toggleChapter(chapter.id)}
                   >
-                    <CollapsibleTrigger className="flex items-center gap-2 w-full rounded-lg p-2 text-start text-foreground/70 transition-colors hover:bg-accent/50 hover:text-accent-foreground">
+                    <CollapsibleTrigger className="flex items-center gap-2 w-full rounded-lg p-2 text-start text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
                       <span className="flex-1 text-left truncate">{chapterTitle(chapter)}</span>
                       <ChevronRight
                         className={cn(
@@ -199,7 +199,7 @@ function DocsSidebarContent({
                     <CollapsibleContent>
                       <div className="relative flex flex-col gap-0.5 pt-0.5">
                         {/* Vertical connector line */}
-                        <div className="absolute w-px inset-y-1 start-[0.625rem] bg-border" />
+                        <div className="absolute w-px inset-y-1 start-[0.625rem] bg-sidebar-foreground/15" />
                         {chapter.articles.map((article) => {
                           const href = `/${projectSlug}/${article.slug}${buildQuery({})}`;
                           const isActive = pathname === `/${projectSlug}/${article.slug}`;
@@ -209,11 +209,11 @@ function DocsSidebarContent({
                               href={href}
                               data-active={isActive}
                               className={cn(
-                                "relative flex items-center gap-2 rounded-lg p-2 pl-7 text-foreground/70 transition-colors",
-                                "hover:bg-accent/50 hover:text-accent-foreground hover:transition-none",
+                                "relative flex items-center gap-2 rounded-lg p-2 pl-7 text-sidebar-foreground/60 transition-colors",
+                                "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:transition-none",
                                 isActive && [
-                                  "bg-primary/10 text-primary hover:bg-primary/10 hover:text-primary hover:transition-colors",
-                                  "before:content-[''] before:bg-primary before:absolute before:w-px before:inset-y-2.5 before:start-[0.625rem]",
+                                  "bg-sidebar-accent text-sidebar-accent-foreground font-medium hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:transition-colors",
+                                  "before:content-[''] before:bg-sidebar-foreground before:absolute before:w-px before:inset-y-2.5 before:start-[0.625rem]",
                                 ]
                               )}
                             >
@@ -232,10 +232,10 @@ function DocsSidebarContent({
       </div>
 
       {/* Footer: language + theme toggle */}
-      <div className="flex items-center border-t p-4 pt-2">
+      <div className="flex items-center border-t border-sidebar-foreground/10 p-4 pt-2">
         {languages.length > 1 && (
           <Select value={currentLang} onValueChange={handleLanguageChange}>
-            <SelectTrigger className="h-8 w-auto gap-1.5 border-0 bg-transparent px-2 text-muted-foreground shadow-none">
+            <SelectTrigger className="h-8 w-auto gap-1.5 border-0 bg-transparent px-2 text-sidebar-foreground/60 shadow-none">
               <SelectValue>
                 <span className="flex items-center gap-1.5 text-xs">
                   <span>{LANGUAGE_CONFIG[currentLang]?.flag ?? "\u{1F310}"}</span>
