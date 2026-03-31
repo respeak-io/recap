@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { extractHeadings } from "@/lib/extract-headings";
 import { Toc } from "@/components/docs/toc";
@@ -5,6 +6,34 @@ import { DocsBreadcrumb } from "@/components/docs/docs-breadcrumb";
 import { AnalyticsTracker } from "@/components/docs/analytics-tracker";
 import { notFound } from "next/navigation";
 import { ArticleWithVideo } from "./article-with-video";
+
+export async function generateMetadata({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ projectSlug: string; articleSlug: string }>;
+  searchParams: Promise<{ lang?: string }>;
+}): Promise<Metadata> {
+  const { projectSlug, articleSlug } = await params;
+  const { lang = "en" } = await searchParams;
+  const supabase = await createClient();
+
+  const { data: article } = await supabase
+    .from("articles")
+    .select("title, projects!inner(name)")
+    .eq("projects.slug", projectSlug)
+    .eq("slug", articleSlug)
+    .eq("language", lang)
+    .eq("status", "published")
+    .single();
+
+  if (!article) return { title: "Not Found" };
+
+  const projectName = (article.projects as unknown as { name: string }).name;
+  return {
+    title: `${article.title} | ${projectName}`,
+  };
+}
 
 export default async function ArticlePage({
   params,
