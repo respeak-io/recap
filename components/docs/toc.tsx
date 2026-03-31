@@ -5,7 +5,6 @@ import {
   useState,
   useRef,
   useCallback,
-  type ReactNode,
 } from "react";
 import { cn } from "@/lib/utils";
 
@@ -15,170 +14,239 @@ interface TocItem {
   level: number;
 }
 
+// --- Observer (adapted from fumadocs-core/toc.tsx) ---
+
+interface ObserverItem {
+  id: string;
+  active: boolean;
+  /** true if active only because nothing else is intersecting */
+  fallback: boolean;
+}
+
+class TocObserver {
+  items: ObserverItem[] = [];
+  private observer: IntersectionObserver | null = null;
+  onChange?: () => void;
+
+  private callback(entries: IntersectionObserverEntry[]) {
+    if (entries.length === 0) return;
+
+    let hasActive = false;
+    this.items = this.items.map((item) => {
+      const entry = entries.find((e) => e.target.id === item.id);
+      // If entry exists, use its isIntersecting. Otherwise keep previous state (unless fallback).
+      const active = entry ? entry.isIntersecting : item.active && !item.fallback;
+
+      if (item.active !== active) {
+        item = { ...item, active, fallback: false };
+      }
+      if (active) hasActive = true;
+      return item;
+    });
+
+    // Fallback: when nothing is intersecting, find heading closest to viewport top
+    if (!hasActive && entries[0].rootBounds) {
+      const viewTop = entries[0].rootBounds.top;
+      let min = Infinity;
+      let fallbackIdx = -1;
+
+      for (let i = 0; i < this.items.length; i++) {
+        const el = document.getElementById(this.items[i].id);
+        if (!el) continue;
+        const d = Math.abs(viewTop - el.getBoundingClientRect().top);
+        if (d < min) {
+          fallbackIdx = i;
+          min = d;
+        }
+      }
+
+      if (fallbackIdx !== -1) {
+        this.items[fallbackIdx] = {
+          ...this.items[fallbackIdx],
+          active: true,
+          fallback: true,
+        };
+      }
+    }
+
+    this.onChange?.();
+  }
+
+  setItems(ids: string[]) {
+    if (this.observer) {
+      for (const item of this.items) {
+        const el = document.getElementById(item.id);
+        if (el) this.observer.unobserve(el);
+      }
+    }
+
+    this.items = ids.map((id) => ({ id, active: false, fallback: false }));
+    this.observeAll();
+  }
+
+  watch() {
+    if (this.observer) return;
+    this.observer = new IntersectionObserver(this.callback.bind(this), {
+      rootMargin: "0px",
+      threshold: 0.98,
+    });
+    this.observeAll();
+  }
+
+  private observeAll() {
+    if (!this.observer) return;
+    for (const item of this.items) {
+      const el = document.getElementById(item.id);
+      if (el) this.observer.observe(el);
+    }
+  }
+
+  unwatch() {
+    this.observer?.disconnect();
+    this.observer = null;
+  }
+}
+
+// --- SVG path builder (adapted from fumadocs clerk style) ---
+
 function getLineX(level: number): number {
-  // x-offset based on heading depth, matching the padding-left of links
   if (level <= 2) return 6;
   if (level === 3) return 18;
   return 30;
 }
 
+interface SvgData {
+  width: number;
+  height: number;
+  path: string;
+}
+
+function buildSvgPath(
+  headings: TocItem[],
+  container: HTMLElement
+): SvgData | null {
+  if (headings.length === 0) return null;
+
+  let w = 0;
+  let h = 0;
+  let prevBottom = 0;
+  let prevX = 0;
+  let d = "";
+
+  for (let i = 0; i < headings.length; i++) {
+    const el = container.querySelector<HTMLAnchorElement>(
+      `a[href="#${headings[i].id}"]`
+    );
+    if (!el) continue;
+
+    const styles = getComputedStyle(el);
+    const x = getLineX(headings[i].level) + 0.5;
+    const top = el.offsetTop + parseFloat(styles.paddingTop);
+    const bottom =
+      el.offsetTop + el.clientHeight - parseFloat(styles.paddingBottom);
+
+    w = Math.max(x + 8, w);
+    h = Math.max(h, bottom);
+
+    if (i === 0) {
+      d += `M${x} ${top} L${x} ${bottom}`;
+    } else {
+      d += ` C${prevX} ${top - 4} ${x} ${prevBottom + 4} ${x} ${top} L${x} ${bottom}`;
+    }
+
+    prevX = x;
+    prevBottom = bottom;
+  }
+
+  return d ? { width: w, height: h, path: d } : null;
+}
+
+// --- Thumb position calculator (adapted from fumadocs TocThumb) ---
+
+function calcThumb(
+  activeIds: string[],
+  container: HTMLElement
+): { top: number; height: number } {
+  if (activeIds.length === 0) return { top: 0, height: 0 };
+
+  let upper = Infinity;
+  let lower = 0;
+
+  for (const id of activeIds) {
+    const el = container.querySelector<HTMLAnchorElement>(`a[href="#${id}"]`);
+    if (!el) continue;
+    const styles = getComputedStyle(el);
+    upper = Math.min(upper, el.offsetTop + parseFloat(styles.paddingTop));
+    lower = Math.max(
+      lower,
+      el.offsetTop + el.clientHeight - parseFloat(styles.paddingBottom)
+    );
+  }
+
+  return upper === Infinity ? { top: 0, height: 0 } : { top: upper, height: lower - upper };
+}
+
+// --- Component ---
+
 export function Toc({ headings }: { headings: TocItem[] }) {
-  const [activeIds, setActiveIds] = useState<Set<string>>(new Set());
   const containerRef = useRef<HTMLDivElement>(null);
-  const [svg, setSvg] = useState<{
-    width: number;
-    height: number;
-    path: string;
-    elements: ReactNode[];
-  } | null>(null);
-  const [thumbStyle, setThumbStyle] = useState<{ top: number; height: number }>({
+  const observerRef = useRef<TocObserver | null>(null);
+  const [activeIds, setActiveIds] = useState<string[]>([]);
+  const [svg, setSvg] = useState<SvgData | null>(null);
+  const [thumb, setThumb] = useState<{ top: number; height: number }>({
     top: 0,
     height: 0,
   });
 
-  // Track all visible headings via IntersectionObserver
+  // Initialize observer
   useEffect(() => {
-    const visibleSet = new Set<string>();
+    const obs = new TocObserver();
+    observerRef.current = obs;
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            visibleSet.add(entry.target.id);
-          } else {
-            visibleSet.delete(entry.target.id);
-          }
-        }
+    obs.onChange = () => {
+      const ids = obs.items.filter((i) => i.active).map((i) => i.id);
+      setActiveIds(ids);
+    };
 
-        if (visibleSet.size > 0) {
-          setActiveIds(new Set(visibleSet));
-        } else {
-          // Fallback: find heading closest to viewport top
-          let closest: string | null = null;
-          let minDist = Infinity;
-          for (const h of headings) {
-            const el = document.getElementById(h.id);
-            if (!el) continue;
-            const d = Math.abs(el.getBoundingClientRect().top);
-            if (d < minDist) {
-              minDist = d;
-              closest = h.id;
-            }
-          }
-          if (closest) setActiveIds(new Set([closest]));
-        }
-      },
-      { rootMargin: "0px", threshold: 0.5 }
-    );
-
+    // Delay to let headings render
     const timer = setTimeout(() => {
-      for (const h of headings) {
-        const el = document.getElementById(h.id);
-        if (el) observer.observe(el);
-      }
+      obs.setItems(headings.map((h) => h.id));
+      obs.watch();
     }, 100);
 
     return () => {
       clearTimeout(timer);
-      observer.disconnect();
+      obs.unwatch();
     };
   }, [headings]);
 
-  // Build SVG path with curves between depth levels
-  const buildSvg = useCallback(() => {
+  // Build SVG + update thumb when layout or active items change
+  const refresh = useCallback(() => {
     const container = containerRef.current;
-    if (!container || headings.length === 0) {
-      setSvg(null);
-      return;
-    }
-
-    let w = 0;
-    let h = 0;
-    let prevBottom = 0;
-    let prevX = 0;
-    let d = "";
-
-    for (let i = 0; i < headings.length; i++) {
-      const heading = headings[i];
-      const el = container.querySelector<HTMLAnchorElement>(
-        `a[href="#${heading.id}"]`
-      );
-      if (!el) continue;
-
-      const styles = getComputedStyle(el);
-      const x = getLineX(heading.level);
-      const top = el.offsetTop + parseFloat(styles.paddingTop);
-      const bottom =
-        el.offsetTop + el.clientHeight - parseFloat(styles.paddingBottom);
-
-      w = Math.max(x + 4, w);
-      h = Math.max(h, bottom);
-
-      if (i === 0) {
-        d += `M${x} ${top} L${x} ${bottom}`;
-      } else {
-        // Cubic bezier curve from previous position to this one
-        d += ` C${prevX} ${top - 4} ${x} ${prevBottom + 4} ${x} ${top} L${x} ${bottom}`;
-      }
-
-      prevX = x;
-      prevBottom = bottom;
-    }
-
-    setSvg({ width: w, height: h, path: d, elements: [] });
-  }, [headings]);
+    if (!container) return;
+    setSvg(buildSvgPath(headings, container));
+    setThumb(calcThumb(activeIds, container));
+  }, [headings, activeIds]);
 
   useEffect(() => {
-    buildSvg();
-  }, [buildSvg]);
+    refresh();
+  }, [refresh]);
 
-  // Recalculate SVG on resize
+  // Recalculate on resize
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
-    const observer = new ResizeObserver(buildSvg);
-    observer.observe(container);
-    return () => observer.disconnect();
-  }, [buildSvg]);
-
-  // Calculate thumb clip region from active anchors
-  const updateThumb = useCallback(() => {
-    const container = containerRef.current;
-    if (!container || activeIds.size === 0) {
-      setThumbStyle({ top: 0, height: 0 });
-      return;
-    }
-
-    let upper = Infinity;
-    let lower = 0;
-
-    for (const id of activeIds) {
-      const el = container.querySelector<HTMLAnchorElement>(`a[href="#${id}"]`);
-      if (!el) continue;
-      const styles = getComputedStyle(el);
-      const top = el.offsetTop + parseFloat(styles.paddingTop);
-      const bottom =
-        el.offsetTop + el.clientHeight - parseFloat(styles.paddingBottom);
-      upper = Math.min(upper, top);
-      lower = Math.max(lower, bottom);
-    }
-
-    if (upper === Infinity) {
-      setThumbStyle({ top: 0, height: 0 });
-    } else {
-      setThumbStyle({ top: upper, height: lower - upper });
-    }
-  }, [activeIds]);
-
-  useEffect(() => {
-    updateThumb();
-  }, [updateThumb]);
+    const ro = new ResizeObserver(refresh);
+    ro.observe(container);
+    return () => ro.disconnect();
+  }, [refresh]);
 
   if (headings.length === 0) return null;
 
+  const activeSet = new Set(activeIds);
   const clipPath =
-    thumbStyle.height > 0
-      ? `polygon(0 ${thumbStyle.top}px, 100% ${thumbStyle.top}px, 100% ${thumbStyle.top + thumbStyle.height}px, 0 ${thumbStyle.top + thumbStyle.height}px)`
+    thumb.height > 0
+      ? `polygon(0 ${thumb.top}px, 100% ${thumb.top}px, 100% ${thumb.top + thumb.height}px, 0 ${thumb.top + thumb.height}px)`
       : "polygon(0 0, 0 0, 0 0, 0 0)";
 
   return (
@@ -195,12 +263,7 @@ export function Toc({ headings }: { headings: TocItem[] }) {
             className="absolute top-0 left-0 pointer-events-none"
             style={{ width: svg.width, height: svg.height }}
           >
-            <path
-              d={svg.path}
-              className="stroke-border"
-              strokeWidth="1"
-              fill="none"
-            />
+            <path d={svg.path} className="stroke-border" strokeWidth="1" fill="none" />
           </svg>
         )}
         {/* Active snake path (highlighted, clipped) */}
@@ -209,19 +272,26 @@ export function Toc({ headings }: { headings: TocItem[] }) {
             xmlns="http://www.w3.org/2000/svg"
             viewBox={`0 0 ${svg.width} ${svg.height}`}
             className="absolute top-0 left-0 pointer-events-none transition-[clip-path] duration-200"
+            style={{ width: svg.width, height: svg.height, clipPath }}
+          >
+            <path d={svg.path} className="stroke-primary" strokeWidth="1.5" fill="none" />
+          </svg>
+        )}
+        {/* Active dot at the top of the highlighted region */}
+        {thumb.height > 0 && activeIds.length > 0 && (
+          <div
+            className="absolute left-0 pointer-events-none transition-[top] duration-200"
             style={{
-              width: svg.width,
-              height: svg.height,
-              clipPath,
+              top: thumb.top + thumb.height / 2 - 4,
+              left: (() => {
+                // Position dot at the x-offset of the last active heading
+                const lastActive = headings.find((h) => h.id === activeIds[activeIds.length - 1]);
+                return lastActive ? getLineX(lastActive.level) - 3.5 : 2.5;
+              })(),
             }}
           >
-            <path
-              d={svg.path}
-              className="stroke-primary"
-              strokeWidth="1.5"
-              fill="none"
-            />
-          </svg>
+            <div className="size-2 rounded-full bg-primary" />
+          </div>
         )}
         <nav ref={containerRef} className="flex flex-col gap-0.5 relative">
           {headings.map((h) => (
@@ -241,7 +311,7 @@ export function Toc({ headings }: { headings: TocItem[] }) {
                 h.level <= 2 && "pl-4",
                 h.level === 3 && "pl-7",
                 h.level >= 4 && "pl-10",
-                activeIds.has(h.id)
+                activeSet.has(h.id)
                   ? "text-primary font-medium"
                   : "text-muted-foreground hover:text-foreground"
               )}
