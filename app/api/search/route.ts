@@ -15,7 +15,7 @@ export async function GET(request: Request) {
 
   let articlesQuery = supabase
     .from("articles")
-    .select("id, title, slug, content_text, project_id")
+    .select("id, title, slug, content_text, project_id, chapters(title)")
     .eq("project_id", projectId)
     .eq("status", "published")
     .textSearch("fts", query, { type: "websearch", config: "english" })
