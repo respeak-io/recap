@@ -3,13 +3,20 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
-  CommandDialog,
+  Command,
   CommandEmpty,
   CommandGroup,
   CommandInput,
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface SearchResult {
   id: string;
@@ -128,47 +135,55 @@ export function SearchDialog({ projectId, projectSlug }: SearchDialogProps) {
         </kbd>
       </button>
 
-      <CommandDialog open={open} onOpenChange={setOpen}>
-        <CommandInput
-          placeholder="Search documentation..."
-          value={query}
-          onValueChange={handleValueChange}
-        />
-        <CommandList>
-          {!loading && results.length === 0 && query.trim() && (
-            <CommandEmpty>No results found.</CommandEmpty>
-          )}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogHeader className="sr-only">
+          <DialogTitle>Search documentation</DialogTitle>
+          <DialogDescription>Search for articles in this project</DialogDescription>
+        </DialogHeader>
+        <DialogContent className="overflow-hidden p-0">
+          <Command shouldFilter={false} className="[&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group]]:px-2">
+            <CommandInput
+              placeholder="Search documentation..."
+              value={query}
+              onValueChange={handleValueChange}
+            />
+            <CommandList>
+              {!loading && results.length === 0 && query.trim() && (
+                <CommandEmpty>No results found.</CommandEmpty>
+              )}
 
-          {aiAnswer && (
-            <CommandGroup heading="AI Answer">
-              <div className="px-3 py-2 text-sm text-muted-foreground">
-                {aiAnswer}
-              </div>
-            </CommandGroup>
-          )}
-
-          {results.length > 0 && (
-            <CommandGroup heading="Articles">
-              {results.map((r) => (
-                <CommandItem
-                  key={r.id}
-                  value={r.title}
-                  onSelect={() => handleSelect(r.slug)}
-                >
-                  <div className="flex flex-col gap-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{r.title}</span>
-                    </div>
-                    <span className="text-xs text-muted-foreground">
-                      {snippet(r.content_text)}
-                    </span>
+              {aiAnswer && (
+                <CommandGroup heading="AI Answer">
+                  <div className="px-3 py-2 text-sm text-muted-foreground">
+                    {aiAnswer}
                   </div>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          )}
-        </CommandList>
-      </CommandDialog>
+                </CommandGroup>
+              )}
+
+              {results.length > 0 && (
+                <CommandGroup heading="Articles">
+                  {results.map((r) => (
+                    <CommandItem
+                      key={r.id}
+                      value={r.title}
+                      onSelect={() => handleSelect(r.slug)}
+                    >
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{r.title}</span>
+                        </div>
+                        <span className="text-xs text-muted-foreground">
+                          {snippet(r.content_text)}
+                        </span>
+                      </div>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
+            </CommandList>
+          </Command>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

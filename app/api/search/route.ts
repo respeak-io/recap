@@ -25,7 +25,10 @@ export async function GET(request: Request) {
     articlesQuery = articlesQuery.eq("language", lang);
   }
 
-  const { data: articles } = await articlesQuery;
+  const { data: articles, error } = await articlesQuery;
+  if (error) {
+    console.error("[search] Query failed:", error.message);
+  }
 
   // Log search event asynchronously (don't block response)
   supabase.from("search_events").insert({
