@@ -320,8 +320,10 @@ export function Toc({ headings }: { headings: TocItem[] }) {
         {/* Scroll-direction dot on the snake line */}
         {dot.visible && (
           <div
-            className="absolute size-1 rounded-full bg-primary pointer-events-none transition-[translate] duration-200"
+            className="absolute rounded-full bg-primary pointer-events-none transition-[translate] duration-200"
             style={{
+              width: 3,
+              height: 3,
               translate: `${dot.x - 1.5}px ${dot.y - 1.5}px`,
             }}
           />
