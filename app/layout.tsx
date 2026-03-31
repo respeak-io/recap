@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Reeldocs",
-    template: "%s | Reeldocs",
+    default: "Recap",
+    template: "%s | Recap",
   },
   description: "AI-powered video-to-documentation platform",
 };
