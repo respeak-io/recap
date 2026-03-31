@@ -174,11 +174,11 @@ function DocsSidebarContent({
         {groupedChapters.map((group, groupIndex) => (
           <div key={group.group ?? `ungrouped-${groupIndex}`}>
             {group.group && (
-              <p className="inline-flex items-center gap-2 mb-1 px-2 mt-8 first:mt-3 text-sm font-medium text-foreground">
+              <p className="inline-flex items-center gap-2 mb-1.5 px-2 mt-10 first:mt-3 text-sm font-semibold text-foreground/70">
                 {group.group}
               </p>
             )}
-            <div className="flex flex-col gap-0.5">
+            <div className="flex flex-col gap-1">
               {group.chapters.map((chapter) => {
                 const isExpanded = expandedChapters.has(chapter.id);
                 return (
@@ -187,7 +187,7 @@ function DocsSidebarContent({
                     open={isExpanded}
                     onOpenChange={() => toggleChapter(chapter.id)}
                   >
-                    <CollapsibleTrigger className="flex items-center gap-2 w-full rounded-lg p-2 text-start text-foreground transition-colors hover:bg-accent/50 hover:text-accent-foreground">
+                    <CollapsibleTrigger className="flex items-center gap-2 w-full rounded-lg p-2 text-start font-semibold text-foreground/70 transition-colors hover:bg-accent/50 hover:text-accent-foreground">
                       <span className="flex-1 text-left truncate">{chapterTitle(chapter)}</span>
                       <ChevronRight
                         className={cn(
@@ -209,8 +209,8 @@ function DocsSidebarContent({
                               href={href}
                               data-active={isActive}
                               className={cn(
-                                "relative flex items-center gap-2 rounded-lg p-2 pl-7 text-muted-foreground transition-colors",
-                                "hover:bg-accent/50 hover:text-accent-foreground/80 hover:transition-none",
+                                "relative flex items-center gap-2 rounded-lg p-2 pl-7 text-foreground/70 transition-colors",
+                                "hover:bg-accent/50 hover:text-accent-foreground hover:transition-none",
                                 isActive && [
                                   "bg-primary/10 text-primary hover:bg-primary/10 hover:text-primary hover:transition-colors",
                                   "before:content-[''] before:bg-primary before:absolute before:w-px before:inset-y-2.5 before:start-[0.625rem]",
