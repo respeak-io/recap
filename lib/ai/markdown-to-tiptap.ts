@@ -157,41 +157,51 @@ function extractCustomBlocks(markdown: string): { cleaned: string; customBlocks:
   const customBlocks: TiptapNode[] = [];
   let cleaned = markdown;
 
-  // Callouts: :::note, :::warning, :::tip
+  // Helper: strip common leading whitespace from block content
+  function dedent(text: string): string {
+    const lines = text.split("\n");
+    const indents = lines.filter((l) => l.trim()).map((l) => l.match(/^(\s*)/)?.[1].length ?? 0);
+    const min = indents.length > 0 ? Math.min(...indents) : 0;
+    if (min === 0) return text;
+    return lines.map((l) => l.slice(min)).join("\n");
+  }
+
+  // Callouts: :::note, :::warning, :::tip (with optional leading whitespace)
   cleaned = cleaned.replace(
-    /^:::(note|warning|tip|info)\s*\n([\s\S]*?)^:::\s*$/gm,
+    /^[ \t]*:::(note|warning|tip|info)\s*\n([\s\S]*?)^[ \t]*:::\s*$/gm,
     (_, type: string, content: string) => {
       const calloutType = type === "note" || type === "info" ? "info" : type;
-      const innerNodes = tokensToTiptap(new Lexer().lex(content.trim()));
+      const innerNodes = tokensToTiptap(new Lexer().lex(dedent(content).trim()));
       const idx = customBlocks.length;
       customBlocks.push({
         type: "callout",
         attrs: { type: calloutType },
         content: innerNodes,
       });
-      return `__CUSTOM_BLOCK_${idx}__`;
+      return `\n\n__CUSTOM_BLOCK_${idx}__\n\n`;
     }
   );
 
-  // Steps: :::steps ... ::: split by ### headings
+  // Steps: :::steps ... ::: split by ### headings (with optional leading whitespace)
   cleaned = cleaned.replace(
-    /^:::steps\s*\n([\s\S]*?)^:::\s*$/gm,
+    /^[ \t]*:::steps\s*\n([\s\S]*?)^[ \t]*:::\s*$/gm,
     (_, content: string) => {
+      const dedented = dedent(content);
       const stepRegex = /^###\s+(.+)$/gm;
       const parts: { title: string; body: string }[] = [];
       let match: RegExpExecArray | null;
       let lastIndex = 0;
       let lastTitle = "";
 
-      while ((match = stepRegex.exec(content)) !== null) {
+      while ((match = stepRegex.exec(dedented)) !== null) {
         if (lastTitle) {
-          parts.push({ title: lastTitle, body: content.slice(lastIndex, match.index).trim() });
+          parts.push({ title: lastTitle, body: dedented.slice(lastIndex, match.index).trim() });
         }
         lastTitle = match[1];
         lastIndex = match.index + match[0].length;
       }
       if (lastTitle) {
-        parts.push({ title: lastTitle, body: content.slice(lastIndex).trim() });
+        parts.push({ title: lastTitle, body: dedented.slice(lastIndex).trim() });
       }
 
       const stepNodes = parts.map((p) => ({
@@ -205,29 +215,30 @@ function extractCustomBlocks(markdown: string): { cleaned: string; customBlocks:
         type: "steps",
         content: stepNodes,
       });
-      return `__CUSTOM_BLOCK_${idx}__`;
+      return `\n\n__CUSTOM_BLOCK_${idx}__\n\n`;
     }
   );
 
-  // Tabs: :::tabs ... ::: split by ::tab{title="..."}
+  // Tabs: :::tabs ... ::: split by ::tab{title="..."} (with optional leading whitespace)
   cleaned = cleaned.replace(
-    /^:::tabs\s*\n([\s\S]*?)^:::\s*$/gm,
+    /^[ \t]*:::tabs\s*\n([\s\S]*?)^[ \t]*:::\s*$/gm,
     (_, content: string) => {
-      const tabRegex = /^::tab\{title="([^"]+)"\}\s*$/gm;
+      const dedented = dedent(content);
+      const tabRegex = /^[ \t]*::tab\{title="([^"]+)"\}\s*$/gm;
       const tabs: { title: string; body: string }[] = [];
       let match: RegExpExecArray | null;
       let lastIndex = 0;
       let lastTitle = "";
 
-      while ((match = tabRegex.exec(content)) !== null) {
+      while ((match = tabRegex.exec(dedented)) !== null) {
         if (lastTitle) {
-          tabs.push({ title: lastTitle, body: content.slice(lastIndex, match.index).trim() });
+          tabs.push({ title: lastTitle, body: dedented.slice(lastIndex, match.index).trim() });
         }
         lastTitle = match[1];
         lastIndex = match.index + match[0].length;
       }
       if (lastTitle) {
-        tabs.push({ title: lastTitle, body: content.slice(lastIndex).trim() });
+        tabs.push({ title: lastTitle, body: dedented.slice(lastIndex).trim() });
       }
 
       const tabNodes = tabs.map((t) => ({
@@ -241,15 +252,15 @@ function extractCustomBlocks(markdown: string): { cleaned: string; customBlocks:
         type: "tabGroup",
         content: tabNodes,
       });
-      return `__CUSTOM_BLOCK_${idx}__`;
+      return `\n\n__CUSTOM_BLOCK_${idx}__\n\n`;
     }
   );
 
-  // Details/accordion: <details><summary>Title</summary>Content</details>
+  // Details/accordion: <details><summary>Title</summary>Content</details> (with optional indentation)
   cleaned = cleaned.replace(
-    /<details>\s*<summary>([\s\S]*?)<\/summary>\s*([\s\S]*?)<\/details>/gm,
+    /[ \t]*<details>\s*<summary>([\s\S]*?)<\/summary>\s*([\s\S]*?)[ \t]*<\/details>/gm,
     (_, summary: string, content: string) => {
-      const innerNodes = tokensToTiptap(new Lexer().lex(content.trim()));
+      const innerNodes = tokensToTiptap(new Lexer().lex(dedent(content).trim()));
       const idx = customBlocks.length;
       customBlocks.push({
         type: "details",
@@ -264,7 +275,7 @@ function extractCustomBlocks(markdown: string): { cleaned: string; customBlocks:
           },
         ],
       });
-      return `__CUSTOM_BLOCK_${idx}__`;
+      return `\n\n__CUSTOM_BLOCK_${idx}__\n\n`;
     }
   );
 
