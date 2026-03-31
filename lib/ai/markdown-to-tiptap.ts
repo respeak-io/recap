@@ -54,14 +54,162 @@ export function markdownToTiptap(
 export function markdownToTiptapRaw(
   markdown: string
 ): { doc: { type: string; content: TiptapNode[] }; text: string } {
-  const tokens = new Lexer().lex(markdown);
-  const nodes = tokensToTiptap(tokens);
-  const doc = { type: "doc", content: nodes };
+  // Pre-process custom blocks before standard markdown tokenization
+  const { cleaned, customBlocks } = extractCustomBlocks(markdown);
 
-  // Extract plain text for FTS content_text field
+  const tokens = new Lexer().lex(cleaned);
+  const standardNodes = tokensToTiptap(tokens);
+
+  // Merge custom block nodes back at their placeholder positions
+  const nodes: TiptapNode[] = [];
+  for (const node of standardNodes) {
+    if (
+      node.type === "paragraph" &&
+      Array.isArray(node.content) &&
+      node.content.length === 1 &&
+      typeof (node.content[0] as TiptapNode).text === "string" &&
+      ((node.content[0] as TiptapNode).text as string).startsWith("__CUSTOM_BLOCK_")
+    ) {
+      const idx = parseInt(((node.content[0] as TiptapNode).text as string).replace("__CUSTOM_BLOCK_", "").replace("__", ""), 10);
+      if (customBlocks[idx]) nodes.push(customBlocks[idx]);
+    } else {
+      nodes.push(node);
+    }
+  }
+
+  const doc = { type: "doc", content: nodes };
   const text = extractPlainText(nodes);
 
   return { doc, text };
+}
+
+/**
+ * Extract custom block syntax (callouts, steps, tabs, details) from markdown,
+ * replace with placeholders, and return the Tiptap nodes for each.
+ *
+ * Supported syntax:
+ *
+ * Callouts:     :::note|:::warning|:::tip ... :::
+ * Steps:        :::steps ... ::: (split by ### headings)
+ * Tabs:         :::tabs ... ::: (split by ::tab{title="..."})
+ * Details:      <details><summary>Title</summary>Content</details>
+ */
+function extractCustomBlocks(markdown: string): { cleaned: string; customBlocks: TiptapNode[] } {
+  const customBlocks: TiptapNode[] = [];
+  let cleaned = markdown;
+
+  // Callouts: :::note, :::warning, :::tip
+  cleaned = cleaned.replace(
+    /^:::(note|warning|tip|info)\s*\n([\s\S]*?)^:::\s*$/gm,
+    (_, type: string, content: string) => {
+      const calloutType = type === "note" || type === "info" ? "info" : type;
+      const innerNodes = tokensToTiptap(new Lexer().lex(content.trim()));
+      const idx = customBlocks.length;
+      customBlocks.push({
+        type: "callout",
+        attrs: { type: calloutType },
+        content: innerNodes,
+      });
+      return `__CUSTOM_BLOCK_${idx}__`;
+    }
+  );
+
+  // Steps: :::steps ... ::: split by ### headings
+  cleaned = cleaned.replace(
+    /^:::steps\s*\n([\s\S]*?)^:::\s*$/gm,
+    (_, content: string) => {
+      const stepRegex = /^###\s+(.+)$/gm;
+      const parts: { title: string; body: string }[] = [];
+      let match: RegExpExecArray | null;
+      let lastIndex = 0;
+      let lastTitle = "";
+
+      while ((match = stepRegex.exec(content)) !== null) {
+        if (lastTitle) {
+          parts.push({ title: lastTitle, body: content.slice(lastIndex, match.index).trim() });
+        }
+        lastTitle = match[1];
+        lastIndex = match.index + match[0].length;
+      }
+      if (lastTitle) {
+        parts.push({ title: lastTitle, body: content.slice(lastIndex).trim() });
+      }
+
+      const stepNodes = parts.map((p) => ({
+        type: "step",
+        attrs: { title: p.title },
+        content: tokensToTiptap(new Lexer().lex(p.body)),
+      }));
+
+      const idx = customBlocks.length;
+      customBlocks.push({
+        type: "steps",
+        content: stepNodes,
+      });
+      return `__CUSTOM_BLOCK_${idx}__`;
+    }
+  );
+
+  // Tabs: :::tabs ... ::: split by ::tab{title="..."}
+  cleaned = cleaned.replace(
+    /^:::tabs\s*\n([\s\S]*?)^:::\s*$/gm,
+    (_, content: string) => {
+      const tabRegex = /^::tab\{title="([^"]+)"\}\s*$/gm;
+      const tabs: { title: string; body: string }[] = [];
+      let match: RegExpExecArray | null;
+      let lastIndex = 0;
+      let lastTitle = "";
+
+      while ((match = tabRegex.exec(content)) !== null) {
+        if (lastTitle) {
+          tabs.push({ title: lastTitle, body: content.slice(lastIndex, match.index).trim() });
+        }
+        lastTitle = match[1];
+        lastIndex = match.index + match[0].length;
+      }
+      if (lastTitle) {
+        tabs.push({ title: lastTitle, body: content.slice(lastIndex).trim() });
+      }
+
+      const tabNodes = tabs.map((t) => ({
+        type: "tab",
+        attrs: { title: t.title },
+        content: tokensToTiptap(new Lexer().lex(t.body)),
+      }));
+
+      const idx = customBlocks.length;
+      customBlocks.push({
+        type: "tabGroup",
+        content: tabNodes,
+      });
+      return `__CUSTOM_BLOCK_${idx}__`;
+    }
+  );
+
+  // Details/accordion: <details><summary>Title</summary>Content</details>
+  cleaned = cleaned.replace(
+    /<details>\s*<summary>([\s\S]*?)<\/summary>\s*([\s\S]*?)<\/details>/gm,
+    (_, summary: string, content: string) => {
+      const innerNodes = tokensToTiptap(new Lexer().lex(content.trim()));
+      const idx = customBlocks.length;
+      customBlocks.push({
+        type: "details",
+        content: [
+          {
+            type: "detailsSummary",
+            content: [{ type: "text", text: summary.trim() }],
+          },
+          {
+            type: "detailsContent",
+            content: innerNodes,
+          },
+        ],
+      });
+      return `__CUSTOM_BLOCK_${idx}__`;
+    }
+  );
+
+  return { cleaned, customBlocks };
 }
 
 function extractPlainText(nodes: TiptapNode[]): string {

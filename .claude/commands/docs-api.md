@@ -33,7 +33,7 @@ For local development, the base URL is `http://localhost:3000/api/v1`.
 - `PATCH /api/v1/projects/:slug/articles/:articleSlug?lang=en` — update article
 - `DELETE /api/v1/projects/:slug/articles/:articleSlug?lang=en` — delete article
 
-Content is always **Markdown** — the API converts it to the internal format.
+Content is always **Markdown** — the API converts it to the internal format. See the Markdown Features section below for supported syntax including callouts, steps, tabs, and accordions.
 
 ### Sync (Recommended for bulk operations)
 
@@ -64,6 +64,92 @@ curl -X PUT \
 Sync is declarative — send the full desired state. The API creates, updates, and **deletes** to match. Chapters/articles matched by slug. Order set by array position.
 
 Returns: `{ "chapters": { "created": N, "updated": N, "deleted": N }, "articles": { ... } }`
+
+## Markdown Features
+
+Standard markdown is fully supported: headings, paragraphs, bold, italic, inline code, links, images, code blocks (with language), blockquotes, tables, horizontal rules, lists.
+
+Additionally, these custom blocks are converted to rich editor components:
+
+### Callouts
+
+```markdown
+:::note
+This is an informational callout.
+:::
+
+:::warning
+Be careful with this action.
+:::
+
+:::tip
+Here's a useful tip.
+:::
+```
+
+Types: `note` (or `info`), `warning`, `tip`
+
+### Steps
+
+```markdown
+:::steps
+### Install dependencies
+Run `npm install` to get started.
+
+### Configure the app
+Create a `.env` file with your settings.
+
+### Start the server
+Run `npm run dev` to launch.
+:::
+```
+
+Each `###` heading starts a new step. The heading text becomes the step title.
+
+### Tabs
+
+```markdown
+:::tabs
+::tab{title="npm"}
+```bash
+npm install reeldocs
+```
+
+::tab{title="pnpm"}
+```bash
+pnpm add reeldocs
+```
+
+::tab{title="yarn"}
+```bash
+yarn add reeldocs
+```
+:::
+```
+
+### Accordions
+
+```markdown
+<details>
+<summary>Click to expand</summary>
+This content is hidden by default and revealed on click.
+</details>
+```
+
+### Multilingual Chapters
+
+Chapters support translated titles and group names:
+
+```json
+{
+  "title": "Getting Started",
+  "group": "Basics",
+  "translations": {
+    "de": { "title": "Erste Schritte", "group": "Grundlagen" },
+    "fr": { "title": "Pour commencer", "group": "Les bases" }
+  }
+}
+```
 
 ## Error Codes
 
