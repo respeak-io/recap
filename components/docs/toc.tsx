@@ -186,6 +186,45 @@ function calcThumb(
   return upper === Infinity ? { top: 0, height: 0 } : { top: upper, height: lower - upper };
 }
 
+// --- Scroll-direction-aware dot (adapted from fumadocs ThumbBox) ---
+
+interface ThumbDotInfo {
+  startIdx: number;
+  endIdx: number;
+  isUp: boolean;
+}
+
+function useThumbDot(
+  headings: TocItem[],
+  activeIds: string[],
+  thumb: { top: number; height: number }
+): { x: number; y: number; visible: boolean } {
+  const previousRef = useRef<ThumbDotInfo | null>(null);
+
+  if (activeIds.length === 0 || thumb.height === 0) {
+    return { x: 0, y: 0, visible: false };
+  }
+
+  const startIdx = headings.findIndex((h) => activeIds.includes(h.id));
+  const endIdx = headings.findLastIndex((h) => activeIds.includes(h.id));
+
+  let isUp = false;
+  if (previousRef.current) {
+    const prev = previousRef.current;
+    isUp =
+      prev.startIdx > startIdx ||
+      prev.endIdx > endIdx ||
+      (prev.startIdx === startIdx && prev.endIdx === endIdx && prev.isUp);
+  }
+  previousRef.current = { startIdx, endIdx, isUp };
+
+  const targetHeading = headings[isUp ? startIdx : endIdx];
+  const x = getLineX(targetHeading.level) + 0.5;
+  const y = isUp ? thumb.top : thumb.top + thumb.height;
+
+  return { x, y, visible: true };
+}
+
 // --- Component ---
 
 export function Toc({ headings }: { headings: TocItem[] }) {
@@ -197,6 +236,7 @@ export function Toc({ headings }: { headings: TocItem[] }) {
     top: 0,
     height: 0,
   });
+  const dot = useThumbDot(headings, activeIds, thumb);
 
   // Initialize observer
   useEffect(() => {
@@ -277,21 +317,14 @@ export function Toc({ headings }: { headings: TocItem[] }) {
             <path d={svg.path} className="stroke-primary" strokeWidth="1.5" fill="none" />
           </svg>
         )}
-        {/* Active dot at the top of the highlighted region */}
-        {thumb.height > 0 && activeIds.length > 0 && (
+        {/* Scroll-direction dot on the snake line */}
+        {dot.visible && (
           <div
-            className="absolute left-0 pointer-events-none transition-[top] duration-200"
+            className="absolute size-1 rounded-full bg-primary pointer-events-none transition-[translate] duration-200"
             style={{
-              top: thumb.top + thumb.height / 2 - 4,
-              left: (() => {
-                // Position dot at the x-offset of the last active heading
-                const lastActive = headings.find((h) => h.id === activeIds[activeIds.length - 1]);
-                return lastActive ? getLineX(lastActive.level) - 3.5 : 2.5;
-              })(),
+              translate: `${dot.x - 1.5}px ${dot.y - 1.5}px`,
             }}
-          >
-            <div className="size-2 rounded-full bg-primary" />
-          </div>
+          />
         )}
         <nav ref={containerRef} className="flex flex-col gap-0.5 relative">
           {headings.map((h) => (
