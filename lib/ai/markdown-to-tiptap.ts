@@ -69,7 +69,9 @@ export function markdownToTiptapRaw(
   return { doc, text };
 }
 
-const PLACEHOLDER_RE = /^__CUSTOM_BLOCK_(\d+)__$/;
+// Placeholder uses <!-- --> HTML comment syntax to avoid being parsed
+// as markdown formatting (double underscores __ trigger bold).
+const PLACEHOLDER_RE = /^<!--CB:(\d+)-->$/;
 
 function replacePlaceholders(
   nodes: TiptapNode[],
@@ -98,7 +100,7 @@ function replacePlaceholders(
       }
 
       // Check if the paragraph has mixed content with placeholders inline
-      // e.g. text before __CUSTOM_BLOCK_0__ text after
+      // e.g. text before <!--CB:0--> text after
       const hasPlaceholder = texts.some((t) => PLACEHOLDER_RE.test(t));
       if (hasPlaceholder) {
         // Split: emit non-placeholder content as paragraph, placeholders as blocks
@@ -178,7 +180,7 @@ function extractCustomBlocks(markdown: string): { cleaned: string; customBlocks:
         attrs: { type: calloutType },
         content: innerNodes,
       });
-      return `\n\n__CUSTOM_BLOCK_${idx}__\n\n`;
+      return `\n\n<!--CB:${idx}-->\n\n`;
     }
   );
 
@@ -215,7 +217,7 @@ function extractCustomBlocks(markdown: string): { cleaned: string; customBlocks:
         type: "steps",
         content: stepNodes,
       });
-      return `\n\n__CUSTOM_BLOCK_${idx}__\n\n`;
+      return `\n\n<!--CB:${idx}-->\n\n`;
     }
   );
 
@@ -252,7 +254,7 @@ function extractCustomBlocks(markdown: string): { cleaned: string; customBlocks:
         type: "tabGroup",
         content: tabNodes,
       });
-      return `\n\n__CUSTOM_BLOCK_${idx}__\n\n`;
+      return `\n\n<!--CB:${idx}-->\n\n`;
     }
   );
 
@@ -275,7 +277,7 @@ function extractCustomBlocks(markdown: string): { cleaned: string; customBlocks:
           },
         ],
       });
-      return `\n\n__CUSTOM_BLOCK_${idx}__\n\n`;
+      return `\n\n<!--CB:${idx}-->\n\n`;
     }
   );
 
