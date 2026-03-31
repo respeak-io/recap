@@ -58,3 +58,13 @@ next-env.d.ts
 
 # supabase local
 supabase/.branches/
+supabase/.temp/
+
+# tooling artifacts
+.agents/
+.claude/skills/
+.superpowers/
+generated/
+plan.yaml
+test-plan.yaml
+skills-lock.json

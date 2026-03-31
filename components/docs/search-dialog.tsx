@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Search as SearchIcon, FileText, Hash, X } from "lucide-react";
 
@@ -64,9 +65,8 @@ export function SearchDialog({ projectId, projectSlug }: SearchDialogProps) {
 
       setLoading(true);
       try {
-        const langParam = currentLang !== "en" ? `&lang=${currentLang}` : "";
         const res = await fetch(
-          `/api/search?q=${encodeURIComponent(q)}&projectId=${projectId}${langParam}`
+          `/api/search?q=${encodeURIComponent(q)}&projectId=${projectId}&lang=${currentLang}`
         );
         const data = await res.json();
         setResults(data.articles ?? []);
@@ -166,7 +166,7 @@ export function SearchDialog({ projectId, projectSlug }: SearchDialogProps) {
 
   return (
     <>
-      {/* Trigger button (still in DOM for layout) */}
+      {/* Trigger button (stays in sidebar layout) */}
       <button
         onClick={() => setOpen(true)}
         className="flex items-center gap-2 w-full rounded-lg border bg-secondary/50 px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent"
@@ -178,100 +178,106 @@ export function SearchDialog({ projectId, projectSlug }: SearchDialogProps) {
         </kbd>
       </button>
 
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 z-50 backdrop-blur-sm bg-background/60 animate-in fade-in-0"
-        onClick={() => setOpen(false)}
-      />
+      {/* Portal overlay out of sidebar stacking context */}
+      {createPortal(
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 z-50 backdrop-blur-[2px] bg-background/40 animate-in fade-in-0"
+            onClick={() => setOpen(false)}
+          />
 
-      {/* Dialog */}
-      <div
-        className="fixed left-1/2 top-4 md:top-[12vh] z-50 w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 animate-in fade-in-0 slide-in-from-top-2"
-        onKeyDown={handleKeyDown}
-      >
-        <div className="rounded-xl border bg-popover shadow-lg overflow-hidden">
-          {/* Search input */}
-          <div className="flex items-center gap-3 border-b px-4 py-3">
-            <SearchIcon className="size-5 shrink-0 text-muted-foreground" />
-            <input
-              ref={inputRef}
-              type="text"
-              placeholder="Search documentation..."
-              value={query}
-              onChange={(e) => handleInput(e.target.value)}
-              className="w-0 flex-1 bg-transparent text-lg placeholder:text-muted-foreground focus-visible:outline-none"
-            />
-            <button
-              onClick={() => setOpen(false)}
-              className="shrink-0 rounded-md border px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-accent"
-            >
-              Esc
-            </button>
-          </div>
-
-          {/* Results */}
-          <div ref={listRef} className="max-h-[60vh] overflow-y-auto p-2">
-            {loading && query.trim() && (
-              <div className="py-8 text-center text-sm text-muted-foreground">
-                Searching...
+          {/* Dialog */}
+          <div
+            className="fixed left-1/2 top-4 md:top-[12vh] z-50 w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 animate-in fade-in-0 slide-in-from-top-2"
+            onKeyDown={handleKeyDown}
+          >
+            <div className="rounded-xl border bg-popover shadow-lg overflow-hidden">
+              {/* Search input */}
+              <div className="flex items-center gap-3 border-b px-4 py-3">
+                <SearchIcon className="size-5 shrink-0 text-muted-foreground" />
+                <input
+                  ref={inputRef}
+                  type="text"
+                  placeholder="Search documentation..."
+                  value={query}
+                  onChange={(e) => handleInput(e.target.value)}
+                  className="w-0 flex-1 bg-transparent text-lg placeholder:text-muted-foreground focus-visible:outline-none"
+                />
+                <button
+                  onClick={() => setOpen(false)}
+                  className="shrink-0 rounded-md border px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-accent"
+                >
+                  Esc
+                </button>
               </div>
-            )}
 
-            {!loading && results.length === 0 && query.trim() && (
-              <div className="py-8 text-center text-sm text-muted-foreground">
-                No results found.
-              </div>
-            )}
+              {/* Results */}
+              <div ref={listRef} className="max-h-[60vh] overflow-y-auto p-2">
+                {loading && query.trim() && (
+                  <div className="py-8 text-center text-sm text-muted-foreground">
+                    Searching...
+                  </div>
+                )}
 
-            {aiAnswer && (
-              <div className="mb-2 rounded-lg bg-primary/5 p-3">
-                <p className="mb-1 text-xs font-medium text-primary">AI Answer</p>
-                <p className="text-sm text-muted-foreground leading-relaxed">{aiAnswer}</p>
-              </div>
-            )}
+                {!loading && results.length === 0 && query.trim() && (
+                  <div className="py-8 text-center text-sm text-muted-foreground">
+                    No results found.
+                  </div>
+                )}
 
-            {grouped.map((group) => (
-              <div key={group.chapter} className="mb-1">
-                <p className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
-                  {group.chapter}
-                </p>
-                {group.items.map((r) => (
-                  <button
-                    key={r.id}
-                    data-active={r.index === activeIndex}
-                    onClick={() => handleSelect(r.slug)}
-                    onMouseEnter={() => setActiveIndex(r.index)}
-                    className="flex w-full items-start gap-3 rounded-lg px-3 py-2.5 text-left transition-colors data-[active=true]:bg-accent data-[active=true]:text-accent-foreground"
-                  >
-                    <FileText className="size-4 shrink-0 mt-0.5 text-muted-foreground" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{r.title}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
-                        {snippet(r.content_text)}
-                      </p>
-                    </div>
-                  </button>
+                {aiAnswer && (
+                  <div className="mb-2 rounded-lg bg-primary/5 p-3">
+                    <p className="mb-1 text-xs font-medium text-primary">AI Answer</p>
+                    <p className="text-sm text-muted-foreground leading-relaxed">{aiAnswer}</p>
+                  </div>
+                )}
+
+                {grouped.map((group) => (
+                  <div key={group.chapter} className="mb-1">
+                    <p className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+                      {group.chapter}
+                    </p>
+                    {group.items.map((r) => (
+                      <button
+                        key={r.id}
+                        data-active={r.index === activeIndex}
+                        onClick={() => handleSelect(r.slug)}
+                        onMouseEnter={() => setActiveIndex(r.index)}
+                        className="flex w-full items-start gap-3 rounded-lg px-3 py-2.5 text-left transition-colors data-[active=true]:bg-accent data-[active=true]:text-accent-foreground"
+                      >
+                        <FileText className="size-4 shrink-0 mt-0.5 text-muted-foreground" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{r.title}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                            {snippet(r.content_text)}
+                          </p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
                 ))}
               </div>
-            ))}
-          </div>
 
-          {/* Footer */}
-          {results.length > 0 && (
-            <div className="flex items-center gap-4 border-t px-4 py-2 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <kbd className="rounded border bg-muted px-1 font-mono">↑↓</kbd> Navigate
-              </span>
-              <span className="flex items-center gap-1">
-                <kbd className="rounded border bg-muted px-1 font-mono">↵</kbd> Open
-              </span>
-              <span className="flex items-center gap-1">
-                <kbd className="rounded border bg-muted px-1 font-mono">Esc</kbd> Close
-              </span>
+              {/* Footer */}
+              {results.length > 0 && (
+                <div className="flex items-center gap-4 border-t px-4 py-2 text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1">
+                    <kbd className="rounded border bg-muted px-1 font-mono">↑↓</kbd> Navigate
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <kbd className="rounded border bg-muted px-1 font-mono">↵</kbd> Open
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <kbd className="rounded border bg-muted px-1 font-mono">Esc</kbd> Close
+                  </span>
+                </div>
+              )}
             </div>
-          )}
-        </div>
-      </div>
+          </div>
+        </>,
+        document.body
+      )}
     </>
   );
 }
