@@ -71,6 +71,7 @@ services:
       - "traefik.http.routers.reeldocs.rule=Host(`docs.respeak.io`)"
       - "traefik.http.routers.reeldocs.entrypoints=websecure"
       - "traefik.http.routers.reeldocs.tls.certresolver=myresolver"
+      - "traefik.http.services.reeldocs.loadbalancer.server.port=3000"
     ports:
       - "3000:3000"
 ```
