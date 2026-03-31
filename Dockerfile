@@ -23,6 +23,9 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/packages/cli/node_modules ./packages/cli/node_modules
 COPY . .
 
+# Build the CLI workspace package first (Next.js imports from its dist/)
+RUN pnpm --filter reeldocs build
+
 # Build arguments for public env vars (needed at build time by Next.js)
 ARG NEXT_PUBLIC_SUPABASE_URL
 ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
