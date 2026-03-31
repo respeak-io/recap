@@ -1,6 +1,6 @@
 -- Page view events (anonymous, no PII)
 create table page_views (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   project_id uuid not null references projects(id) on delete cascade,
   article_id uuid references articles(id) on delete set null,
   article_slug text not null,
@@ -16,7 +16,7 @@ create index page_views_article_idx on page_views (project_id, article_slug);
 
 -- Search query events
 create table search_events (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   project_id uuid not null references projects(id) on delete cascade,
   query text not null,
   results_count integer not null default 0,

@@ -1,9 +1,6 @@
--- Enable UUID generation
-create extension if not exists "uuid-ossp";
-
 -- Organizations
 create table organizations (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   name text not null,
   slug text not null unique,
   created_at timestamptz not null default now()
@@ -11,7 +8,7 @@ create table organizations (
 
 -- Organization members
 create table organization_members (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   org_id uuid not null references organizations(id) on delete cascade,
   user_id uuid not null references auth.users(id) on delete cascade,
   role text not null default 'owner' check (role in ('owner', 'editor', 'viewer')),
@@ -21,7 +18,7 @@ create table organization_members (
 
 -- Projects (a docs site)
 create table projects (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   org_id uuid not null references organizations(id) on delete cascade,
   name text not null,
   slug text not null,
@@ -33,7 +30,7 @@ create table projects (
 
 -- Chapters (sidebar grouping)
 create table chapters (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   project_id uuid not null references projects(id) on delete cascade,
   title text not null,
   slug text not null,
@@ -43,7 +40,7 @@ create table chapters (
 
 -- Videos
 create table videos (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   project_id uuid not null references projects(id) on delete cascade,
   title text not null,
   storage_path text,
@@ -55,7 +52,7 @@ create table videos (
 
 -- Video segments (intermediate extraction from Gemini)
 create table video_segments (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   video_id uuid not null references videos(id) on delete cascade,
   start_time numeric not null,
   end_time numeric not null,
@@ -66,7 +63,7 @@ create table video_segments (
 
 -- Articles
 create table articles (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   project_id uuid not null references projects(id) on delete cascade,
   video_id uuid references videos(id) on delete set null,
   chapter_id uuid references chapters(id) on delete set null,

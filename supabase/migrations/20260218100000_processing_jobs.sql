@@ -1,6 +1,6 @@
 -- Processing jobs table: tracks async video processing progress
 create table processing_jobs (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   project_id uuid not null references projects(id) on delete cascade,
   video_id uuid not null references videos(id) on delete cascade,
   status text not null default 'pending' check (status in ('pending', 'processing', 'completed', 'failed')),
