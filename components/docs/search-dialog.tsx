@@ -17,6 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Search as SearchIcon } from "lucide-react";
 
 interface SearchResult {
   id: string;
@@ -113,24 +114,11 @@ export function SearchDialog({ projectId, projectSlug }: SearchDialogProps) {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center gap-2 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-muted-foreground hover:bg-accent transition-colors"
+        className="flex items-center gap-2 w-full rounded-lg border bg-fd-secondary/50 px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent"
       >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          className="h-4 w-4"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2}
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-          />
-        </svg>
-        Search docs...
-        <kbd className="ml-auto pointer-events-none hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium sm:flex">
+        <SearchIcon className="size-4" />
+        <span className="flex-1 text-left">Search...</span>
+        <kbd className="pointer-events-none hidden h-5 select-none items-center gap-0.5 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium sm:flex">
           <span className="text-xs">&#8984;</span>K
         </kbd>
       </button>

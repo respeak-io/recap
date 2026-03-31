@@ -14,21 +14,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  SidebarGroup,
-  SidebarGroupLabel,
-  SidebarGroupContent,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuSub,
-  SidebarMenuSubItem,
-} from "@/components/ui/sidebar";
-import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { Menu, ChevronRight } from "lucide-react";
+import { Menu, ChevronRight, Search } from "lucide-react";
 import { SearchDialog } from "./search-dialog";
+import { ThemeToggle } from "./theme-toggle";
 
 const LANGUAGE_CONFIG: Record<string, { label: string; flag: string }> = {
   en: { label: "English", flag: "\u{1F1FA}\u{1F1F8}" },
@@ -88,7 +80,6 @@ function DocsSidebarContent({
     }))
     .filter((ch) => ch.articles.length > 0);
 
-  // Find which chapter contains the active article
   const activeArticleSlug = pathname.startsWith(`/${projectSlug}/`)
     ? pathname.slice(`/${projectSlug}/`.length).split("/")[0]
     : "";
@@ -103,7 +94,6 @@ function DocsSidebarContent({
     return set;
   });
 
-  // Auto-expand active chapter on navigation
   useEffect(() => {
     if (!activeChapterId) return;
     setExpandedChapters((prev) => {
@@ -122,10 +112,7 @@ function DocsSidebarContent({
   }
 
   function buildQuery(overrides: Record<string, string>) {
-    const params: Record<string, string> = {
-      lang: currentLang,
-      ...overrides,
-    };
+    const params: Record<string, string> = { lang: currentLang, ...overrides };
     const parts: string[] = [];
     if (params.lang !== "en") parts.push(`lang=${params.lang}`);
     return parts.length > 0 ? `?${parts.join("&")}` : "";
@@ -139,10 +126,7 @@ function DocsSidebarContent({
     if (articleSlug) {
       const exists = chapters.some((ch) =>
         ch.articles.some(
-          (a) =>
-            a.slug === articleSlug &&
-            a.language === lang &&
-            a.status === "published"
+          (a) => a.slug === articleSlug && a.language === lang && a.status === "published"
         )
       );
       if (exists) {
@@ -153,7 +137,6 @@ function DocsSidebarContent({
     window.location.href = `/${projectSlug}${query}`;
   }
 
-  // Resolve translated title/group for current language
   function chapterTitle(ch: Chapter): string {
     return ch.translations?.[currentLang]?.title ?? ch.title;
   }
@@ -161,7 +144,6 @@ function DocsSidebarContent({
     return ch.translations?.[currentLang]?.group ?? ch.group ?? undefined;
   }
 
-  // Group chapters by their resolved group name
   const groupedChapters: { group: string | undefined; chapters: typeof filteredChapters }[] = [];
   for (const chapter of filteredChapters) {
     const g = chapterGroup(chapter);
@@ -174,12 +156,12 @@ function DocsSidebarContent({
   }
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Top: logo + search */}
-      <div className="p-4 pb-2 border-b border-border/50">
-        <Link href={`/${projectSlug}`} className="flex items-center gap-2 font-semibold text-lg mb-3">
+    <div className="flex flex-col h-full text-sm">
+      {/* Header: logo + search */}
+      <div className="flex flex-col gap-3 p-4 pb-2">
+        <Link href={`/${projectSlug}`} className="inline-flex items-center gap-2.5 text-[0.9375rem] font-medium">
           {logoUrl ? (
-            <img src={logoUrl} alt={projectName} className="max-h-8 object-contain" />
+            <img src={logoUrl} alt={projectName} className="max-h-7 object-contain" />
           ) : (
             projectName
           )}
@@ -187,73 +169,75 @@ function DocsSidebarContent({
         <SearchDialog projectId={projectId} projectSlug={projectSlug} />
       </div>
 
-      {/* Middle: nav using shadcn sidebar primitives */}
-      <div className="flex-1 overflow-y-auto">
+      {/* Nav */}
+      <div className="flex-1 overflow-y-auto px-2 py-1">
         {groupedChapters.map((group, groupIndex) => (
-          <SidebarGroup key={group.group ?? `ungrouped-${groupIndex}`}>
+          <div key={group.group ?? `ungrouped-${groupIndex}`} className="mb-1">
             {group.group && (
-              <SidebarGroupLabel>{group.group}</SidebarGroupLabel>
+              <p className="inline-flex items-center gap-2 mb-1 px-2 mt-6 first:mt-2 text-xs font-medium text-muted-foreground/70">
+                {group.group}
+              </p>
             )}
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {group.chapters.map((chapter) => {
-                  const isExpanded = expandedChapters.has(chapter.id);
-                  return (
-                    <Collapsible
-                      key={chapter.id}
-                      open={isExpanded}
-                      onOpenChange={() => toggleChapter(chapter.id)}
-                    >
-                      <SidebarMenuItem>
-                        <CollapsibleTrigger className="flex items-center w-full rounded-md p-2 text-sm font-medium hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors">
-                          <span className="flex-1 text-left truncate">{chapterTitle(chapter)}</span>
-                          <ChevronRight
-                            className={cn(
-                              "size-4 shrink-0 text-muted-foreground transition-transform duration-200",
-                              isExpanded && "rotate-90"
-                            )}
-                          />
-                        </CollapsibleTrigger>
-                        <CollapsibleContent>
-                          <SidebarMenuSub>
-                            {chapter.articles.map((article) => {
-                              const href = `/${projectSlug}/${article.slug}${buildQuery({})}`;
-                              const isActive = pathname === `/${projectSlug}/${article.slug}`;
-                              return (
-                                <SidebarMenuSubItem key={article.id}>
-                                  <Link
-                                    href={href}
-                                    className={cn(
-                                      "flex h-7 min-w-0 -translate-x-px items-center gap-2 overflow-hidden rounded-md px-2 text-sm transition-colors",
-                                      isActive
-                                        ? "bg-primary/10 text-primary font-medium"
-                                        : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                                    )}
-                                  >
-                                    <span className="truncate">{article.title}</span>
-                                  </Link>
-                                </SidebarMenuSubItem>
-                              );
-                            })}
-                          </SidebarMenuSub>
-                        </CollapsibleContent>
-                      </SidebarMenuItem>
-                    </Collapsible>
-                  );
-                })}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
+            <div className="flex flex-col gap-0.5">
+              {group.chapters.map((chapter) => {
+                const isExpanded = expandedChapters.has(chapter.id);
+                return (
+                  <Collapsible
+                    key={chapter.id}
+                    open={isExpanded}
+                    onOpenChange={() => toggleChapter(chapter.id)}
+                  >
+                    <CollapsibleTrigger className="flex items-center gap-2 w-full rounded-lg p-2 text-start text-muted-foreground transition-colors hover:bg-accent/50 hover:text-accent-foreground/80">
+                      <span className="flex-1 text-left truncate">{chapterTitle(chapter)}</span>
+                      <ChevronRight
+                        className={cn(
+                          "size-4 shrink-0 transition-transform duration-200",
+                          isExpanded && "rotate-90"
+                        )}
+                      />
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="relative flex flex-col gap-0.5 pt-0.5">
+                        {/* Vertical connector line */}
+                        <div className="absolute w-px inset-y-1 start-[0.625rem] bg-border" />
+                        {chapter.articles.map((article) => {
+                          const href = `/${projectSlug}/${article.slug}${buildQuery({})}`;
+                          const isActive = pathname === `/${projectSlug}/${article.slug}`;
+                          return (
+                            <Link
+                              key={article.id}
+                              href={href}
+                              data-active={isActive}
+                              className={cn(
+                                "relative flex items-center gap-2 rounded-lg p-2 pl-7 text-muted-foreground transition-colors",
+                                "hover:bg-accent/50 hover:text-accent-foreground/80 hover:transition-none",
+                                isActive && [
+                                  "bg-primary/10 text-primary hover:bg-primary/10 hover:text-primary hover:transition-colors",
+                                  "before:content-[''] before:bg-primary before:absolute before:w-px before:inset-y-2.5 before:start-[0.625rem]",
+                                ]
+                              )}
+                            >
+                              <span className="truncate">{article.title}</span>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                );
+              })}
+            </div>
+          </div>
         ))}
       </div>
 
-      {/* Bottom: language selector */}
-      {languages.length > 1 && (
-        <div className="p-4 pt-2 border-t border-border/50">
+      {/* Footer: language + theme toggle */}
+      <div className="flex items-center border-t p-4 pt-2">
+        {languages.length > 1 && (
           <Select value={currentLang} onValueChange={handleLanguageChange}>
-            <SelectTrigger className="w-full">
+            <SelectTrigger className="h-8 w-auto gap-1.5 border-0 bg-transparent px-2 text-muted-foreground shadow-none">
               <SelectValue>
-                <span className="flex items-center gap-2">
+                <span className="flex items-center gap-1.5 text-xs">
                   <span>{LANGUAGE_CONFIG[currentLang]?.flag ?? "\u{1F310}"}</span>
                   <span>{LANGUAGE_CONFIG[currentLang]?.label ?? currentLang}</span>
                 </span>
@@ -270,8 +254,11 @@ function DocsSidebarContent({
               ))}
             </SelectContent>
           </Select>
+        )}
+        <div className="ms-auto">
+          <ThemeToggle />
         </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -288,13 +275,13 @@ export function Sidebar(props: SidebarProps) {
               <Menu className="h-4 w-4" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="w-[260px] p-0 bg-sidebar text-sidebar-foreground">
+          <SheetContent side="left" className="w-[268px] p-0 bg-sidebar text-sidebar-foreground">
             <DocsSidebarContent {...props} />
           </SheetContent>
         </Sheet>
       </div>
 
-      <aside className="hidden lg:block w-[260px] border-r h-screen sticky top-0 flex-shrink-0 bg-sidebar text-sidebar-foreground">
+      <aside className="hidden lg:block w-[268px] border-r h-screen sticky top-0 flex-shrink-0 bg-sidebar text-sidebar-foreground">
         <DocsSidebarContent {...props} />
       </aside>
     </>
