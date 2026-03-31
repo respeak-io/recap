@@ -172,13 +172,13 @@ function DocsSidebarContent({
       {/* Nav */}
       <div className="flex-1 overflow-y-auto px-2 py-1">
         {groupedChapters.map((group, groupIndex) => (
-          <div key={group.group ?? `ungrouped-${groupIndex}`}>
+          <div key={group.group ?? `ungrouped-${groupIndex}`} className="mt-6 first:mt-0">
             {group.group && (
-              <p className="inline-flex items-center gap-2 mb-1.5 px-2 mt-10 first:mt-3 text-sm font-semibold text-foreground/70">
+              <p className="px-2 mb-2 text-sm font-semibold text-foreground">
                 {group.group}
               </p>
             )}
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-0.5">
               {group.chapters.map((chapter) => {
                 const isExpanded = expandedChapters.has(chapter.id);
                 return (
@@ -187,7 +187,7 @@ function DocsSidebarContent({
                     open={isExpanded}
                     onOpenChange={() => toggleChapter(chapter.id)}
                   >
-                    <CollapsibleTrigger className="flex items-center gap-2 w-full rounded-lg p-2 text-start font-semibold text-foreground/70 transition-colors hover:bg-accent/50 hover:text-accent-foreground">
+                    <CollapsibleTrigger className="flex items-center gap-2 w-full rounded-lg p-2 text-start text-foreground/70 transition-colors hover:bg-accent/50 hover:text-accent-foreground">
                       <span className="flex-1 text-left truncate">{chapterTitle(chapter)}</span>
                       <ChevronRight
                         className={cn(
