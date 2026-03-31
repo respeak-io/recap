@@ -60,27 +60,86 @@ export function markdownToTiptapRaw(
   const tokens = new Lexer().lex(cleaned);
   const standardNodes = tokensToTiptap(tokens);
 
-  // Merge custom block nodes back at their placeholder positions
-  const nodes: TiptapNode[] = [];
-  for (const node of standardNodes) {
-    if (
-      node.type === "paragraph" &&
-      Array.isArray(node.content) &&
-      node.content.length === 1 &&
-      typeof (node.content[0] as TiptapNode).text === "string" &&
-      ((node.content[0] as TiptapNode).text as string).startsWith("__CUSTOM_BLOCK_")
-    ) {
-      const idx = parseInt(((node.content[0] as TiptapNode).text as string).replace("__CUSTOM_BLOCK_", "").replace("__", ""), 10);
-      if (customBlocks[idx]) nodes.push(customBlocks[idx]);
-    } else {
-      nodes.push(node);
-    }
-  }
+  // Replace placeholder nodes with custom block nodes (recursive)
+  const nodes = replacePlaceholders(standardNodes, customBlocks);
 
   const doc = { type: "doc", content: nodes };
   const text = extractPlainText(nodes);
 
   return { doc, text };
+}
+
+const PLACEHOLDER_RE = /^__CUSTOM_BLOCK_(\d+)__$/;
+
+function replacePlaceholders(
+  nodes: TiptapNode[],
+  customBlocks: TiptapNode[]
+): TiptapNode[] {
+  const result: TiptapNode[] = [];
+
+  for (const node of nodes) {
+    // Check if this is a paragraph containing only a placeholder
+    if (node.type === "paragraph" && Array.isArray(node.content)) {
+      // Collect all text content to check for placeholder
+      const texts = (node.content as TiptapNode[])
+        .filter((c) => typeof c.text === "string")
+        .map((c) => (c.text as string).trim())
+        .filter(Boolean);
+
+      if (texts.length === 1) {
+        const match = texts[0].match(PLACEHOLDER_RE);
+        if (match) {
+          const idx = parseInt(match[1], 10);
+          if (customBlocks[idx]) {
+            result.push(customBlocks[idx]);
+            continue;
+          }
+        }
+      }
+
+      // Check if the paragraph has mixed content with placeholders inline
+      // e.g. text before __CUSTOM_BLOCK_0__ text after
+      const hasPlaceholder = texts.some((t) => PLACEHOLDER_RE.test(t));
+      if (hasPlaceholder) {
+        // Split: emit non-placeholder content as paragraph, placeholders as blocks
+        for (const child of node.content as TiptapNode[]) {
+          const childText = typeof child.text === "string" ? child.text.trim() : "";
+          const m = childText.match(PLACEHOLDER_RE);
+          if (m) {
+            const idx = parseInt(m[1], 10);
+            if (customBlocks[idx]) result.push(customBlocks[idx]);
+          } else if (childText) {
+            result.push({ type: "paragraph", content: [child] });
+          }
+        }
+        continue;
+      }
+    }
+
+    // Check plain text nodes at any level (shouldn't happen but safety net)
+    if (typeof node.text === "string") {
+      const match = node.text.trim().match(PLACEHOLDER_RE);
+      if (match) {
+        const idx = parseInt(match[1], 10);
+        if (customBlocks[idx]) {
+          result.push(customBlocks[idx]);
+          continue;
+        }
+      }
+    }
+
+    // Recurse into children
+    if (Array.isArray(node.content)) {
+      result.push({
+        ...node,
+        content: replacePlaceholders(node.content as TiptapNode[], customBlocks),
+      });
+    } else {
+      result.push(node);
+    }
+  }
+
+  return result;
 }
 
 /**
