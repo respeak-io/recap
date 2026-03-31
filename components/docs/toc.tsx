@@ -290,7 +290,7 @@ export function Toc({ headings }: { headings: TocItem[] }) {
       : "polygon(0 0, 0 0, 0 0, 0 0)";
 
   return (
-    <aside className="hidden xl:block w-[200px] flex-shrink-0 sticky top-16 h-fit pr-4">
+    <aside className="hidden xl:block w-[220px] flex-shrink-0 sticky top-16 h-fit pr-8">
       <p className="text-xs font-semibold uppercase text-muted-foreground mb-3">
         On this page
       </p>
@@ -322,9 +322,9 @@ export function Toc({ headings }: { headings: TocItem[] }) {
           <div
             className="absolute rounded-full bg-primary pointer-events-none transition-[translate] duration-200"
             style={{
-              width: 3,
-              height: 3,
-              translate: `${dot.x - 1.5}px ${dot.y - 1.5}px`,
+              width: 5,
+              height: 5,
+              translate: `${dot.x - 2.5}px ${dot.y - 2.5}px`,
             }}
           />
         )}
@@ -347,9 +347,10 @@ export function Toc({ headings }: { headings: TocItem[] }) {
                 h.level === 3 && "pl-7",
                 h.level >= 4 && "pl-10",
                 activeSet.has(h.id)
-                  ? "text-primary font-medium"
+                  ? "text-primary"
                   : "text-muted-foreground hover:text-foreground"
               )}
+              style={activeSet.has(h.id) ? { textShadow: "0 0 .5px currentColor" } : undefined}
             >
               {h.text}
             </a>
