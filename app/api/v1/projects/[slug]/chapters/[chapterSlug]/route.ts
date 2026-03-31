@@ -21,6 +21,7 @@ export async function PATCH(
   if (body.slug !== undefined) updates.slug = body.slug;
   if (body.group !== undefined) updates.group = body.group;
   if (body.order !== undefined) updates.order = body.order;
+  if (body.translations !== undefined) updates.translations = body.translations;
 
   if (Object.keys(updates).length === 0) {
     return apiError("No fields to update", "VALIDATION_ERROR", 422);

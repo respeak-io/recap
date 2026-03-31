@@ -7,6 +7,7 @@ interface SyncChapter {
   title: string;
   slug?: string;
   group?: string;
+  translations?: Record<string, { title?: string; group?: string }>;
   articles?: SyncArticle[];
 }
 
@@ -70,10 +71,12 @@ export async function PUT(
     const existing = existChapterMap.get(chSlug);
     let chapterId: string;
 
+    const translations = ch.translations ?? null;
+
     if (existing) {
       await db
         .from("chapters")
-        .update({ title: ch.title, group: ch.group ?? null, order: ci })
+        .update({ title: ch.title, group: ch.group ?? null, translations, order: ci })
         .eq("id", existing.id);
       chapterId = existing.id;
       stats.chapters.updated++;
@@ -85,6 +88,7 @@ export async function PUT(
           title: ch.title,
           slug: chSlug,
           group: ch.group ?? null,
+          translations,
           order: ci,
         })
         .select("id")

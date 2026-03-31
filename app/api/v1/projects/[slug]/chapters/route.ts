@@ -39,6 +39,7 @@ export async function POST(
       title: body.title,
       slug: chapterSlug,
       group: body.group ?? null,
+      translations: body.translations ?? null,
       order,
     })
     .select()

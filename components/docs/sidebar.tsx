@@ -46,6 +46,7 @@ interface Chapter {
   title: string;
   slug: string;
   group?: string;
+  translations?: Record<string, { title?: string; group?: string }> | null;
   articles: {
     id: string;
     title: string;
@@ -152,14 +153,23 @@ function DocsSidebarContent({
     window.location.href = `/${projectSlug}${query}`;
   }
 
-  // Group chapters by their optional `group` field
+  // Resolve translated title/group for current language
+  function chapterTitle(ch: Chapter): string {
+    return ch.translations?.[currentLang]?.title ?? ch.title;
+  }
+  function chapterGroup(ch: Chapter): string | undefined {
+    return ch.translations?.[currentLang]?.group ?? ch.group ?? undefined;
+  }
+
+  // Group chapters by their resolved group name
   const groupedChapters: { group: string | undefined; chapters: typeof filteredChapters }[] = [];
   for (const chapter of filteredChapters) {
-    const existing = groupedChapters.find((g) => g.group === chapter.group);
+    const g = chapterGroup(chapter);
+    const existing = groupedChapters.find((gr) => gr.group === g);
     if (existing) {
       existing.chapters.push(chapter);
     } else {
-      groupedChapters.push({ group: chapter.group, chapters: [chapter] });
+      groupedChapters.push({ group: g, chapters: [chapter] });
     }
   }
 
@@ -196,7 +206,7 @@ function DocsSidebarContent({
                     >
                       <SidebarMenuItem>
                         <CollapsibleTrigger className="flex items-center w-full rounded-md p-2 text-sm font-medium hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors">
-                          <span className="flex-1 text-left truncate">{chapter.title}</span>
+                          <span className="flex-1 text-left truncate">{chapterTitle(chapter)}</span>
                           <ChevronRight
                             className={cn(
                               "size-4 shrink-0 text-muted-foreground transition-transform duration-200",

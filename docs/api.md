@@ -77,13 +77,17 @@ POST /api/v1/projects/:slug/chapters
   "title": "Getting Started",
   "slug": "getting-started",
   "group": "Basics",
-  "order": 0
+  "order": 0,
+  "translations": {
+    "de": { "title": "Erste Schritte", "group": "Grundlagen" }
+  }
 }
 ```
 
 - `slug` — optional, auto-generated from title if omitted
 - `group` — optional, non-clickable section title above the chapter in the sidebar
 - `order` — optional, appended at end if omitted
+- `translations` — optional, per-language overrides for `title` and `group`. The sidebar shows the translated version for the current language, falling back to the default.
 
 **Response:** `201` with the created chapter.
 
@@ -170,6 +174,9 @@ Send the full desired doc structure. The API diffs against the current state: cr
       "title": "Getting Started",
       "slug": "getting-started",
       "group": "Basics",
+      "translations": {
+        "de": { "title": "Erste Schritte", "group": "Grundlagen" }
+      },
       "articles": [
         {
           "title": "Installation",
