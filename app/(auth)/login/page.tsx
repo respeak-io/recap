@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -93,12 +92,6 @@ export default function LoginPage() {
           <Button type="button" variant="outline" onClick={handleGitHubLogin}>
             Continue with GitHub
           </Button>
-          <p className="text-center text-sm text-muted-foreground">
-            No account?{" "}
-            <Link href="/signup" className="underline">
-              Sign up
-            </Link>
-          </p>
         </form>
       </CardContent>
     </Card>
