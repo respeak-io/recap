@@ -238,7 +238,7 @@ function renderNode(
           key={index}
           className={`border-l-4 rounded-r-lg p-4 my-4 ${styles[type] || styles.info}`}
         >
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
             <span className="flex-shrink-0">{icons[type] || icons.info}</span>
             <div className="flex-1 min-w-0">{children}</div>
           </div>
