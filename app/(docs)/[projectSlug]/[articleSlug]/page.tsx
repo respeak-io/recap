@@ -14,7 +14,7 @@ interface NavChapter {
   title: string;
   description?: string;
   order: number;
-  translations?: Record<string, { title?: string }> | null;
+  translations?: Record<string, { title?: string; description?: string }> | null;
   articles: { slug: string; title: string; description?: string; language: string; status: string; order: number }[];
 }
 
@@ -23,7 +23,8 @@ function buildNavList(chapters: NavChapter[], lang: string): NavItem[] {
   const sorted = [...chapters].sort((a, b) => a.order - b.order);
   for (const ch of sorted) {
     const title = ch.translations?.[lang]?.title ?? ch.title;
-    items.push({ title, description: ch.description, slug: ch.slug });
+    const description = ch.translations?.[lang]?.description ?? ch.description;
+    items.push({ title, description, slug: ch.slug });
     const arts = ch.articles
       .filter((a) => a.language === lang && a.status === "published")
       .sort((a, b) => a.order - b.order);
@@ -177,6 +178,8 @@ export default async function ArticleOrChapterPage({
 
   const chapterTitle =
     chapter.translations?.[lang]?.title ?? chapter.title;
+  const chapterDescription =
+    chapter.translations?.[lang]?.description ?? chapter.description;
 
   const articles = (chapter.articles ?? [])
     .filter(
@@ -192,7 +195,7 @@ export default async function ArticleOrChapterPage({
       projectName={project.name}
       projectSlug={projectSlug}
       chapterTitle={chapterTitle}
-      chapterDescription={chapter.description}
+      chapterDescription={chapterDescription}
       contentJson={chapter.content_json}
       articles={articles}
       prev={prev}

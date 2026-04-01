@@ -24,7 +24,7 @@ export function PageNav({ prev, next, projectSlug, lang }: PageNavProps) {
       {prev ? (
         <Link
           href={`/${projectSlug}/${prev.slug}${qs}`}
-          className="group flex flex-col gap-1 rounded-xl border p-4 transition-colors hover:bg-accent/50"
+          className="group flex flex-col gap-1 rounded-xl border p-4 transition-colors hover:bg-accent/50 min-w-0"
         >
           <span className="flex items-center gap-1 text-sm text-muted-foreground">
             <ChevronLeft className="size-3.5" />
@@ -45,7 +45,7 @@ export function PageNav({ prev, next, projectSlug, lang }: PageNavProps) {
       {next ? (
         <Link
           href={`/${projectSlug}/${next.slug}${qs}`}
-          className="group flex flex-col items-end gap-1 rounded-xl border p-4 transition-colors hover:bg-accent/50 text-right"
+          className="group flex flex-col items-end gap-1 rounded-xl border p-4 transition-colors hover:bg-accent/50 text-right min-w-0"
         >
           <span className="flex items-center gap-1 text-sm text-muted-foreground">
             Next
@@ -55,7 +55,7 @@ export function PageNav({ prev, next, projectSlug, lang }: PageNavProps) {
             {next.title}
           </span>
           {next.description && (
-            <span className="text-sm text-muted-foreground line-clamp-1">
+            <span className="self-stretch text-sm text-muted-foreground line-clamp-1">
               {next.description}
             </span>
           )}
