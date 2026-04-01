@@ -13,7 +13,7 @@ export async function GET(
 
   const { data: project } = await db
     .from("projects")
-    .select("id, name, slug, is_public, chapters(id, title, slug, group, order, articles(id, title, slug, language, status, order))")
+    .select("id, name, slug, is_public, chapters(id, title, description, slug, group, order, translations, articles(id, title, description, slug, language, status, order))")
     .eq("slug", slug)
     .eq("org_id", auth.orgId)
     .single();
