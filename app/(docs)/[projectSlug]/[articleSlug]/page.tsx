@@ -14,7 +14,8 @@ interface NavChapter {
   title: string;
   description?: string;
   order: number;
-  translations?: Record<string, { title?: string; description?: string }> | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  translations?: Record<string, { title?: string; description?: string; content_json?: any }> | null;
   articles: { slug: string; title: string; description?: string; language: string; status: string; order: number }[];
 }
 
@@ -196,7 +197,7 @@ export default async function ArticleOrChapterPage({
       projectSlug={projectSlug}
       chapterTitle={chapterTitle}
       chapterDescription={chapterDescription}
-      contentJson={chapter.content_json}
+      contentJson={chapter.translations?.[lang]?.content_json ?? chapter.content_json}
       articles={articles}
       prev={prev}
       next={next}

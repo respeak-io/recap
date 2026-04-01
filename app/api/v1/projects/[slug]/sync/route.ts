@@ -9,7 +9,7 @@ interface SyncChapter {
   content?: string;
   slug?: string;
   group?: string;
-  translations?: Record<string, { title?: string; group?: string }>;
+  translations?: Record<string, { title?: string; group?: string; description?: string; content?: string }>;
   articles?: SyncArticle[];
 }
 
@@ -74,7 +74,17 @@ export async function PUT(
     const existing = existChapterMap.get(chSlug);
     let chapterId: string;
 
-    const translations = ch.translations ?? null;
+    const translations = ch.translations
+      ? Object.fromEntries(
+          Object.entries(ch.translations).map(([lang, t]) => {
+            const { content, ...rest } = t;
+            return [lang, {
+              ...rest,
+              ...(content ? { content_json: markdownToTiptapRaw(content).doc } : {}),
+            }];
+          })
+        )
+      : null;
     const chapterContentJson = ch.content ? markdownToTiptapRaw(ch.content).doc : {};
 
     if (existing) {
