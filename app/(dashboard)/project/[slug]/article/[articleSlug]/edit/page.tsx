@@ -44,6 +44,7 @@ export default async function ArticleEditPage({
       article={{
         id: article.id,
         title: article.title,
+        description: article.description ?? "",
         slug: article.slug,
         status: article.status,
         content_json: article.content_json,

@@ -22,6 +22,7 @@ export async function PATCH(
   const updates: Record<string, unknown> = {};
 
   if (body.title !== undefined) updates.title = body.title;
+  if (body.description !== undefined) updates.description = body.description;
   if (body.slug !== undefined) updates.slug = body.slug;
   if (body.status !== undefined) updates.status = body.status;
   if (body.language !== undefined) updates.language = body.language;

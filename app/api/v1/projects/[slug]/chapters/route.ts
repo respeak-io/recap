@@ -37,6 +37,7 @@ export async function POST(
     .insert({
       project_id: project.id,
       title: body.title,
+      description: body.description ?? "",
       slug: chapterSlug,
       group: body.group ?? null,
       translations: body.translations ?? null,

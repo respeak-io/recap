@@ -5,6 +5,8 @@ import { markdownToTiptapRaw } from "@/lib/ai/markdown-to-tiptap";
 
 interface SyncChapter {
   title: string;
+  description?: string;
+  content?: string;
   slug?: string;
   group?: string;
   translations?: Record<string, { title?: string; group?: string }>;
@@ -13,6 +15,7 @@ interface SyncChapter {
 
 interface SyncArticle {
   title: string;
+  description?: string;
   slug?: string;
   content: string;
   language?: string;
@@ -72,11 +75,12 @@ export async function PUT(
     let chapterId: string;
 
     const translations = ch.translations ?? null;
+    const chapterContentJson = ch.content ? markdownToTiptapRaw(ch.content).doc : {};
 
     if (existing) {
       await db
         .from("chapters")
-        .update({ title: ch.title, group: ch.group ?? null, translations, order: ci })
+        .update({ title: ch.title, description: ch.description ?? "", content_json: chapterContentJson, group: ch.group ?? null, translations, order: ci })
         .eq("id", existing.id);
       chapterId = existing.id;
       stats.chapters.updated++;
@@ -86,6 +90,8 @@ export async function PUT(
         .insert({
           project_id: project.id,
           title: ch.title,
+          description: ch.description ?? "",
+          content_json: chapterContentJson,
           slug: chSlug,
           group: ch.group ?? null,
           translations,
@@ -113,6 +119,7 @@ export async function PUT(
           .from("articles")
           .update({
             title: art.title,
+            description: art.description ?? "",
             content_json: doc,
             content_text: text,
             status: art.status || "draft",
@@ -126,6 +133,7 @@ export async function PUT(
           project_id: project.id,
           chapter_id: chapterId,
           title: art.title,
+          description: art.description ?? "",
           slug: artSlug,
           language: lang,
           content_json: doc,

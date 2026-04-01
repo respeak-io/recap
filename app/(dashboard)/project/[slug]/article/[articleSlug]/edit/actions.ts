@@ -6,13 +6,20 @@ import { revalidatePath } from "next/cache";
 export async function saveArticleAction(
   id: string,
   contentJsonStr: string,
-  contentText: string
+  contentText: string,
+  description?: string
 ) {
   const contentJson = JSON.parse(contentJsonStr);
   const supabase = await createClient();
+  const updates: Record<string, unknown> = {
+    content_json: contentJson,
+    content_text: contentText,
+  };
+  if (description !== undefined) updates.description = description;
+
   const { error } = await supabase
     .from("articles")
-    .update({ content_json: contentJson, content_text: contentText })
+    .update(updates)
     .eq("id", id);
 
   if (error) throw error;

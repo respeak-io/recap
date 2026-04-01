@@ -23,6 +23,7 @@ import { saveArticleAction, togglePublishAction, batchTogglePublishAction } from
 interface ArticleData {
   id: string;
   title: string;
+  description: string;
   slug: string;
   status: string;
   content_json: Record<string, unknown>;
@@ -62,6 +63,7 @@ export function EditorPageClient({
   const [translating, setTranslating] = useState(false);
   const [translateError, setTranslateError] = useState<string | null>(null);
   const [status, setStatus] = useState(article.status);
+  const [description, setDescription] = useState(article.description);
   const [languageStatuses, setLanguageStatuses] = useState<Record<string, string>>(
     Object.fromEntries(siblingLanguages.map((lang) => [lang.id, lang.status]))
   );
@@ -80,7 +82,7 @@ export function EditorPageClient({
   async function handleSave() {
     setSaving(true);
     const text = extractText(contentRef.current);
-    await saveArticleAction(article.id, JSON.stringify(contentRef.current), text);
+    await saveArticleAction(article.id, JSON.stringify(contentRef.current), text, description);
     setSaving(false);
     setSaved(true);
   }
@@ -257,6 +259,14 @@ export function EditorPageClient({
       {translateError && (
         <p className="text-sm text-destructive">{translateError}</p>
       )}
+
+      <input
+        type="text"
+        value={description}
+        onChange={(e) => { setDescription(e.target.value); setSaved(false); }}
+        placeholder="Add a short description..."
+        className="w-full text-sm text-muted-foreground bg-transparent border-none outline-none placeholder:text-muted-foreground/50"
+      />
 
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <Editor

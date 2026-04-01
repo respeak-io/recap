@@ -6,6 +6,7 @@ import { ArticleRenderer } from "@/components/docs/article-renderer";
 
 interface ArticleWithVideoProps {
   title: string;
+  description?: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   content: any;
   videoUrl: string | null;
@@ -13,6 +14,7 @@ interface ArticleWithVideoProps {
 
 export function ArticleWithVideo({
   title,
+  description,
   content,
   videoUrl,
 }: ArticleWithVideoProps) {
@@ -27,7 +29,11 @@ export function ArticleWithVideo({
       {videoUrl && (
         <VideoPlayer ref={playerRef} src={videoUrl} className="mb-8" />
       )}
-      <h1 className="text-3xl font-bold mt-4 mb-6">{title}</h1>
+      <h1 className="text-3xl font-bold mt-4 mb-2">{title}</h1>
+      {description && (
+        <p className="text-lg text-muted-foreground mb-6">{description}</p>
+      )}
+      {!description && <div className="mb-4" />}
       <ArticleRenderer
         content={content}
         onTimestampClick={handleTimestampClick}

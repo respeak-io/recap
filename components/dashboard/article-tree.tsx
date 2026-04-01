@@ -35,7 +35,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
-import { ChevronRight, GripVertical, FileText, Trash2, Tag } from "lucide-react";
+import { ChevronRight, GripVertical, FileText, Trash2, Tag, Pencil } from "lucide-react";
 
 interface Article {
   id: string;
@@ -205,6 +205,11 @@ export function ArticleTree({
                 {chapter.title}
               </CollapsibleTrigger>
               <div className="ml-auto flex items-center gap-2">
+                <Button variant="ghost" size="icon" className="size-6" asChild>
+                  <Link href={`/project/${projectSlug}/chapter/${chapter.slug}/edit`}>
+                    <Pencil className="size-3 text-muted-foreground" />
+                  </Link>
+                </Button>
                 <Tag className="size-3 text-muted-foreground" />
                 <Input
                   className="h-6 w-28 text-xs"

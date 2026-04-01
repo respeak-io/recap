@@ -181,21 +181,36 @@ function DocsSidebarContent({
             <div className="flex flex-col gap-0.5">
               {group.chapters.map((chapter) => {
                 const isExpanded = expandedChapters.has(chapter.id);
+                const chapterHref = `/${projectSlug}/${chapter.slug}${buildQuery({})}`;
+                const isChapterActive = pathname === `/${projectSlug}/${chapter.slug}`;
                 return (
                   <Collapsible
                     key={chapter.id}
                     open={isExpanded}
                     onOpenChange={() => toggleChapter(chapter.id)}
                   >
-                    <CollapsibleTrigger className="flex items-center gap-2 w-full rounded-lg p-2 text-start text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
-                      <span className="flex-1 text-left truncate">{chapterTitle(chapter)}</span>
-                      <ChevronRight
+                    <div className={cn(
+                      "flex items-center rounded-lg transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                      isChapterActive && "bg-sidebar-accent text-sidebar-accent-foreground"
+                    )}>
+                      <Link
+                        href={chapterHref}
                         className={cn(
-                          "size-4 shrink-0 transition-transform duration-200",
-                          isExpanded && "rotate-90"
+                          "flex-1 truncate p-2 text-start text-sidebar-foreground/70",
+                          isChapterActive && "font-medium text-sidebar-accent-foreground"
                         )}
-                      />
-                    </CollapsibleTrigger>
+                      >
+                        {chapterTitle(chapter)}
+                      </Link>
+                      <CollapsibleTrigger className="p-2 text-sidebar-foreground/70 hover:text-sidebar-accent-foreground">
+                        <ChevronRight
+                          className={cn(
+                            "size-4 shrink-0 transition-transform duration-200",
+                            isExpanded && "rotate-90"
+                          )}
+                        />
+                      </CollapsibleTrigger>
+                    </div>
                     <CollapsibleContent>
                       <div className="relative flex flex-col gap-0.5 pt-0.5">
                         {/* Vertical connector line */}

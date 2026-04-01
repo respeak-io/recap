@@ -54,6 +54,7 @@ export async function POST(
       project_id: project.id,
       chapter_id: chapterId,
       title: body.title,
+      description: body.description ?? "",
       slug: articleSlug,
       language,
       status,

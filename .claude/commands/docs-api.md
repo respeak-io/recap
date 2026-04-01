@@ -21,17 +21,25 @@ For local development, the base URL is `http://localhost:3000/api/v1`.
 
 ### Chapters
 
+Chapters have their own public pages at `/{projectSlug}/{chapterSlug}`. These pages display the chapter title, any rich-text content (edited via the dashboard), and a card grid linking to all child articles.
+
 - `POST /api/v1/projects/:slug/chapters` — create chapter
-  - Body: `{ "title": "...", "slug?": "...", "group?": "...", "order?": 0 }`
-- `PATCH /api/v1/projects/:slug/chapters/:chapterSlug` — update chapter
+  - Body: `{ "title": "...", "description?": "...", "slug?": "...", "group?": "...", "order?": 0 }`
+- `PATCH /api/v1/projects/:slug/chapters/:chapterSlug` — update chapter (title, description, slug, group, order, translations, content_json)
 - `DELETE /api/v1/projects/:slug/chapters/:chapterSlug` — delete chapter
+
+Chapter content is editable in the dashboard at `/project/:slug/chapter/:chapterSlug/edit` using the same Tiptap editor as articles. The `content_json` field stores the rich-text content (same format as article `content_json`).
+
+The `description` field is a short plain-text subtitle shown below the title on both the chapter page and in navigation cards.
 
 ### Articles
 
 - `POST /api/v1/projects/:slug/articles` — create article
-  - Body: `{ "title": "...", "content": "<markdown>", "chapter_slug?": "...", "slug?": "...", "language?": "en", "status?": "draft" }`
-- `PATCH /api/v1/projects/:slug/articles/:articleSlug?lang=en` — update article
+  - Body: `{ "title": "...", "description?": "...", "content": "<markdown>", "chapter_slug?": "...", "slug?": "...", "language?": "en", "status?": "draft" }`
+- `PATCH /api/v1/projects/:slug/articles/:articleSlug?lang=en` — update article (title, description, content, slug, status, language, chapter_slug)
 - `DELETE /api/v1/projects/:slug/articles/:articleSlug?lang=en` — delete article
+
+The `description` field is a short plain-text subtitle shown below the article title and in chapter page cards. It should NOT repeat the title — use it to explain what the article covers.
 
 Content is always **Markdown** — the API converts it to the internal format. See the Markdown Features section below for supported syntax including callouts, steps, tabs, and accordions.
 
@@ -45,13 +53,16 @@ curl -X PUT \
     "chapters": [
       {
         "title": "Getting Started",
+        "description": "Set up your project from scratch",
+        "content": "## Overview\n\nThis chapter walks you through initial setup.",
         "slug": "getting-started",
         "group": "Basics",
         "articles": [
           {
             "title": "Installation",
+            "description": "Install dependencies and configure your environment",
             "slug": "installation",
-            "content": "# Installation\n\n...",
+            "content": "## Install dependencies\n\n...",
             "status": "published"
           }
         ]
@@ -61,7 +72,7 @@ curl -X PUT \
   http://localhost:3000/api/v1/projects/my-project/sync
 ```
 
-Sync is declarative — send the full desired state. The API creates, updates, and **deletes** to match. Chapters/articles matched by slug. Order set by array position.
+Sync is declarative — send the full desired state. The API creates, updates, and **deletes** to match. Chapters/articles matched by slug. Order set by array position. Both chapters and articles accept `content` as Markdown — it is converted to the internal format automatically.
 
 Returns: `{ "chapters": { "created": N, "updated": N, "deleted": N }, "articles": { ... } }`
 
