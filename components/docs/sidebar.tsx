@@ -45,6 +45,7 @@ interface Chapter {
     slug: string;
     language: string;
     status: string;
+    order: number;
   }[];
 }
 
@@ -72,11 +73,13 @@ function DocsSidebarContent({
   const filteredChapters = chapters
     .map((ch) => ({
       ...ch,
-      articles: ch.articles.filter(
-        (a) =>
-          a.language === currentLang &&
-          a.status === "published"
-      ),
+      articles: ch.articles
+        .filter(
+          (a) =>
+            a.language === currentLang &&
+            a.status === "published"
+        )
+        .sort((a, b) => a.order - b.order),
     }))
     .filter((ch) => ch.articles.length > 0);
 

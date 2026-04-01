@@ -6,7 +6,7 @@ export async function generateLlmsTxt(projectSlug: string) {
   const { data: project } = await supabase
     .from("projects")
     .select(
-      "*, chapters(*, articles(id, title, slug, language, status, content_text))"
+      "*, chapters(*, articles(id, title, slug, language, status, content_text, \"order\"))"
     )
     .eq("slug", projectSlug)
     .eq("is_public", true)
@@ -15,11 +15,12 @@ export async function generateLlmsTxt(projectSlug: string) {
   if (!project) return null;
 
   const chapters = project.chapters
-    .map((ch: { title: string; articles: { language: string; status: string; title: string; slug: string; content_text: string }[] }) => ({
+    .sort((a: { order: number }, b: { order: number }) => a.order - b.order)
+    .map((ch: { title: string; order: number; articles: { language: string; status: string; title: string; slug: string; content_text: string; order: number }[] }) => ({
       ...ch,
-      articles: ch.articles.filter(
-        (a) => a.language === "en" && a.status === "published"
-      ),
+      articles: ch.articles
+        .filter((a) => a.language === "en" && a.status === "published")
+        .sort((a, b) => a.order - b.order),
     }))
     .filter((ch: { articles: unknown[] }) => ch.articles.length > 0);
 
@@ -50,7 +51,7 @@ export async function generateLlmsFullTxt(projectSlug: string) {
   const { data: project } = await supabase
     .from("projects")
     .select(
-      "*, chapters(*, articles(id, title, slug, language, status, content_text))"
+      "*, chapters(*, articles(id, title, slug, language, status, content_text, \"order\"))"
     )
     .eq("slug", projectSlug)
     .eq("is_public", true)
@@ -59,11 +60,12 @@ export async function generateLlmsFullTxt(projectSlug: string) {
   if (!project) return null;
 
   const chapters = project.chapters
-    .map((ch: { title: string; articles: { language: string; status: string; title: string; content_text: string }[] }) => ({
+    .sort((a: { order: number }, b: { order: number }) => a.order - b.order)
+    .map((ch: { title: string; order: number; articles: { language: string; status: string; title: string; content_text: string; order: number }[] }) => ({
       ...ch,
-      articles: ch.articles.filter(
-        (a) => a.language === "en" && a.status === "published"
-      ),
+      articles: ch.articles
+        .filter((a) => a.language === "en" && a.status === "published")
+        .sort((a, b) => a.order - b.order),
     }))
     .filter((ch: { articles: unknown[] }) => ch.articles.length > 0);
 
