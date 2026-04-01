@@ -12,9 +12,10 @@ import { ArticleWithVideo } from "./article-with-video";
 interface NavChapter {
   slug: string;
   title: string;
+  description?: string;
   order: number;
   translations?: Record<string, { title?: string }> | null;
-  articles: { slug: string; title: string; language: string; status: string; order: number }[];
+  articles: { slug: string; title: string; description?: string; language: string; status: string; order: number }[];
 }
 
 function buildNavList(chapters: NavChapter[], lang: string): NavItem[] {
@@ -22,12 +23,12 @@ function buildNavList(chapters: NavChapter[], lang: string): NavItem[] {
   const sorted = [...chapters].sort((a, b) => a.order - b.order);
   for (const ch of sorted) {
     const title = ch.translations?.[lang]?.title ?? ch.title;
-    items.push({ title, slug: ch.slug });
+    items.push({ title, description: ch.description, slug: ch.slug });
     const arts = ch.articles
       .filter((a) => a.language === lang && a.status === "published")
       .sort((a, b) => a.order - b.order);
     for (const a of arts) {
-      items.push({ title: a.title, slug: a.slug });
+      items.push({ title: a.title, description: a.description, slug: a.slug });
     }
   }
   return items;
@@ -108,7 +109,7 @@ export default async function ArticleOrChapterPage({
   // Fetch nav tree for prev/next (used by both article and chapter pages)
   const { data: navChapters } = await supabase
     .from("chapters")
-    .select("slug, title, order, translations, articles(slug, title, language, status, \"order\")")
+    .select("slug, title, description, order, translations, articles(slug, title, description, language, status, \"order\")")
     .eq("project_id", project.id)
     .order("order");
 
@@ -118,7 +119,7 @@ export default async function ArticleOrChapterPage({
   // Try article first
   const { data: article } = await supabase
     .from("articles")
-    .select("*, videos(*), chapters(title)")
+    .select("*, videos(*), chapters(title, translations)")
     .eq("project_id", project.id)
     .eq("slug", articleSlug)
     .eq("language", lang)
@@ -142,7 +143,7 @@ export default async function ArticleOrChapterPage({
           <DocsBreadcrumb
             projectName={project.name}
             projectSlug={projectSlug}
-            chapterTitle={article.chapters?.title}
+            chapterTitle={article.chapters?.translations?.[lang]?.title ?? article.chapters?.title}
             articleTitle={article.title}
           />
           <ArticleWithVideo

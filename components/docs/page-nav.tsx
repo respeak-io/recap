@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export interface NavItem {
   title: string;
+  description?: string;
   slug: string;
 }
 
@@ -32,6 +33,11 @@ export function PageNav({ prev, next, projectSlug, lang }: PageNavProps) {
           <span className="font-medium group-hover:text-accent-foreground">
             {prev.title}
           </span>
+          {prev.description && (
+            <span className="text-sm text-muted-foreground line-clamp-1">
+              {prev.description}
+            </span>
+          )}
         </Link>
       ) : (
         <div />
@@ -48,6 +54,11 @@ export function PageNav({ prev, next, projectSlug, lang }: PageNavProps) {
           <span className="font-medium group-hover:text-accent-foreground">
             {next.title}
           </span>
+          {next.description && (
+            <span className="text-sm text-muted-foreground line-clamp-1">
+              {next.description}
+            </span>
+          )}
         </Link>
       ) : (
         <div />
