@@ -122,7 +122,7 @@ function renderNode(
           src={node.attrs?.src as string}
           alt={(node.attrs?.alt as string) ?? ""}
           className="rounded-lg"
-          style={imgWidth ? { width: imgWidth, height: imgHeight ?? "auto" } : undefined}
+          style={imgWidth ? { width: imgWidth, height: imgHeight ?? "auto", maxWidth: "100%" } : undefined}
         />
       );
     }
