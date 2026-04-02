@@ -37,7 +37,7 @@ export interface SlashCommandItem {
   command: (props: { editor: Editor; range: Range }) => void;
 }
 
-function getDefaultItems(): SlashCommandItem[] {
+function getDefaultItems(projectId?: string): SlashCommandItem[] {
   return [
     {
       title: "Heading 2",
@@ -197,17 +197,38 @@ function getDefaultItems(): SlashCommandItem[] {
     },
     {
       title: "Image",
-      description: "Insert an image from URL",
+      description: "Upload an image or insert from URL",
       icon: Image,
       command: ({ editor, range }) => {
-        const url = window.prompt("Image URL:");
-        if (url) {
-          editor
-            .chain()
-            .focus()
-            .deleteRange(range)
-            .setImage({ src: url })
-            .run();
+        editor.chain().focus().deleteRange(range).run();
+
+        if (projectId) {
+          const input = document.createElement("input");
+          input.type = "file";
+          input.accept = "image/*";
+          input.onchange = async () => {
+            const file = input.files?.[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append("file", file);
+            try {
+              const res = await fetch(`/api/projects/${projectId}/media/upload`, {
+                method: "POST",
+                body: formData,
+              });
+              if (!res.ok) throw new Error("Upload failed");
+              const { url } = await res.json();
+              editor.chain().focus().setImage({ src: url }).run();
+            } catch {
+              const url = window.prompt("Upload failed. Enter image URL instead:");
+              if (url) editor.chain().focus().setImage({ src: url }).run();
+            }
+          };
+          input.click();
+        } else {
+          const url = window.prompt("Image URL:");
+          if (url) editor.chain().focus().setImage({ src: url }).run();
         }
       },
     },
@@ -324,10 +345,10 @@ const SlashCommandList = forwardRef(
 );
 SlashCommandList.displayName = "SlashCommandList";
 
-export function slashCommandSuggestion() {
+export function slashCommandSuggestion(projectId?: string) {
   return {
     items: ({ query }: { query: string }) => {
-      return getDefaultItems().filter(
+      return getDefaultItems(projectId).filter(
         (item) =>
           item.title.toLowerCase().includes(query.toLowerCase()) ||
           item.description.toLowerCase().includes(query.toLowerCase())

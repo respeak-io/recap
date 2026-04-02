@@ -106,7 +106,7 @@ export function Editor({ content, onUpdate, onTimestampClick, projectId }: Edito
       Step,
       Typography,
       SlashCommand.configure({
-        suggestion: slashCommandSuggestion(),
+        suggestion: slashCommandSuggestion(projectId),
       }),
     ],
     content,
