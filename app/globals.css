@@ -165,6 +165,38 @@
   font-weight: bold;
 }
 
+/* Image resize handles in editor */
+.ProseMirror [data-resize-container] {
+  display: inline-flex;
+}
+.ProseMirror [data-resize-wrapper] {
+  position: relative;
+  display: inline-block;
+  line-height: 0;
+}
+.ProseMirror [data-resize-handle] {
+  width: 10px;
+  height: 10px;
+  background: var(--primary);
+  border: 1.5px solid var(--background);
+  border-radius: 2px;
+  z-index: 10;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.ProseMirror [data-resize-wrapper]:hover [data-resize-handle],
+.ProseMirror [data-resize-container][data-resize-state="true"] [data-resize-handle] {
+  opacity: 1;
+}
+.ProseMirror [data-resize-handle="top-left"] { cursor: nwse-resize; }
+.ProseMirror [data-resize-handle="top-right"] { cursor: nesw-resize; }
+.ProseMirror [data-resize-handle="bottom-left"] { cursor: nesw-resize; }
+.ProseMirror [data-resize-handle="bottom-right"] { cursor: nwse-resize; }
+.ProseMirror [data-resize-handle="top"] { cursor: ns-resize; }
+.ProseMirror [data-resize-handle="bottom"] { cursor: ns-resize; }
+.ProseMirror [data-resize-handle="left"] { cursor: ew-resize; }
+.ProseMirror [data-resize-handle="right"] { cursor: ew-resize; }
+
 /* Prose refinements for Mintlify-style docs */
 .prose {
   --tw-prose-body: var(--foreground);
