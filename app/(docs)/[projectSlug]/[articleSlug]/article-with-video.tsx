@@ -10,6 +10,7 @@ interface ArticleWithVideoProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   content: any;
   videoUrl: string | null;
+  videoUrls?: Record<string, string>;
 }
 
 export function ArticleWithVideo({
@@ -17,6 +18,7 @@ export function ArticleWithVideo({
   description,
   content,
   videoUrl,
+  videoUrls,
 }: ArticleWithVideoProps) {
   const playerRef = useRef<VideoPlayerHandle>(null);
 
@@ -37,6 +39,7 @@ export function ArticleWithVideo({
       <ArticleRenderer
         content={content}
         onTimestampClick={handleTimestampClick}
+        videoUrls={videoUrls}
       />
     </>
   );
