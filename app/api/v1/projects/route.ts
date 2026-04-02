@@ -8,7 +8,7 @@ export async function GET(request: Request) {
   const db = createServiceClient();
   const { data, error } = await db
     .from("projects")
-    .select("id, name, slug, is_public")
+    .select("id, name, slug, subtitle, is_public")
     .eq("org_id", auth.orgId)
     .order("created_at", { ascending: false });
 

@@ -25,7 +25,7 @@ Returns all projects in the org.
 **Response:**
 ```json
 [
-  { "id": "uuid", "name": "My Docs", "slug": "my-docs", "is_public": true }
+  { "id": "uuid", "name": "My Docs", "slug": "my-docs", "subtitle": "Welcome to the docs.", "is_public": true }
 ]
 ```
 
@@ -43,6 +43,7 @@ Returns project with full chapter and article tree.
   "id": "uuid",
   "name": "My Docs",
   "slug": "my-docs",
+  "subtitle": "Welcome to the docs.",
   "chapters": [
     {
       "id": "uuid",
