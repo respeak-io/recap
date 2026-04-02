@@ -47,6 +47,7 @@ export function EditorPageClient({
   article,
   projectSlug,
   projectName,
+  projectId,
   videoUrl,
   siblingLanguages,
   currentLanguage,
@@ -54,6 +55,7 @@ export function EditorPageClient({
   article: ArticleData;
   projectSlug: string;
   projectName: string;
+  projectId: string;
   videoUrl: string | null;
   siblingLanguages: { id: string; language: string; status: string }[];
   currentLanguage: string;
@@ -274,6 +276,7 @@ export function EditorPageClient({
           content={article.content_json}
           onUpdate={handleUpdate}
           onTimestampClick={handleTimestampClick}
+          projectId={projectId}
         />
         {videoUrl && (
           <div className="space-y-2">

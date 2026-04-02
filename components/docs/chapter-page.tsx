@@ -14,6 +14,7 @@ interface ChapterPageProps {
   prev?: NavItem | null;
   next?: NavItem | null;
   lang: string;
+  videoUrls?: Record<string, string>;
 }
 
 function hasContent(json: unknown): boolean {
@@ -32,6 +33,7 @@ export function ChapterPage({
   prev,
   next,
   lang,
+  videoUrls,
 }: ChapterPageProps) {
   const qs = lang !== "en" ? `?lang=${lang}` : "";
 
@@ -49,7 +51,7 @@ export function ChapterPage({
       {!chapterDescription && <div className="mb-6" />}
       {hasContent(contentJson) && (
         <div className="mb-8">
-          <ArticleRenderer content={contentJson} />
+          <ArticleRenderer content={contentJson} videoUrls={videoUrls} />
         </div>
       )}
       {articles.length > 0 ? (

@@ -281,6 +281,19 @@ function extractCustomBlocks(markdown: string): { cleaned: string; customBlocks:
     }
   );
 
+  // Project video: [project-video:{uuid}]
+  cleaned = cleaned.replace(
+    /^\[project-video:([0-9a-f-]{36})\]\s*$/gm,
+    (_, videoId: string) => {
+      const idx = customBlocks.length;
+      customBlocks.push({
+        type: "projectVideo",
+        attrs: { videoId },
+      });
+      return `\n\n<!--CB:${idx}-->\n\n`;
+    }
+  );
+
   return { cleaned, customBlocks };
 }
 
