@@ -163,7 +163,12 @@ export function Editor({ content, onUpdate, onTimestampClick, projectId }: Edito
   return (
     <TooltipProvider>
       <div className="border rounded-lg">
-        <Toolbar editor={editor} />
+        <Toolbar
+          editor={editor}
+          projectId={projectId}
+          onImageUpload={(file) => handleImageUpload(editor, file)}
+          onOpenVideoPicker={() => setVideoPickerOpen(true)}
+        />
         <EditorContent
           editor={editor}
           className="prose prose-sm max-w-none p-4 min-h-[400px] focus-within:outline-none [&_.ProseMirror]:outline-none"

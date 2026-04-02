@@ -16,6 +16,8 @@ import {
   AlertTriangle,
   Lightbulb,
   Clock,
+  ImageIcon,
+  Video,
 } from "lucide-react";
 import {
   Tooltip,
@@ -25,6 +27,9 @@ import {
 
 interface ToolbarProps {
   editor: Editor;
+  projectId?: string;
+  onImageUpload?: (file: File) => void;
+  onOpenVideoPicker?: () => void;
 }
 
 function ToolbarButton({
@@ -56,7 +61,23 @@ function ToolbarButton({
   );
 }
 
-export function Toolbar({ editor }: ToolbarProps) {
+export function Toolbar({ editor, projectId, onImageUpload, onOpenVideoPicker }: ToolbarProps) {
+  function pickImage() {
+    if (onImageUpload) {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = "image/*";
+      input.onchange = () => {
+        const file = input.files?.[0];
+        if (file) onImageUpload(file);
+      };
+      input.click();
+    } else {
+      const url = window.prompt("Image URL:");
+      if (url) editor.chain().focus().setImage({ src: url }).run();
+    }
+  }
+
   function insertTimestamp() {
     const input = prompt("Enter timestamp (MM:SS):");
     if (!input) return;
@@ -183,6 +204,18 @@ export function Toolbar({ editor }: ToolbarProps) {
       <ToolbarButton onClick={insertTimestamp} tooltip="Insert timestamp">
         <Clock className="h-4 w-4" />
       </ToolbarButton>
+
+      <div className="mx-1 h-6 w-px bg-border" />
+
+      <ToolbarButton onClick={pickImage} tooltip="Insert image">
+        <ImageIcon className="h-4 w-4" />
+      </ToolbarButton>
+
+      {projectId && onOpenVideoPicker && (
+        <ToolbarButton onClick={onOpenVideoPicker} tooltip="Insert video">
+          <Video className="h-4 w-4" />
+        </ToolbarButton>
+      )}
     </div>
   );
 }
