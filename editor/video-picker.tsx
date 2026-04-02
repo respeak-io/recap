@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import {
   Dialog,
@@ -8,7 +8,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Video } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Upload, Video } from "lucide-react";
+import { useVideoUpload } from "@/hooks/use-video-upload";
 
 interface VideoItem {
   id: string;
@@ -25,6 +27,8 @@ interface VideoPickerProps {
 export function VideoPicker({ projectId, open, onOpenChange, onSelect }: VideoPickerProps) {
   const [videos, setVideos] = useState<VideoItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { upload, uploading } = useVideoUpload(projectId);
 
   useEffect(() => {
     if (!open) return;
@@ -43,18 +47,57 @@ export function VideoPicker({ projectId, open, onOpenChange, onSelect }: VideoPi
       });
   }, [open, projectId]);
 
+  async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const result = await upload(file);
+    if (result) {
+      onSelect({ id: result.videoId, title: result.title });
+      onOpenChange(false);
+    }
+
+    // Reset input so the same file can be re-selected
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Insert Video</DialogTitle>
         </DialogHeader>
+
+        {/* Upload button */}
+        <div className="border-b pb-3">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="video/mp4,video/webm,video/quicktime"
+            className="hidden"
+            onChange={handleFileSelect}
+          />
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+          >
+            <Upload className="size-4 mr-2" />
+            {uploading ? "Uploading..." : "Upload new video"}
+          </Button>
+          <p className="text-xs text-muted-foreground mt-1.5 text-center">
+            MP4, WebM, or MOV — max 25MB
+          </p>
+        </div>
+
+        {/* Existing videos list */}
         <div className="max-h-64 overflow-y-auto">
           {loading ? (
             <p className="text-sm text-muted-foreground py-4 text-center">Loading...</p>
           ) : videos.length === 0 ? (
             <p className="text-sm text-muted-foreground py-4 text-center">
-              No videos in this project. Upload a video first.
+              No existing videos in this project.
             </p>
           ) : (
             <div className="space-y-1">
