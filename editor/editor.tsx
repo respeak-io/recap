@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useRef, useEffect } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";
 import StarterKit from "@tiptap/starter-kit";
@@ -12,9 +13,11 @@ import { FileHandler } from "@tiptap/extension-file-handler";
 import { useMediaUpload } from "@/hooks/use-media-upload";
 import { TimestampLink } from "./extensions/timestamp-link";
 import { Callout } from "./extensions/callout";
+import { ProjectVideo } from "./extensions/project-video";
 import { SlashCommand } from "./extensions/slash-command";
 import { slashCommandSuggestion } from "./slash-menu";
 import { BubbleMenuContent } from "./bubble-menu";
+import { VideoPicker } from "./video-picker";
 import Link from "@tiptap/extension-link";
 import { Details, DetailsSummary, DetailsContent } from "@tiptap/extension-details";
 import { mergeAttributes } from "@tiptap/core";
@@ -49,6 +52,7 @@ interface EditorProps {
 }
 
 export function Editor({ content, onUpdate, onTimestampClick, projectId }: EditorProps) {
+  const [videoPickerOpen, setVideoPickerOpen] = useState(false);
   const { upload } = useMediaUpload(projectId ?? "");
 
   async function handleImageUpload(editor: any, file: File, pos?: number) {
@@ -104,9 +108,10 @@ export function Editor({ content, onUpdate, onTimestampClick, projectId }: Edito
       Tab,
       Steps,
       Step,
+      ProjectVideo,
       Typography,
       SlashCommand.configure({
-        suggestion: slashCommandSuggestion(projectId),
+        suggestion: slashCommandSuggestion(projectId, () => setVideoPickerOpen(true)),
       }),
     ],
     content,
@@ -114,6 +119,11 @@ export function Editor({ content, onUpdate, onTimestampClick, projectId }: Edito
       onUpdate(editor.getJSON());
     },
   });
+
+  const editorRef = useRef(editor);
+  useEffect(() => {
+    editorRef.current = editor;
+  }, [editor]);
 
   if (!editor) return null;
 
@@ -137,6 +147,20 @@ export function Editor({ content, onUpdate, onTimestampClick, projectId }: Edito
           <BubbleMenuContent editor={editor} />
         </BubbleMenu>
       </div>
+      {projectId && (
+        <VideoPicker
+          projectId={projectId}
+          open={videoPickerOpen}
+          onOpenChange={setVideoPickerOpen}
+          onSelect={(video) => {
+            editorRef.current
+              ?.chain()
+              .focus()
+              .setProjectVideo({ videoId: video.id, title: video.title })
+              .run();
+          }}
+        />
+      )}
     </TooltipProvider>
   );
 }

@@ -22,6 +22,7 @@ import {
   AlertTriangle,
   Lightbulb,
   Image,
+  Video,
   Table,
   ChevronRight,
   Columns,
@@ -37,7 +38,7 @@ export interface SlashCommandItem {
   command: (props: { editor: Editor; range: Range }) => void;
 }
 
-function getDefaultItems(projectId?: string): SlashCommandItem[] {
+function getDefaultItems(projectId?: string, onOpenVideoPicker?: () => void): SlashCommandItem[] {
   return [
     {
       title: "Heading 2",
@@ -232,6 +233,19 @@ function getDefaultItems(projectId?: string): SlashCommandItem[] {
         }
       },
     },
+    ...(projectId && onOpenVideoPicker
+      ? [
+          {
+            title: "Video",
+            description: "Embed a project video",
+            icon: Video,
+            command: ({ editor, range }: { editor: Editor; range: Range }) => {
+              editor.chain().focus().deleteRange(range).run();
+              onOpenVideoPicker();
+            },
+          },
+        ]
+      : []),
     {
       title: "Table",
       description: "Insert a 3x3 table",
@@ -345,10 +359,10 @@ const SlashCommandList = forwardRef(
 );
 SlashCommandList.displayName = "SlashCommandList";
 
-export function slashCommandSuggestion(projectId?: string) {
+export function slashCommandSuggestion(projectId?: string, onOpenVideoPicker?: () => void) {
   return {
     items: ({ query }: { query: string }) => {
-      return getDefaultItems(projectId).filter(
+      return getDefaultItems(projectId, onOpenVideoPicker).filter(
         (item) =>
           item.title.toLowerCase().includes(query.toLowerCase()) ||
           item.description.toLowerCase().includes(query.toLowerCase())
