@@ -52,6 +52,7 @@ export default async function ArticleEditPage({
       }}
       projectSlug={slug}
       projectName={article.projects.name}
+      projectId={article.project_id}
       videoUrl={videoUrl}
       siblingLanguages={siblingLanguages ?? []}
       currentLanguage={lang}

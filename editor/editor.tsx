@@ -8,6 +8,8 @@ import { Table, TableRow, TableCell, TableHeader } from "@tiptap/extension-table
 import Placeholder from "@tiptap/extension-placeholder";
 import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
 import { common, createLowlight } from "lowlight";
+import { FileHandler } from "@tiptap/extension-file-handler";
+import { useMediaUpload } from "@/hooks/use-media-upload";
 import { TimestampLink } from "./extensions/timestamp-link";
 import { Callout } from "./extensions/callout";
 import { SlashCommand } from "./extensions/slash-command";
@@ -43,9 +45,24 @@ interface EditorProps {
   content: Record<string, unknown>;
   onUpdate: (json: Record<string, unknown>) => void;
   onTimestampClick?: (seconds: number) => void;
+  projectId?: string;
 }
 
-export function Editor({ content, onUpdate, onTimestampClick }: EditorProps) {
+export function Editor({ content, onUpdate, onTimestampClick, projectId }: EditorProps) {
+  const { upload } = useMediaUpload(projectId ?? "");
+
+  async function handleImageUpload(editor: any, file: File, pos?: number) {
+    if (!editor || !projectId) return;
+    const url = await upload(file);
+    if (url) {
+      if (pos !== undefined) {
+        editor.chain().focus().insertContentAt(pos, { type: "image", attrs: { src: url } }).run();
+      } else {
+        editor.chain().focus().setImage({ src: url }).run();
+      }
+    }
+  }
+
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
@@ -55,6 +72,23 @@ export function Editor({ content, onUpdate, onTimestampClick }: EditorProps) {
       }),
       CodeBlockLowlight.configure({ lowlight }),
       Image,
+      ...(projectId
+        ? [
+            FileHandler.configure({
+              allowedMimeTypes: ["image/png", "image/jpeg", "image/gif", "image/webp", "image/svg+xml"],
+              onDrop: (editor, files, pos) => {
+                for (const file of files) {
+                  handleImageUpload(editor, file, pos);
+                }
+              },
+              onPaste: (editor, files) => {
+                for (const file of files) {
+                  handleImageUpload(editor, file);
+                }
+              },
+            }),
+          ]
+        : []),
       Table.configure({ resizable: false }),
       TableRow,
       TableCell,

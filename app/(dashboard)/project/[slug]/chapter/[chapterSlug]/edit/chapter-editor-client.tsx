@@ -18,12 +18,14 @@ interface ChapterEditorClientProps {
   };
   projectSlug: string;
   projectName: string;
+  projectId: string;
 }
 
 export function ChapterEditorClient({
   chapter,
   projectSlug,
   projectName,
+  projectId,
 }: ChapterEditorClientProps) {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -85,6 +87,7 @@ export function ChapterEditorClient({
           key={chapter.id}
           content={chapter.content_json}
           onUpdate={handleUpdate}
+          projectId={projectId}
         />
       </div>
     </>
