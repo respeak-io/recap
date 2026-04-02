@@ -15,6 +15,7 @@ interface TiptapNode {
 interface ArticleRendererProps {
   content: { type: string; content?: TiptapNode[] };
   onTimestampClick?: (seconds: number) => void;
+  videoUrls?: Record<string, string>;
 }
 
 export { extractHeadings } from "@/lib/extract-headings";
@@ -70,7 +71,8 @@ function renderInline(
 function renderNode(
   node: TiptapNode,
   index: number,
-  onTimestampClick?: (seconds: number) => void
+  onTimestampClick?: (seconds: number) => void,
+  videoUrls?: Record<string, string>,
 ): React.ReactNode {
   const children = node.content?.map((child, i) => {
     if (child.type === "text" || child.type === "timestampLink") {
@@ -78,7 +80,7 @@ function renderNode(
         <span key={i}>{renderInline(child, onTimestampClick)}</span>
       );
     }
-    return renderNode(child, i, onTimestampClick);
+    return renderNode(child, i, onTimestampClick, videoUrls);
   });
 
   switch (node.type) {
@@ -111,15 +113,19 @@ function renderNode(
       return <blockquote key={index}>{children}</blockquote>;
     case "horizontalRule":
       return <hr key={index} />;
-    case "image":
+    case "image": {
+      const imgWidth = node.attrs?.width as number | undefined;
+      const imgHeight = node.attrs?.height as number | undefined;
       return (
         <img
           key={index}
           src={node.attrs?.src as string}
           alt={(node.attrs?.alt as string) ?? ""}
           className="rounded-lg"
+          style={imgWidth ? { width: imgWidth, height: imgHeight ?? "auto", maxWidth: "100%" } : undefined}
         />
       );
+    }
     case "table":
       return (
         <table key={index} className="border-collapse w-full">
@@ -146,7 +152,7 @@ function renderNode(
       return (
         <details key={index} className="my-4 rounded-lg border p-4 group">
           {(node.content ?? []).map((child: TiptapNode, i: number) =>
-            renderNode(child, i, onTimestampClick)
+            renderNode(child, i, onTimestampClick, videoUrls)
           )}
         </details>
       );
@@ -173,7 +179,7 @@ function renderNode(
       return (
         <div key={index} className="mt-2 pl-6">
           {(node.content ?? []).map((child: TiptapNode, i: number) =>
-            renderNode(child, i, onTimestampClick)
+            renderNode(child, i, onTimestampClick, videoUrls)
           )}
         </div>
       );
@@ -188,7 +194,7 @@ function renderNode(
           tabs={tabs}
           renderContent={(nodes, prefix) =>
             nodes.map((n: TiptapNode, i: number) =>
-              renderNode(n, `${prefix}-${i}` as unknown as number, onTimestampClick)
+              renderNode(n, `${prefix}-${i}` as unknown as number, onTimestampClick, videoUrls)
             )
           }
         />
@@ -212,7 +218,7 @@ function renderNode(
               </p>
               <div>
                 {(step.content ?? []).map((child: TiptapNode, j: number) =>
-                  renderNode(child, j, onTimestampClick)
+                  renderNode(child, j, onTimestampClick, videoUrls)
                 )}
               </div>
             </div>
@@ -245,6 +251,25 @@ function renderNode(
         </div>
       );
     }
+    case "projectVideo": {
+      const videoId = node.attrs?.videoId as string | undefined;
+      const videoGroupId = node.attrs?.videoGroupId as string | undefined;
+      const title = (node.attrs?.title as string) || "Video";
+      const src = videoUrls?.[videoGroupId ?? videoId ?? ""];
+      if (!src) {
+        return (
+          <div key={index} className="rounded-lg border border-dashed p-4 my-4 text-sm text-muted-foreground">
+            Video nicht verfügbar
+          </div>
+        );
+      }
+      return (
+        <video key={index} controls className="w-full rounded-lg my-4" title={title}>
+          <source src={src} />
+          Your browser does not support the video tag.
+        </video>
+      );
+    }
     default:
       return <div key={index}>{children}</div>;
   }
@@ -253,12 +278,13 @@ function renderNode(
 export function ArticleRenderer({
   content,
   onTimestampClick,
+  videoUrls,
 }: ArticleRendererProps) {
   if (!content.content) return null;
 
   return (
     <div className="prose prose-neutral dark:prose-invert max-w-none">
-      {content.content.map((node, i) => renderNode(node, i, onTimestampClick))}
+      {content.content.map((node, i) => renderNode(node, i, onTimestampClick, videoUrls))}
     </div>
   );
 }

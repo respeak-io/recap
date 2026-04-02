@@ -36,6 +36,88 @@ function buildNavList(chapters: NavChapter[], lang: string): NavItem[] {
   return items;
 }
 
+async function resolveVideoUrls(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  contentJson: Record<string, unknown>,
+  language: string,
+  projectDefaultLanguage: string
+): Promise<Record<string, string>> {
+  const videoIds = new Set<string>();
+  const videoGroupIds = new Set<string>();
+
+  function walk(nodes: unknown[]) {
+    for (const node of nodes) {
+      const n = node as Record<string, unknown>;
+      if (n.type === "projectVideo" && n.attrs) {
+        const attrs = n.attrs as Record<string, unknown>;
+        if (attrs.videoGroupId) videoGroupIds.add(attrs.videoGroupId as string);
+        else if (attrs.videoId) videoIds.add(attrs.videoId as string);
+      }
+      if (Array.isArray(n.content)) walk(n.content);
+    }
+  }
+
+  const content = (contentJson as Record<string, unknown>).content;
+  if (Array.isArray(content)) walk(content);
+
+  if (videoIds.size === 0 && videoGroupIds.size === 0) return {};
+
+  const urls: Record<string, string> = {};
+
+  // Handle legacy videoId references
+  if (videoIds.size > 0) {
+    const { data: legacyVideos } = await supabase
+      .from("videos")
+      .select("id, storage_path")
+      .in("id", Array.from(videoIds))
+      .eq("status", "ready");
+
+    for (const video of legacyVideos ?? []) {
+      if (video.storage_path) {
+        const { data } = await supabase.storage
+          .from("videos")
+          .createSignedUrl(video.storage_path, 3600);
+        if (data?.signedUrl) urls[video.id] = data.signedUrl;
+      }
+    }
+  }
+
+  // Handle videoGroupId references with language fallback
+  if (videoGroupIds.size > 0) {
+    const { data: groupVideos } = await supabase
+      .from("videos")
+      .select("id, video_group_id, language, storage_path, created_at")
+      .in("video_group_id", Array.from(videoGroupIds))
+      .eq("status", "ready");
+
+    const grouped = new Map<string, typeof groupVideos>();
+    for (const v of groupVideos ?? []) {
+      const list = grouped.get(v.video_group_id) ?? [];
+      list.push(v);
+      grouped.set(v.video_group_id, list);
+    }
+
+    for (const [groupId, variants] of grouped) {
+      if (!variants || variants.length === 0) continue;
+
+      // Fallback chain: requested language -> project default -> oldest
+      const match =
+        variants.find((v) => v.language === language) ??
+        variants.find((v) => v.language === projectDefaultLanguage) ??
+        [...variants].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())[0];
+
+      if (match?.storage_path) {
+        const { data } = await supabase.storage
+          .from("videos")
+          .createSignedUrl(match.storage_path, 3600);
+        if (data?.signedUrl) urls[groupId] = data.signedUrl;
+      }
+    }
+  }
+
+  return urls;
+}
+
 function findPrevNext(navList: NavItem[], currentSlug: string) {
   const idx = navList.findIndex((item) => item.slug === currentSlug);
   if (idx === -1) return { prev: null, next: null };
@@ -140,6 +222,8 @@ export default async function ArticleOrChapterPage({
       videoUrl = data?.signedUrl ?? null;
     }
 
+    const embeddedVideoUrls = await resolveVideoUrls(supabase, article.content_json, lang, "en");
+
     const headings = extractHeadings(article.content_json);
 
     return (
@@ -156,6 +240,7 @@ export default async function ArticleOrChapterPage({
             description={article.description}
             content={article.content_json}
             videoUrl={videoUrl}
+            videoUrls={embeddedVideoUrls}
           />
           <PageNav prev={prev} next={next} projectSlug={projectSlug} lang={lang} />
         </article>
@@ -194,17 +279,23 @@ export default async function ArticleOrChapterPage({
       (a: { order: number }, b: { order: number }) => a.order - b.order
     );
 
+  const chapterContentJson = chapter.translations?.[lang]?.content_json ?? chapter.content_json;
+  const chapterVideoUrls = chapterContentJson
+    ? await resolveVideoUrls(supabase, chapterContentJson as Record<string, unknown>, lang, "en")
+    : {};
+
   return (
     <ChapterPage
       projectName={project.name}
       projectSlug={projectSlug}
       chapterTitle={chapterTitle}
       chapterDescription={chapterDescription}
-      contentJson={chapter.translations?.[lang]?.content_json ?? chapter.content_json}
+      contentJson={chapterContentJson}
       articles={articles}
       prev={prev}
       next={next}
       lang={lang}
+      videoUrls={chapterVideoUrls}
     />
   );
 }
