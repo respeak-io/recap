@@ -28,6 +28,7 @@ For local development, the base URL is `http://localhost:3000/api/v1`.
 
 Chapters have their own public pages at `/{projectSlug}/{chapterSlug}`. These pages display the chapter title, any rich-text content (edited via the dashboard), and a card grid linking to all child articles.
 
+- `GET /api/v1/projects/:slug/chapters/:chapterSlug` — get single chapter with content_json, translations, and articles
 - `POST /api/v1/projects/:slug/chapters` — create chapter
   - Body: `{ "title": "...", "description?": "...", "content?": "<markdown>", "slug?": "...", "group?": "...", "order?": 0 }`
 - `PATCH /api/v1/projects/:slug/chapters/:chapterSlug` — update chapter (title, description, content, slug, group, order, translations, content_json)

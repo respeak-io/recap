@@ -3,6 +3,35 @@ import { validateApiKey, apiError } from "@/lib/api-key-auth";
 import { resolveProject } from "@/lib/api-v1-helpers";
 import { markdownToTiptapRaw } from "@/lib/ai/markdown-to-tiptap";
 
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ slug: string; chapterSlug: string }> }
+) {
+  const auth = await validateApiKey(request);
+  if (auth instanceof Response) return auth;
+
+  const { slug, chapterSlug } = await params;
+  const db = createServiceClient();
+
+  const project = await resolveProject(db, auth.orgId, slug);
+  if (project instanceof Response) return project;
+
+  const { data, error } = await db
+    .from("chapters")
+    .select("*, articles(id, title, description, slug, language, status, \"order\")")
+    .eq("project_id", project.id)
+    .eq("slug", chapterSlug)
+    .single();
+
+  if (error || !data) return apiError("Chapter not found", "NOT_FOUND", 404);
+
+  const articles = (data.articles ?? []).sort(
+    (a: { order: number }, b: { order: number }) => a.order - b.order
+  );
+
+  return Response.json({ ...data, articles });
+}
+
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ slug: string; chapterSlug: string }> }

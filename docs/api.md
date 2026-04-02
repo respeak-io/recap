@@ -115,6 +115,31 @@ POST /api/v1/projects/:slug/chapters
 
 **Response:** `201` with the created chapter.
 
+### Get Chapter
+
+```
+GET /api/v1/projects/:slug/chapters/:chapterSlug
+```
+
+Returns a single chapter with all fields including `content_json`, `translations`, and its articles sorted by order.
+
+**Response:**
+```json
+{
+  "id": "uuid",
+  "title": "Getting Started",
+  "slug": "getting-started",
+  "description": "Set up your project from scratch",
+  "group": "Basics",
+  "order": 0,
+  "content_json": { "type": "doc", "content": [...] },
+  "translations": { "de": { "title": "Erste Schritte", "content_json": {...} } },
+  "articles": [
+    { "id": "uuid", "title": "Installation", "slug": "installation", "language": "en", "status": "published", "order": 0 }
+  ]
+}
+```
+
 ### Update Chapter
 
 ```
