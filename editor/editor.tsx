@@ -27,6 +27,7 @@ import { Steps, Step } from "./extensions/steps";
 import Typography from "@tiptap/extension-typography";
 import { Toolbar } from "./toolbar";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { toast } from "sonner";
 
 const lowlight = createLowlight(common);
 
@@ -66,6 +67,8 @@ export function Editor({ content, onUpdate, onTimestampClick, projectId }: Edito
       } else {
         editor.chain().focus().setImage({ src: url }).run();
       }
+    } else {
+      toast.error("Image upload failed. Please try again.");
     }
   }
 
@@ -80,7 +83,7 @@ export function Editor({ content, onUpdate, onTimestampClick, projectId }: Edito
         editor.chain().focus().insertContent(node).run();
       }
     } else {
-      window.alert("Video upload failed. Please try again.");
+      toast.error("Video upload failed. Please try again.");
     }
   }
 
