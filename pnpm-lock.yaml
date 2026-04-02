@@ -32,6 +32,9 @@ importers:
       '@tiptap/extension-details':
         specifier: 3.19.0
         version: 3.19.0(@tiptap/core@3.19.0(@tiptap/pm@3.19.0))(@tiptap/extension-text-style@3.20.0(@tiptap/core@3.19.0(@tiptap/pm@3.19.0)))(@tiptap/pm@3.19.0)
+      '@tiptap/extension-file-handler':
+        specifier: 3.19.0
+        version: 3.19.0(@tiptap/core@3.19.0(@tiptap/pm@3.19.0))(@tiptap/extension-text-style@3.20.0(@tiptap/core@3.19.0(@tiptap/pm@3.19.0)))(@tiptap/pm@3.19.0)
       '@tiptap/extension-image':
         specifier: ^3.19.0
         version: 3.19.0(@tiptap/core@3.19.0(@tiptap/pm@3.19.0))
@@ -2411,6 +2414,13 @@ packages:
     resolution: {integrity: sha512-sf3dEZXiLvsGqVK2maUIzXY6qtYYCvBumag7+VPTMGQ0D4hiZ1X/4ukt4+6VXDg5R2WP1CoIt/QvUetUjWNhbQ==}
     peerDependencies:
       '@tiptap/extensions': ^3.19.0
+
+  '@tiptap/extension-file-handler@3.19.0':
+    resolution: {integrity: sha512-h4SZyIO/e6TUJENnuat6Y4tc/NfpQMB9S8qabVOpia6o+qaaPB6EAlko8EeKtY/NuPDlxbXKKDC+1WBjUu8ELQ==}
+    peerDependencies:
+      '@tiptap/core': ^3.19.0
+      '@tiptap/extension-text-style': ^3.19.0
+      '@tiptap/pm': ^3.19.0
 
   '@tiptap/extension-floating-menu@3.19.0':
     resolution: {integrity: sha512-JaoEkVRkt+Slq3tySlIsxnMnCjS0L5n1CA1hctjLy0iah8edetj3XD5mVv5iKqDzE+LIjF4nwLRRVKJPc8hFBg==}
@@ -8651,6 +8661,12 @@ snapshots:
   '@tiptap/extension-dropcursor@3.19.0(@tiptap/extensions@3.19.0(@tiptap/core@3.19.0(@tiptap/pm@3.19.0))(@tiptap/pm@3.19.0))':
     dependencies:
       '@tiptap/extensions': 3.19.0(@tiptap/core@3.19.0(@tiptap/pm@3.19.0))(@tiptap/pm@3.19.0)
+
+  '@tiptap/extension-file-handler@3.19.0(@tiptap/core@3.19.0(@tiptap/pm@3.19.0))(@tiptap/extension-text-style@3.20.0(@tiptap/core@3.19.0(@tiptap/pm@3.19.0)))(@tiptap/pm@3.19.0)':
+    dependencies:
+      '@tiptap/core': 3.19.0(@tiptap/pm@3.19.0)
+      '@tiptap/extension-text-style': 3.20.0(@tiptap/core@3.19.0(@tiptap/pm@3.19.0))
+      '@tiptap/pm': 3.19.0
 
   '@tiptap/extension-floating-menu@3.19.0(@floating-ui/dom@1.7.5)(@tiptap/core@3.19.0(@tiptap/pm@3.19.0))(@tiptap/pm@3.19.0)':
     dependencies:
