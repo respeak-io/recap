@@ -183,19 +183,6 @@
   z-index: 10;
   opacity: 0;
   transition: opacity 0.15s;
-  transform: translate(-50%, -50%);
-}
-.ProseMirror [data-resize-handle*="right"] {
-  transform: translate(50%, -50%);
-}
-.ProseMirror [data-resize-handle="bottom-left"] {
-  transform: translate(-50%, 50%);
-}
-.ProseMirror [data-resize-handle="bottom-right"] {
-  transform: translate(50%, 50%);
-}
-.ProseMirror [data-resize-handle="bottom"] {
-  transform: translate(-50%, 50%);
 }
 .ProseMirror [data-resize-wrapper]:hover [data-resize-handle],
 .ProseMirror [data-resize-container][data-resize-state="true"] [data-resize-handle] {
