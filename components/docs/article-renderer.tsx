@@ -113,15 +113,19 @@ function renderNode(
       return <blockquote key={index}>{children}</blockquote>;
     case "horizontalRule":
       return <hr key={index} />;
-    case "image":
+    case "image": {
+      const imgWidth = node.attrs?.width as number | undefined;
+      const imgHeight = node.attrs?.height as number | undefined;
       return (
         <img
           key={index}
           src={node.attrs?.src as string}
           alt={(node.attrs?.alt as string) ?? ""}
           className="rounded-lg"
+          style={imgWidth ? { width: imgWidth, height: imgHeight ?? "auto" } : undefined}
         />
       );
+    }
     case "table":
       return (
         <table key={index} className="border-collapse w-full">
