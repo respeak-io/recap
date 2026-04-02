@@ -67,6 +67,26 @@ Returns project with full chapter and article tree.
 }
 ```
 
+### Update Project
+
+```
+PATCH /api/v1/projects/:slug
+```
+
+**Body:** Any subset of `{ name, subtitle, translations }`.
+
+```json
+{
+  "name": "Updated Name",
+  "subtitle": "Updated subtitle",
+  "translations": {
+    "de": { "name": "Neuer Name", "subtitle": "Neuer Untertitel" }
+  }
+}
+```
+
+**Response:** `200` with `{ "ok": true }`.
+
 ### Create Chapter
 
 ```
@@ -168,9 +188,14 @@ PUT /api/v1/projects/:slug/sync
 
 Send the full desired doc structure. The API diffs against the current state: creates new chapters/articles, updates existing ones (matched by slug), and deletes anything not in the payload.
 
+Optionally include `name`, `subtitle`, and/or `translations` at the top level to update the project itself.
+
 **Body:**
 ```json
 {
+  "name": "My Docs",
+  "subtitle": "Welcome to the docs.",
+  "translations": { "de": { "name": "Meine Doku", "subtitle": "Willkommen" } },
   "chapters": [
     {
       "title": "Getting Started",

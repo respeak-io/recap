@@ -40,6 +40,16 @@ export async function PUT(
     return apiError("chapters array is required", "VALIDATION_ERROR", 422);
   }
 
+  // Update project-level fields if provided
+  const projectUpdate: Record<string, unknown> = {};
+  if (typeof body.name === "string") projectUpdate.name = body.name;
+  if (typeof body.subtitle === "string") projectUpdate.subtitle = body.subtitle;
+  if (body.translations !== undefined) projectUpdate.translations = body.translations;
+
+  if (Object.keys(projectUpdate).length > 0) {
+    await db.from("projects").update(projectUpdate).eq("id", project.id);
+  }
+
   const incomingChapters: SyncChapter[] = body.chapters;
   const stats = {
     chapters: { created: 0, updated: 0, deleted: 0 },

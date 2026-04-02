@@ -19,6 +19,11 @@ For local development, the base URL is `http://localhost:3000/api/v1`.
 - `GET /api/v1/projects` — list all projects (returns id, name, slug, subtitle, translations, is_public)
 - `GET /api/v1/projects/:slug` — get project with full chapter/article tree (includes subtitle, translations)
 
+### Update Project
+
+- `PATCH /api/v1/projects/:slug` — update project (name, subtitle, translations)
+  - Body: any subset of `{ "name": "...", "subtitle": "...", "translations": { "de": { "name": "...", "subtitle": "..." } } }`
+
 ### Chapters
 
 Chapters have their own public pages at `/{projectSlug}/{chapterSlug}`. These pages display the chapter title, any rich-text content (edited via the dashboard), and a card grid linking to all child articles.
@@ -50,6 +55,9 @@ curl -X PUT \
   -H "Authorization: Bearer rd_<key>" \
   -H "Content-Type: application/json" \
   -d '{
+    "name": "My Docs",
+    "subtitle": "Welcome to the docs.",
+    "translations": { "de": { "name": "Meine Doku", "subtitle": "Willkommen" } },
     "chapters": [
       {
         "title": "Getting Started",
@@ -72,7 +80,7 @@ curl -X PUT \
   http://localhost:3000/api/v1/projects/my-project/sync
 ```
 
-Sync is declarative — send the full desired state. The API creates, updates, and **deletes** to match. Chapters/articles matched by slug. Order set by array position. Both chapters and articles accept `content` as Markdown — it is converted to the internal format automatically.
+Sync is declarative — send the full desired state. The API creates, updates, and **deletes** to match. Chapters/articles matched by slug. Order set by array position. Both chapters and articles accept `content` as Markdown — it is converted to the internal format automatically. Optionally include `name`, `subtitle`, and/or `translations` at the top level to update the project itself.
 
 Returns: `{ "chapters": { "created": N, "updated": N, "deleted": N }, "articles": { ... } }`
 
