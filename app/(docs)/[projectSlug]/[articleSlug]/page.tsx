@@ -101,12 +101,15 @@ export default async function ArticleOrChapterPage({
   // Resolve project ID first
   const { data: project } = await supabase
     .from("projects")
-    .select("id, name")
+    .select("id, name, translations")
     .eq("slug", projectSlug)
     .eq("is_public", true)
     .single();
 
   if (!project) notFound();
+
+  const projectTranslations = project.translations as Record<string, { name?: string }> | null;
+  const resolvedProjectName = projectTranslations?.[lang]?.name || project.name;
 
   // Fetch nav tree for prev/next (used by both article and chapter pages)
   const { data: navChapters } = await supabase
@@ -143,7 +146,7 @@ export default async function ArticleOrChapterPage({
       <div className="flex gap-8">
         <article className="flex-1 max-w-[720px] mx-auto px-8 py-12 min-w-0">
           <DocsBreadcrumb
-            projectName={project.name}
+            projectName={resolvedProjectName}
             projectSlug={projectSlug}
             chapterTitle={article.chapters?.translations?.[lang]?.title ?? article.chapters?.title}
             articleTitle={article.title}

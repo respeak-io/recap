@@ -6,7 +6,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const { name, subtitle } = await request.json();
+  const { name, subtitle, translations } = await request.json();
   const supabase = await createClient();
 
   const { data: project } = await supabase
@@ -19,9 +19,10 @@ export async function PUT(
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
   }
 
-  const update: Record<string, string> = {};
+  const update: Record<string, unknown> = {};
   if (typeof name === "string") update.name = name;
   if (typeof subtitle === "string") update.subtitle = subtitle;
+  if (translations !== undefined) update.translations = translations;
 
   const { error } = await supabase
     .from("projects")

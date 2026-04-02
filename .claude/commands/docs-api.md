@@ -16,8 +16,8 @@ For local development, the base URL is `http://localhost:3000/api/v1`.
 
 ### Read
 
-- `GET /api/v1/projects` — list all projects (returns id, name, slug, subtitle, is_public)
-- `GET /api/v1/projects/:slug` — get project with full chapter/article tree (includes subtitle)
+- `GET /api/v1/projects` — list all projects (returns id, name, slug, subtitle, translations, is_public)
+- `GET /api/v1/projects/:slug` — get project with full chapter/article tree (includes subtitle, translations)
 
 ### Chapters
 

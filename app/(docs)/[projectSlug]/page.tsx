@@ -39,7 +39,7 @@ export default async function DocsIndexPage({
   const { data: project } = await supabase
     .from("projects")
     .select(
-      "id, name, slug, subtitle, chapters(id, title, slug, description, order, \"group\", translations, articles(id, title, description, slug, language, status, \"order\"))"
+      "id, name, slug, subtitle, translations, chapters(id, title, slug, description, order, \"group\", translations, articles(id, title, description, slug, language, status, \"order\"))"
     )
     .eq("slug", projectSlug)
     .eq("is_public", true)
@@ -48,6 +48,9 @@ export default async function DocsIndexPage({
   if (!project) notFound();
 
   const qs = lang !== "en" ? `?lang=${lang}` : "";
+  const projectTranslations = project.translations as Record<string, { name?: string; subtitle?: string }> | null;
+  const resolvedName = projectTranslations?.[lang]?.name || project.name;
+  const resolvedSubtitle = projectTranslations?.[lang]?.subtitle || project.subtitle;
 
   // Filter and sort chapters with published articles in the current language
   const chapters = ((project.chapters ?? []) as Chapter[])
@@ -87,10 +90,10 @@ export default async function DocsIndexPage({
       {/* Hero */}
       <div className="mb-10">
         <h1 className="text-3xl font-bold tracking-tight mb-2">
-          {project.name}
+          {resolvedName}
         </h1>
-        {project.subtitle && (
-          <p className="text-lg text-muted-foreground">{project.subtitle}</p>
+        {resolvedSubtitle && (
+          <p className="text-lg text-muted-foreground">{resolvedSubtitle}</p>
         )}
       </div>
 

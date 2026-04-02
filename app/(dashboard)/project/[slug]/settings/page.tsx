@@ -15,11 +15,21 @@ export default async function SettingsPage({
 
   const { data: project } = await supabase
     .from("projects")
-    .select("id, name, slug, subtitle, theme")
+    .select("id, name, slug, subtitle, translations, theme, chapters(articles(language, status))")
     .eq("slug", slug)
     .single();
 
   if (!project) notFound();
+
+  // Derive available languages from published articles
+  type ArticleInfo = { language: string; status: string };
+  const allArticles = (project.chapters ?? []).flatMap(
+    (ch: { articles: ArticleInfo[] }) =>
+      ch.articles.filter((a) => a.status === "published")
+  );
+  const languages = [...new Set(allArticles.map((a: ArticleInfo) => a.language))].filter(
+    (l) => l !== "en"
+  );
 
   const theme = resolveTheme(project.theme as Record<string, unknown>);
 
@@ -53,6 +63,8 @@ export default async function SettingsPage({
             projectId={project.id}
             name={project.name}
             subtitle={project.subtitle ?? ""}
+            translations={(project.translations as Record<string, { name?: string; subtitle?: string }>) ?? {}}
+            languages={languages}
           />
         </div>
 

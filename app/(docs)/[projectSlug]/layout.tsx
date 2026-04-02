@@ -69,6 +69,7 @@ export default async function DocsLayout({
           chapters={chapters}
           languages={languages}
           logoUrl={logoUrl}
+          translations={project.translations as Record<string, { name?: string }> | null}
         />
         <div className="flex-1 min-w-0">
           {children}

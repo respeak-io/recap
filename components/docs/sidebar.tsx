@@ -56,6 +56,7 @@ interface SidebarProps {
   chapters: Chapter[];
   languages: string[];
   logoUrl?: string | null;
+  translations?: Record<string, { name?: string }> | null;
 }
 
 function DocsSidebarContent({
@@ -65,10 +66,12 @@ function DocsSidebarContent({
   chapters,
   languages,
   logoUrl,
+  translations,
 }: SidebarProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const currentLang = searchParams.get("lang") ?? "en";
+  const resolvedProjectName = translations?.[currentLang]?.name || projectName;
 
   const filteredChapters = chapters
     .map((ch) => ({
@@ -164,9 +167,9 @@ function DocsSidebarContent({
       <div className="flex flex-col gap-3 p-4 pb-2">
         <Link href={`/${projectSlug}`} className="inline-flex items-center gap-2.5 text-[0.9375rem] font-medium">
           {logoUrl ? (
-            <img src={logoUrl} alt={projectName} className="max-h-7 object-contain" />
+            <img src={logoUrl} alt={resolvedProjectName} className="max-h-7 object-contain" />
           ) : (
-            projectName
+            resolvedProjectName
           )}
         </Link>
         <SearchDialog projectId={projectId} projectSlug={projectSlug} />
