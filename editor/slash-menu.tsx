@@ -22,12 +22,14 @@ import {
   AlertTriangle,
   Lightbulb,
   Image,
+  Video,
   Table,
   ChevronRight,
   Columns,
   ListChecks,
   type LucideIcon,
 } from "lucide-react";
+import type { MediaPickerTab } from "./media-picker";
 import { cn } from "@/lib/utils";
 
 export interface SlashCommandItem {
@@ -37,7 +39,7 @@ export interface SlashCommandItem {
   command: (props: { editor: Editor; range: Range }) => void;
 }
 
-function getDefaultItems(): SlashCommandItem[] {
+function getDefaultItems(projectId?: string, onOpenMediaPicker?: (tab: MediaPickerTab) => void): SlashCommandItem[] {
   return [
     {
       title: "Heading 2",
@@ -197,20 +199,31 @@ function getDefaultItems(): SlashCommandItem[] {
     },
     {
       title: "Image",
-      description: "Insert an image from URL",
+      description: onOpenMediaPicker ? "Browse gallery or upload an image" : "Insert an image from URL",
       icon: Image,
       command: ({ editor, range }) => {
-        const url = window.prompt("Image URL:");
-        if (url) {
-          editor
-            .chain()
-            .focus()
-            .deleteRange(range)
-            .setImage({ src: url })
-            .run();
+        editor.chain().focus().deleteRange(range).run();
+        if (onOpenMediaPicker) {
+          onOpenMediaPicker("images");
+        } else {
+          const url = window.prompt("Image URL:");
+          if (url) {
+            editor.chain().focus().setImage({ src: url }).run();
+          }
         }
       },
     },
+    ...(projectId && onOpenMediaPicker
+      ? [{
+          title: "Video",
+          description: "Browse gallery or upload a video",
+          icon: Video,
+          command: ({ editor, range }: { editor: Editor; range: Range }) => {
+            editor.chain().focus().deleteRange(range).run();
+            onOpenMediaPicker("videos");
+          },
+        }]
+      : []),
     {
       title: "Table",
       description: "Insert a 3x3 table",
@@ -324,10 +337,10 @@ const SlashCommandList = forwardRef(
 );
 SlashCommandList.displayName = "SlashCommandList";
 
-export function slashCommandSuggestion() {
+export function slashCommandSuggestion(projectId?: string, onOpenMediaPicker?: (tab: MediaPickerTab) => void) {
   return {
     items: ({ query }: { query: string }) => {
-      return getDefaultItems().filter(
+      return getDefaultItems(projectId, onOpenMediaPicker).filter(
         (item) =>
           item.title.toLowerCase().includes(query.toLowerCase()) ||
           item.description.toLowerCase().includes(query.toLowerCase())
