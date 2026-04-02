@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, FileText, Upload, Settings, Globe, BarChart3, Key } from "lucide-react";
+import { LayoutDashboard, FileText, Upload, Settings, Globe, BarChart3, Key, ImageIcon } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -51,6 +51,11 @@ export function AppSidebar({ projects, userEmail }: AppSidebarProps) {
           title: "Upload Video",
           href: `/project/${currentProjectSlug}/upload`,
           icon: Upload,
+        },
+        {
+          title: "Media",
+          href: `/project/${currentProjectSlug}/media`,
+          icon: ImageIcon,
         },
         {
           title: "Analytics",
