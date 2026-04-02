@@ -11,6 +11,7 @@ import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
 import { common, createLowlight } from "lowlight";
 import { FileHandler } from "@tiptap/extension-file-handler";
 import { useMediaUpload } from "@/hooks/use-media-upload";
+import { useVideoUpload } from "@/hooks/use-video-upload";
 import { TimestampLink } from "./extensions/timestamp-link";
 import { Callout } from "./extensions/callout";
 import { ProjectVideo } from "./extensions/project-video";
@@ -54,6 +55,7 @@ interface EditorProps {
 export function Editor({ content, onUpdate, onTimestampClick, projectId }: EditorProps) {
   const [videoPickerOpen, setVideoPickerOpen] = useState(false);
   const { upload } = useMediaUpload(projectId ?? "");
+  const { upload: uploadVideo } = useVideoUpload(projectId ?? "");
 
   async function handleImageUpload(editor: any, file: File, pos?: number) {
     if (!editor || !projectId) return;
@@ -63,6 +65,19 @@ export function Editor({ content, onUpdate, onTimestampClick, projectId }: Edito
         editor.chain().focus().insertContentAt(pos, { type: "image", attrs: { src: url } }).run();
       } else {
         editor.chain().focus().setImage({ src: url }).run();
+      }
+    }
+  }
+
+  async function handleVideoUpload(editor: any, file: File, pos?: number) {
+    if (!editor || !projectId) return;
+    const result = await uploadVideo(file);
+    if (result) {
+      const node = { type: "projectVideo", attrs: { videoId: result.videoId, title: result.title } };
+      if (pos !== undefined) {
+        editor.chain().focus().insertContentAt(pos, node).run();
+      } else {
+        editor.chain().focus().insertContent(node).run();
       }
     }
   }
@@ -86,15 +101,26 @@ export function Editor({ content, onUpdate, onTimestampClick, projectId }: Edito
       ...(projectId
         ? [
             FileHandler.configure({
-              allowedMimeTypes: ["image/png", "image/jpeg", "image/gif", "image/webp", "image/svg+xml"],
+              allowedMimeTypes: [
+                "image/png", "image/jpeg", "image/gif", "image/webp", "image/svg+xml",
+                "video/mp4", "video/webm", "video/quicktime",
+              ],
               onDrop: (editor, files, pos) => {
                 for (const file of files) {
-                  handleImageUpload(editor, file, pos);
+                  if (file.type.startsWith("video/")) {
+                    handleVideoUpload(editor, file, pos);
+                  } else {
+                    handleImageUpload(editor, file, pos);
+                  }
                 }
               },
               onPaste: (editor, files) => {
                 for (const file of files) {
-                  handleImageUpload(editor, file);
+                  if (file.type.startsWith("video/")) {
+                    handleVideoUpload(editor, file);
+                  } else {
+                    handleImageUpload(editor, file);
+                  }
                 }
               },
             }),
