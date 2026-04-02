@@ -29,8 +29,8 @@ For local development, the base URL is `http://localhost:3000/api/v1`.
 Chapters have their own public pages at `/{projectSlug}/{chapterSlug}`. These pages display the chapter title, any rich-text content (edited via the dashboard), and a card grid linking to all child articles.
 
 - `POST /api/v1/projects/:slug/chapters` — create chapter
-  - Body: `{ "title": "...", "description?": "...", "slug?": "...", "group?": "...", "order?": 0 }`
-- `PATCH /api/v1/projects/:slug/chapters/:chapterSlug` — update chapter (title, description, slug, group, order, translations, content_json)
+  - Body: `{ "title": "...", "description?": "...", "content?": "<markdown>", "slug?": "...", "group?": "...", "order?": 0 }`
+- `PATCH /api/v1/projects/:slug/chapters/:chapterSlug` — update chapter (title, description, content, slug, group, order, translations, content_json)
 - `DELETE /api/v1/projects/:slug/chapters/:chapterSlug` — delete chapter
 
 Chapter content is editable in the dashboard at `/project/:slug/chapter/:chapterSlug/edit` using the same Tiptap editor as articles. The `content_json` field stores the rich-text content (same format as article `content_json`).

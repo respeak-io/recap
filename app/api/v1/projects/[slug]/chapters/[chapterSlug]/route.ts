@@ -1,6 +1,7 @@
 import { createServiceClient } from "@/lib/supabase/service";
 import { validateApiKey, apiError } from "@/lib/api-key-auth";
 import { resolveProject } from "@/lib/api-v1-helpers";
+import { markdownToTiptapRaw } from "@/lib/ai/markdown-to-tiptap";
 
 export async function PATCH(
   request: Request,
@@ -23,6 +24,8 @@ export async function PATCH(
   if (body.group !== undefined) updates.group = body.group;
   if (body.order !== undefined) updates.order = body.order;
   if (body.translations !== undefined) updates.translations = body.translations;
+  if (body.content !== undefined) updates.content_json = markdownToTiptapRaw(body.content).doc;
+  if (body.content_json !== undefined) updates.content_json = body.content_json;
 
   if (Object.keys(updates).length === 0) {
     return apiError("No fields to update", "VALIDATION_ERROR", 422);

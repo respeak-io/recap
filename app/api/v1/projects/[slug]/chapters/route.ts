@@ -1,6 +1,7 @@
 import { createServiceClient } from "@/lib/supabase/service";
 import { validateApiKey, apiError } from "@/lib/api-key-auth";
 import { resolveProject, toSlug } from "@/lib/api-v1-helpers";
+import { markdownToTiptapRaw } from "@/lib/ai/markdown-to-tiptap";
 
 export async function POST(
   request: Request,
@@ -32,12 +33,15 @@ export async function POST(
     order = (last?.order ?? -1) + 1;
   }
 
+  const contentJson = body.content ? markdownToTiptapRaw(body.content).doc : {};
+
   const { data, error } = await db
     .from("chapters")
     .insert({
       project_id: project.id,
       title: body.title,
       description: body.description ?? "",
+      content_json: contentJson,
       slug: chapterSlug,
       group: body.group ?? null,
       translations: body.translations ?? null,

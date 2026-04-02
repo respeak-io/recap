@@ -100,6 +100,7 @@ POST /api/v1/projects/:slug/chapters
   "slug": "getting-started",
   "group": "Basics",
   "order": 0,
+  "content": "## Overview\n\nThis chapter walks you through initial setup.",
   "translations": {
     "de": { "title": "Erste Schritte", "group": "Grundlagen" }
   }
@@ -109,6 +110,7 @@ POST /api/v1/projects/:slug/chapters
 - `slug` — optional, auto-generated from title if omitted
 - `group` — optional, non-clickable section title above the chapter in the sidebar
 - `order` — optional, appended at end if omitted
+- `content` — optional, **Markdown** converted to internal format server-side
 - `translations` — optional, per-language overrides for `title` and `group`. The sidebar shows the translated version for the current language, falling back to the default.
 
 **Response:** `201` with the created chapter.
@@ -119,7 +121,9 @@ POST /api/v1/projects/:slug/chapters
 PATCH /api/v1/projects/:slug/chapters/:chapterSlug
 ```
 
-**Body:** Any subset of `{ title, slug, group, order }`.
+**Body:** Any subset of `{ title, description, slug, group, order, content, content_json, translations }`.
+
+If `content` is provided (Markdown), it is converted to `content_json`. If both are provided, `content_json` takes precedence.
 
 ### Delete Chapter
 
