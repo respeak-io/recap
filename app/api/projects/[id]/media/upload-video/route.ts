@@ -3,6 +3,11 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 
 const ALLOWED_TYPES = ["video/mp4", "video/webm", "video/quicktime"];
+const MIME_TO_EXT: Record<string, string> = {
+  "video/mp4": "mp4",
+  "video/webm": "webm",
+  "video/quicktime": "mov",
+};
 const MAX_SIZE = 25 * 1024 * 1024; // 25MB
 
 export async function POST(
@@ -47,7 +52,7 @@ export async function POST(
   // Derive title from filename (minus extension)
   const title = file.name.replace(/\.[^.]+$/, "") || "Untitled Video";
 
-  const ext = file.name.split(".").pop() ?? "mp4";
+  const ext = MIME_TO_EXT[file.type] ?? "mp4";
   const storagePath = `${id}/${randomUUID()}.${ext}`;
 
   // Upload to videos bucket

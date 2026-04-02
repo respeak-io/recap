@@ -28,7 +28,7 @@ export function VideoPicker({ projectId, open, onOpenChange, onSelect }: VideoPi
   const [videos, setVideos] = useState<VideoItem[]>([]);
   const [loading, setLoading] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { upload, uploading } = useVideoUpload(projectId);
+  const { upload, uploading, error } = useVideoUpload(projectId);
 
   useEffect(() => {
     if (!open) return;
@@ -89,6 +89,9 @@ export function VideoPicker({ projectId, open, onOpenChange, onSelect }: VideoPi
           <p className="text-xs text-muted-foreground mt-1.5 text-center">
             MP4, WebM, or MOV — max 25MB
           </p>
+          {error && (
+            <p className="text-xs text-destructive mt-1.5 text-center">{error}</p>
+          )}
         </div>
 
         {/* Existing videos list */}

@@ -79,6 +79,8 @@ export function Editor({ content, onUpdate, onTimestampClick, projectId }: Edito
       } else {
         editor.chain().focus().insertContent(node).run();
       }
+    } else {
+      window.alert("Video upload failed. Please try again.");
     }
   }
 
