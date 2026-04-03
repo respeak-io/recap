@@ -49,6 +49,26 @@ The `description` field is a short plain-text subtitle shown below the article t
 
 Content is always **Markdown** — the API converts it to the internal format. See the Markdown Features section below for supported syntax including callouts, steps, tabs, and accordions.
 
+### Media
+
+Media must be uploaded before it can be referenced in article/chapter content.
+
+**Images:**
+- `POST /api/v1/projects/:slug/media/images` — upload image(s), multipart/form-data with `file` field(s). Returns `{ imageId, url, filename }`. Use the `url` in Markdown: `![alt](url)`
+- `GET /api/v1/projects/:slug/media/images` — list all images
+- `PATCH /api/v1/projects/:slug/media/images/:imageId` — update alt_text
+- `DELETE /api/v1/projects/:slug/media/images/:imageId` — delete image
+- `POST /api/v1/projects/:slug/media/images/batch-delete` — batch delete, body: `{ "ids": [...] }`
+
+**Videos:**
+- `POST /api/v1/projects/:slug/media/videos` — upload video(s), multipart/form-data with `file` field(s), optional `language` and `videoGroupId`. Returns `{ videoId, title, videoGroupId }`. Use `videoId` in Markdown: `[project-video:<videoId>]`
+- `GET /api/v1/projects/:slug/media/videos` — list all videos
+- `PATCH /api/v1/projects/:slug/media/videos/:videoId` — update title
+- `DELETE /api/v1/projects/:slug/media/videos/:videoId` — delete video
+- `POST /api/v1/projects/:slug/media/videos/batch-delete` — batch delete, body: `{ "ids": [...] }`
+
+Constraints: Images max 10MB (PNG, JPEG, GIF, WebP, SVG). Videos max 25MB (MP4, WebM, MOV).
+
 ### Sync (Recommended for bulk operations)
 
 ```bash

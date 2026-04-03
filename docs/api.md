@@ -266,6 +266,156 @@ Optionally include `name`, `subtitle`, and/or `translations` at the top level to
 }
 ```
 
+## Media
+
+Media must be uploaded before it can be referenced in article content. Use the returned `url` in Markdown images (`![alt](url)`) or the returned `videoId` in video embeds (`[project-video:<videoId>]`).
+
+### Upload Images
+
+```
+POST /api/v1/projects/:slug/media/images
+```
+
+Upload one or more images. Send as `multipart/form-data` with one or more `file` fields.
+
+**Constraints:** PNG, JPEG, GIF, WebP, SVG only. Max 10MB per file.
+
+**Single file response** (`201`):
+```json
+{ "imageId": "uuid", "url": "https://...", "filename": "photo.png" }
+```
+
+**Multiple files response** (`201`):
+```json
+{
+  "images": [
+    { "imageId": "uuid", "url": "https://...", "filename": "photo1.png" }
+  ],
+  "errors": [
+    { "filename": "bad.exe", "error": "File must be an image" }
+  ]
+}
+```
+
+### List Images
+
+```
+GET /api/v1/projects/:slug/media/images
+```
+
+**Response:**
+```json
+{
+  "images": [
+    { "id": "uuid", "url": "https://...", "filename": "photo.png", "alt_text": "A photo", "width": 800, "height": 600, "created_at": "2026-04-03T12:00:00Z" }
+  ]
+}
+```
+
+### Update Image
+
+```
+PATCH /api/v1/projects/:slug/media/images/:imageId
+```
+
+**Body:** `{ "alt_text": "Updated description" }`
+
+**Response:** `200` with the updated image object.
+
+### Delete Image
+
+```
+DELETE /api/v1/projects/:slug/media/images/:imageId
+```
+
+**Response:** `204` No Content.
+
+### Batch Delete Images
+
+```
+POST /api/v1/projects/:slug/media/images/batch-delete
+```
+
+**Body:** `{ "ids": ["uuid-1", "uuid-2"] }`
+
+**Response:**
+```json
+{ "deleted": ["uuid-1"], "errors": [{ "id": "uuid-2", "error": "Image not found" }] }
+```
+
+### Upload Videos
+
+```
+POST /api/v1/projects/:slug/media/videos
+```
+
+Upload one or more videos. Send as `multipart/form-data` with one or more `file` fields. Optional form fields: `language` (default `"en"`), `videoGroupId` (auto-generated if omitted).
+
+**Constraints:** MP4, WebM, MOV only. Max 25MB per file.
+
+**Single file response** (`201`):
+```json
+{ "videoId": "uuid", "title": "demo", "videoGroupId": "uuid" }
+```
+
+**Multiple files response** (`201`):
+```json
+{
+  "videos": [
+    { "videoId": "uuid", "title": "demo", "videoGroupId": "uuid" }
+  ],
+  "errors": [
+    { "filename": "huge.mp4", "error": "File too large (max 25MB)" }
+  ]
+}
+```
+
+### List Videos
+
+```
+GET /api/v1/projects/:slug/media/videos
+```
+
+**Response:**
+```json
+{
+  "videos": [
+    { "id": "uuid", "title": "Demo Video", "language": "en", "videoGroupId": "uuid", "status": "ready", "created_at": "2026-04-03T12:00:00Z" }
+  ]
+}
+```
+
+### Update Video
+
+```
+PATCH /api/v1/projects/:slug/media/videos/:videoId
+```
+
+**Body:** `{ "title": "Updated Title" }`
+
+**Response:** `200` with the updated video object.
+
+### Delete Video
+
+```
+DELETE /api/v1/projects/:slug/media/videos/:videoId
+```
+
+**Response:** `204` No Content.
+
+### Batch Delete Videos
+
+```
+POST /api/v1/projects/:slug/media/videos/batch-delete
+```
+
+**Body:** `{ "ids": ["uuid-1", "uuid-2"] }`
+
+**Response:**
+```json
+{ "deleted": ["uuid-1"], "errors": [{ "id": "uuid-2", "error": "Video not found" }] }
+```
+
 ## Error Format
 
 All errors return:
