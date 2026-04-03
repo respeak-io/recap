@@ -56,7 +56,7 @@ Media must be uploaded before it can be referenced in article/chapter content.
 **Images:**
 - `POST /api/v1/projects/:slug/media/images` — upload image(s), multipart/form-data with `file` field(s). Returns `{ imageId, url, filename }`. Use the `url` in Markdown: `![alt](url)`
 - `GET /api/v1/projects/:slug/media/images` — list all images
-- `PATCH /api/v1/projects/:slug/media/images/:imageId` — update alt_text
+- `PATCH /api/v1/projects/:slug/media/images/:imageId` — update alt_text, width, height
 - `DELETE /api/v1/projects/:slug/media/images/:imageId` — delete image
 - `POST /api/v1/projects/:slug/media/images/batch-delete` — batch delete, body: `{ "ids": [...] }`
 
@@ -102,6 +102,8 @@ curl -X PUT \
 ```
 
 Sync is declarative — send the full desired state. The API creates, updates, and **deletes** to match. Chapters/articles matched by slug. Order set by array position. Both chapters and articles accept `content` as Markdown — it is converted to the internal format automatically. Optionally include `name`, `subtitle`, and/or `translations` at the top level to update the project itself.
+
+**Multilingual articles:** Each language variant must be a separate article entry with the same `slug` but different `language` field. If you only send `"language": "en"` entries, all other language variants (e.g. `"de"`) will be **deleted**. The `translations` field only works for chapters (sidebar title/group), NOT for article content.
 
 Returns: `{ "chapters": { "created": N, "updated": N, "deleted": N }, "articles": { ... } }`
 

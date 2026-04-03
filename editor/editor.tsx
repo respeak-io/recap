@@ -71,7 +71,14 @@ export function Editor({ content, onUpdate, onTimestampClick, projectId }: Edito
         codeBlock: false,
       }),
       CodeBlockLowlight.configure({ lowlight }),
-      Image,
+      Image.configure({
+        resize: {
+          enabled: true,
+          alwaysPreserveAspectRatio: true,
+          minWidth: 50,
+          minHeight: 50,
+        },
+      }),
       Table.configure({ resizable: false }),
       TableRow,
       TableCell,

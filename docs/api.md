@@ -242,9 +242,17 @@ Optionally include `name`, `subtitle`, and/or `translations` at the top level to
           "status": "published"
         },
         {
+          "title": "Installation",
+          "slug": "installation",
+          "content": "# Installation\n\nFühre `npm install` aus...",
+          "language": "de",
+          "status": "published"
+        },
+        {
           "title": "Quick Start",
           "slug": "quick-start",
           "content": "# Quick Start\n\n...",
+          "language": "en",
           "status": "published"
         }
       ]
@@ -253,10 +261,12 @@ Optionally include `name`, `subtitle`, and/or `translations` at the top level to
 }
 ```
 
-- Chapters and articles are matched by `slug`
+- Chapters are matched by `slug`
 - Articles are matched by `slug` + `language`
 - `order` is set by array position
 - Chapters/articles not in the payload are **deleted**
+- **Multilingual articles:** Each language variant is a separate entry with the same `slug` but different `language`. If you only include `"language": "en"` entries, all other language variants will be deleted.
+- **`translations` is for chapters only** (sidebar title/group). Article content per language must be sent as separate article entries.
 
 **Response:**
 ```json
@@ -318,7 +328,7 @@ GET /api/v1/projects/:slug/media/images
 PATCH /api/v1/projects/:slug/media/images/:imageId
 ```
 
-**Body:** `{ "alt_text": "Updated description" }`
+**Body:** Any subset of `{ "alt_text": "Updated description", "width": 400, "height": 300 }`
 
 **Response:** `200` with the updated image object.
 

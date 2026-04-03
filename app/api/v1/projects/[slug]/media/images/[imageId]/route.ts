@@ -16,13 +16,18 @@ export async function PATCH(
   if (project instanceof Response) return project;
 
   const body = await request.json();
-  if (body.alt_text === undefined) {
-    return apiError("No valid fields to update (supported: alt_text)", "VALIDATION_ERROR", 400);
+  const updates: Record<string, unknown> = {};
+  if (body.alt_text !== undefined) updates.alt_text = body.alt_text;
+  if (body.width !== undefined) updates.width = body.width;
+  if (body.height !== undefined) updates.height = body.height;
+
+  if (Object.keys(updates).length === 0) {
+    return apiError("No valid fields to update (supported: alt_text, width, height)", "VALIDATION_ERROR", 400);
   }
 
   const { data, error } = await db
     .from("images")
-    .update({ alt_text: body.alt_text })
+    .update(updates)
     .eq("id", imageId)
     .eq("project_id", project.id)
     .select("id, storage_path, filename, alt_text, width, height, created_at")
