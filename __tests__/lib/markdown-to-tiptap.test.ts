@@ -161,4 +161,106 @@ describe("markdownToTiptapRaw", () => {
     expect(text).not.toContain("**");
     expect(text).not.toContain("`");
   });
+
+  it("handles details/accordion blocks", () => {
+    const md =
+      "<details><summary>Click to expand</summary>\n\nHidden content here.\n\n</details>";
+    const { doc } = markdownToTiptapRaw(md);
+    const details = doc.content.find((n) => n.type === "details");
+    expect(details).toBeDefined();
+    const children = details!.content as { type: string }[];
+    expect(children.some((c) => c.type === "detailsSummary")).toBe(true);
+    expect(children.some((c) => c.type === "detailsContent")).toBe(true);
+  });
+
+  it("handles warning and tip callout types", () => {
+    const warningMd = ":::warning\nBe careful!\n:::";
+    const { doc: warningDoc } = markdownToTiptapRaw(warningMd);
+    const warning = warningDoc.content.find((n) => n.type === "callout");
+    expect(warning!.attrs).toMatchObject({ type: "warning" });
+
+    const tipMd = ":::tip\nHelpful hint.\n:::";
+    const { doc: tipDoc } = markdownToTiptapRaw(tipMd);
+    const tip = tipDoc.content.find((n) => n.type === "callout");
+    expect(tip!.attrs).toMatchObject({ type: "tip" });
+  });
+
+  it("handles info callout as alias for note", () => {
+    const md = ":::info\nInformation block.\n:::";
+    const { doc } = markdownToTiptapRaw(md);
+    const callout = doc.content.find((n) => n.type === "callout");
+    expect(callout!.attrs).toMatchObject({ type: "info" });
+  });
+
+  it("handles blockquotes", () => {
+    const { doc } = markdownToTiptapRaw("> This is a quote");
+    const bq = doc.content.find((n) => n.type === "blockquote");
+    expect(bq).toBeDefined();
+  });
+
+  it("handles horizontal rules", () => {
+    const { doc } = markdownToTiptapRaw("---");
+    const hr = doc.content.find((n) => n.type === "horizontalRule");
+    expect(hr).toBeDefined();
+  });
+
+  it("handles images in markdown", () => {
+    const { doc } = markdownToTiptapRaw("![alt text](https://example.com/img.png)");
+    // Image nodes are inline, so they'll be inside a paragraph
+    const para = doc.content.find((n) => n.type === "paragraph");
+    if (para) {
+      const img = (para.content as { type: string }[])?.find(
+        (n) => n.type === "image"
+      );
+      expect(img).toBeDefined();
+    }
+  });
+
+  it("handles links in markdown", () => {
+    const { doc } = markdownToTiptapRaw("[click here](https://example.com)");
+    const para = doc.content.find((n) => n.type === "paragraph");
+    const nodes = para!.content as { type: string; marks?: { type: string; attrs?: { href: string } }[] }[];
+    const linkNode = nodes.find((n) => n.marks?.some((m) => m.type === "link"));
+    expect(linkNode).toBeDefined();
+    expect(linkNode!.marks![0].attrs!.href).toBe("https://example.com");
+  });
+
+  it("handles nested lists", () => {
+    const md = "- Item A\n  - Nested 1\n  - Nested 2\n- Item B";
+    const { doc } = markdownToTiptapRaw(md);
+    const list = doc.content.find((n) => n.type === "bulletList");
+    expect(list).toBeDefined();
+  });
+
+  it("handles empty markdown", () => {
+    const { doc, text } = markdownToTiptapRaw("");
+    expect(doc.type).toBe("doc");
+    expect(doc.content).toEqual([]);
+    expect(text).toBe("");
+  });
+
+  it("handles code blocks with no language", () => {
+    const { doc } = markdownToTiptapRaw("```\nplain code\n```");
+    const codeBlock = doc.content.find((n) => n.type === "codeBlock");
+    expect(codeBlock).toBeDefined();
+    expect(codeBlock!.attrs).toMatchObject({ language: null });
+  });
+
+  it("handles multiple custom blocks in sequence", () => {
+    const md = ":::note\nNote content.\n:::\n\n:::warning\nWarning content.\n:::";
+    const { doc } = markdownToTiptapRaw(md);
+    const callouts = doc.content.filter((n) => n.type === "callout");
+    expect(callouts).toHaveLength(2);
+    expect(callouts[0].attrs).toMatchObject({ type: "info" });
+    expect(callouts[1].attrs).toMatchObject({ type: "warning" });
+  });
+
+  it("preserves inline code spans", () => {
+    const { doc } = markdownToTiptapRaw("Use the `console.log()` function.");
+    const para = doc.content.find((n) => n.type === "paragraph");
+    const nodes = para!.content as { text?: string; marks?: { type: string }[] }[];
+    const codeSpan = nodes.find((n) => n.marks?.some((m) => m.type === "code"));
+    expect(codeSpan).toBeDefined();
+    expect(codeSpan!.text).toBe("console.log()");
+  });
 });
