@@ -1,7 +1,8 @@
+import { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 
-export async function getProjectVideos(projectId: string) {
-  const supabase = await createClient();
+export async function getProjectVideos(projectId: string, client?: SupabaseClient) {
+  const supabase = client ?? (await createClient());
   const { data } = await supabase
     .from("videos")
     .select("*")

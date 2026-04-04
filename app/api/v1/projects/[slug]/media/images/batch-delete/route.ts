@@ -1,6 +1,7 @@
 import { createServiceClient } from "@/lib/supabase/service";
 import { validateApiKey, apiError } from "@/lib/api-key-auth";
 import { resolveProject } from "@/lib/api-v1-helpers";
+import { batchDeleteMedia } from "@/lib/services/media";
 
 export async function POST(
   request: Request,
@@ -22,36 +23,6 @@ export async function POST(
     return apiError("ids must be a non-empty array", "VALIDATION_ERROR", 400);
   }
 
-  const deleted: string[] = [];
-  const errors: { id: string; error: string }[] = [];
-
-  for (const id of ids) {
-    const { data: image } = await db
-      .from("images")
-      .select("storage_path")
-      .eq("id", id)
-      .eq("project_id", project.id)
-      .single();
-
-    if (!image) {
-      errors.push({ id, error: "Image not found" });
-      continue;
-    }
-
-    await db.storage.from("assets").remove([image.storage_path]);
-
-    const { error } = await db
-      .from("images")
-      .delete()
-      .eq("id", id)
-      .eq("project_id", project.id);
-
-    if (error) {
-      errors.push({ id, error: error.message });
-    } else {
-      deleted.push(id);
-    }
-  }
-
-  return Response.json({ deleted, errors });
+  const result = await batchDeleteMedia(db, "images", "assets", project.id, ids);
+  return Response.json(result);
 }

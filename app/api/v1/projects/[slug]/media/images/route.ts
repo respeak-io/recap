@@ -1,26 +1,14 @@
 import { createServiceClient } from "@/lib/supabase/service";
 import { validateApiKey, apiError } from "@/lib/api-key-auth";
 import { resolveProject } from "@/lib/api-v1-helpers";
-import { randomUUID } from "crypto";
-
-const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/gif", "image/webp", "image/svg+xml"];
-const MAX_SIZE = 10 * 1024 * 1024; // 10MB
-
-interface UploadResult {
-  imageId: string;
-  url: string;
-  filename: string;
-}
+import {
+  validateImageFile,
+  uploadImage,
+} from "@/lib/services/upload";
 
 interface UploadError {
   filename: string;
   error: string;
-}
-
-function validateImageFile(file: File): string | null {
-  if (!ALLOWED_TYPES.includes(file.type)) return "File must be an image (PNG, JPEG, GIF, WebP, SVG)";
-  if (file.size > MAX_SIZE) return "File too large (max 10MB)";
-  return null;
 }
 
 export async function POST(
@@ -41,7 +29,7 @@ export async function POST(
 
   if (files.length === 0) return apiError("Missing file", "VALIDATION_ERROR", 400);
 
-  const results: UploadResult[] = [];
+  const results: { imageId: string; url: string; filename: string }[] = [];
   const errors: UploadError[] = [];
 
   for (const file of files) {
@@ -51,37 +39,19 @@ export async function POST(
       continue;
     }
 
-    const ext = file.name.split(".").pop() ?? "png";
-    const storagePath = `${project.id}/content/${randomUUID()}.${ext}`;
-
-    const { error: uploadError } = await db.storage
-      .from("assets")
-      .upload(storagePath, file);
-
-    if (uploadError) {
-      errors.push({ filename: file.name, error: uploadError.message });
-      continue;
+    try {
+      const result = await uploadImage(db, project.id, file);
+      results.push({
+        imageId: result.id,
+        url: result.publicUrl!,
+        filename: file.name,
+      });
+    } catch (err) {
+      errors.push({
+        filename: file.name,
+        error: err instanceof Error ? err.message : "Upload failed",
+      });
     }
-
-    const { data: row, error: insertError } = await db.from("images").insert({
-      project_id: project.id,
-      storage_path: storagePath,
-      filename: file.name,
-      size_bytes: file.size,
-    }).select("id").single();
-
-    if (insertError) {
-      errors.push({ filename: file.name, error: insertError.message });
-      continue;
-    }
-
-    const { data: urlData } = db.storage.from("assets").getPublicUrl(storagePath);
-
-    results.push({
-      imageId: row.id,
-      url: urlData.publicUrl,
-      filename: file.name,
-    });
   }
 
   if (results.length === 0 && errors.length > 0) {

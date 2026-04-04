@@ -1,6 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
 
-export async function generateLlmsTxt(projectSlug: string) {
+interface LlmsChapter {
+  title: string;
+  articles: { title: string; slug: string; content_text: string }[];
+}
+
+async function fetchLlmsData(
+  projectSlug: string
+): Promise<{ name: string; chapters: LlmsChapter[] } | null> {
   const supabase = await createClient();
 
   const { data: project } = await supabase
@@ -17,7 +24,7 @@ export async function generateLlmsTxt(projectSlug: string) {
   const chapters = project.chapters
     .sort((a: { order: number }, b: { order: number }) => a.order - b.order)
     .map((ch: { title: string; order: number; articles: { language: string; status: string; title: string; slug: string; content_text: string; order: number }[] }) => ({
-      ...ch,
+      title: ch.title,
       articles: ch.articles
         .filter((a) => a.language === "en" && a.status === "published")
         .sort((a, b) => a.order - b.order),
@@ -26,12 +33,19 @@ export async function generateLlmsTxt(projectSlug: string) {
 
   if (chapters.length === 0) return null;
 
-  const lines = [`# ${project.name}\n`];
+  return { name: project.name, chapters };
+}
+
+export async function generateLlmsTxt(projectSlug: string) {
+  const data = await fetchLlmsData(projectSlug);
+  if (!data) return null;
+
+  const lines = [`# ${data.name}\n`];
   lines.push(
-    `> Documentation for ${project.name}, optimized for LLM consumption.\n`
+    `> Documentation for ${data.name}, optimized for LLM consumption.\n`
   );
 
-  for (const chapter of chapters) {
+  for (const chapter of data.chapters) {
     lines.push(`## ${chapter.title}`);
     for (const article of chapter.articles) {
       const url = `/${projectSlug}/${article.slug}`;
@@ -46,37 +60,15 @@ export async function generateLlmsTxt(projectSlug: string) {
 }
 
 export async function generateLlmsFullTxt(projectSlug: string) {
-  const supabase = await createClient();
+  const data = await fetchLlmsData(projectSlug);
+  if (!data) return null;
 
-  const { data: project } = await supabase
-    .from("projects")
-    .select(
-      "*, chapters(*, articles(id, title, slug, language, status, content_text, \"order\"))"
-    )
-    .eq("slug", projectSlug)
-    .eq("is_public", true)
-    .single();
-
-  if (!project) return null;
-
-  const chapters = project.chapters
-    .sort((a: { order: number }, b: { order: number }) => a.order - b.order)
-    .map((ch: { title: string; order: number; articles: { language: string; status: string; title: string; content_text: string; order: number }[] }) => ({
-      ...ch,
-      articles: ch.articles
-        .filter((a) => a.language === "en" && a.status === "published")
-        .sort((a, b) => a.order - b.order),
-    }))
-    .filter((ch: { articles: unknown[] }) => ch.articles.length > 0);
-
-  if (chapters.length === 0) return null;
-
-  const lines = [`# ${project.name}\n`];
+  const lines = [`# ${data.name}\n`];
   lines.push(
-    `> Complete documentation for ${project.name}.\n`
+    `> Complete documentation for ${data.name}.\n`
   );
 
-  for (const chapter of chapters) {
+  for (const chapter of data.chapters) {
     lines.push(`## ${chapter.title}\n`);
     for (const article of chapter.articles) {
       lines.push(`### ${article.title}\n`);

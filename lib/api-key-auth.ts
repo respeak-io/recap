@@ -55,10 +55,5 @@ export async function validateApiKey(
   return { orgId: apiKey.org_id, keyId: apiKey.id };
 }
 
-export function apiError(
-  message: string,
-  code: string,
-  status: number
-): Response {
-  return Response.json({ error: message, code }, { status });
-}
+// Re-export from centralized module for backward compat
+export { apiError } from "@/lib/api/errors";

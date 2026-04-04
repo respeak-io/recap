@@ -1,3 +1,4 @@
+import { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 
 export type TimeRange = "7d" | "30d" | "90d";
@@ -9,8 +10,12 @@ function getDateThreshold(range: TimeRange): string {
   return d.toISOString();
 }
 
-export async function getPageViewStats(projectId: string, range: TimeRange) {
-  const supabase = await createClient();
+export async function getPageViewStats(
+  projectId: string,
+  range: TimeRange,
+  client?: SupabaseClient
+) {
+  const supabase = client ?? (await createClient());
   const since = getDateThreshold(range);
 
   // Total views
@@ -40,8 +45,12 @@ export async function getPageViewStats(projectId: string, range: TimeRange) {
   };
 }
 
-export async function getSearchStats(projectId: string, range: TimeRange) {
-  const supabase = await createClient();
+export async function getSearchStats(
+  projectId: string,
+  range: TimeRange,
+  client?: SupabaseClient
+) {
+  const supabase = client ?? (await createClient());
   const since = getDateThreshold(range);
 
   const { count: totalSearches } = await supabase

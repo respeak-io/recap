@@ -1,4 +1,4 @@
-import { getAI } from "./gemini";
+import { generateText } from "./generate";
 
 export function getTranslationPrompt(targetLanguage: string, content: string) {
   return `Translate the following documentation to ${targetLanguage}.
@@ -21,11 +21,8 @@ export async function translateContent(
   targetLanguage: string
 ): Promise<string> {
   const prompt = getTranslationPrompt(targetLanguage, content);
-  const response = await getAI().models.generateContent({
-    model: "gemini-2.5-flash",
-    contents: [{ role: "user", parts: [{ text: prompt }] }],
-  });
-  return response.text ?? content;
+  const result = await generateText(prompt);
+  return result || content;
 }
 
 export async function translateVtt(
@@ -33,11 +30,8 @@ export async function translateVtt(
   targetLanguage: string
 ): Promise<string> {
   const prompt = getVttTranslationPrompt(targetLanguage, vtt);
-  const response = await getAI().models.generateContent({
-    model: "gemini-2.5-flash",
-    contents: [{ role: "user", parts: [{ text: prompt }] }],
-  });
-  return response.text ?? vtt;
+  const result = await generateText(prompt);
+  return result || vtt;
 }
 
 /** Translate Tiptap JSON content by extracting text, translating, and re-assembling */
@@ -61,11 +55,7 @@ Rules:
 
 ${JSON.stringify(contentJson)}`;
 
-  const response = await getAI().models.generateContent({
-    model: "gemini-2.5-flash",
-    contents: [{ role: "user", parts: [{ text: jsonPrompt }] }],
-    config: { responseMimeType: "application/json" },
-  });
+  const responseText = await generateText(jsonPrompt, { json: true });
 
   let translatedTitle: string | undefined;
   if (title) {
@@ -73,7 +63,7 @@ ${JSON.stringify(contentJson)}`;
   }
 
   try {
-    const translatedJson = JSON.parse(response.text!);
+    const translatedJson = JSON.parse(responseText);
     return { json: translatedJson, text: translatedText, title: translatedTitle };
   } catch {
     // Fallback: return original JSON with translated text

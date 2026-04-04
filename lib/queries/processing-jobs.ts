@@ -1,7 +1,8 @@
+import { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 
-export async function getActiveJobs(projectId: string) {
-  const supabase = await createClient();
+export async function getActiveJobs(projectId: string, client?: SupabaseClient) {
+  const supabase = client ?? (await createClient());
   const { data } = await supabase
     .from("processing_jobs")
     .select("*, videos(title)")
@@ -12,8 +13,8 @@ export async function getActiveJobs(projectId: string) {
   return data ?? [];
 }
 
-export async function getRecentJobs(projectId: string, limit = 5) {
-  const supabase = await createClient();
+export async function getRecentJobs(projectId: string, limit = 5, client?: SupabaseClient) {
+  const supabase = client ?? (await createClient());
   const { data } = await supabase
     .from("processing_jobs")
     .select("*, videos(title)")

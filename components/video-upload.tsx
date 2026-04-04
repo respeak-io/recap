@@ -11,17 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
 import { JobProgress } from "./job-progress";
 import { Upload } from "lucide-react";
-
-const LANGUAGES = [
-  { id: "en", label: "English", flag: "\u{1F1FA}\u{1F1F8}" },
-  { id: "de", label: "Deutsch", flag: "\u{1F1E9}\u{1F1EA}" },
-  { id: "es", label: "Espanol", flag: "\u{1F1EA}\u{1F1F8}" },
-  { id: "fr", label: "Francais", flag: "\u{1F1EB}\u{1F1F7}" },
-  { id: "ja", label: "Japanese", flag: "\u{1F1EF}\u{1F1F5}" },
-  { id: "zh", label: "Chinese", flag: "\u{1F1E8}\u{1F1F3}" },
-  { id: "ko", label: "Korean", flag: "\u{1F1F0}\u{1F1F7}" },
-  { id: "pt", label: "Portugues", flag: "\u{1F1E7}\u{1F1F7}" },
-];
+import { LANGUAGES } from "@/lib/languages";
 
 export function VideoUpload({ projectId }: { projectId: string }) {
   const [title, setTitle] = useState("");
@@ -179,17 +169,17 @@ export function VideoUpload({ projectId }: { projectId: string }) {
         <div className="flex flex-wrap gap-2">
           {LANGUAGES.map((l) => (
             <label
-              key={l.id}
+              key={l.code}
               className={`flex items-center gap-2 rounded-lg border px-3 py-2 cursor-pointer transition-colors ${
-                languages.includes(l.id)
+                languages.includes(l.code)
                   ? "border-primary bg-primary/5"
                   : "hover:bg-accent/50"
               }`}
             >
               <input
                 type="checkbox"
-                checked={languages.includes(l.id)}
-                onChange={() => toggleLanguage(l.id)}
+                checked={languages.includes(l.code)}
+                onChange={() => toggleLanguage(l.code)}
                 className="sr-only"
               />
               <span className="text-base">{l.flag}</span>

@@ -1,7 +1,8 @@
+import { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 
-export async function getUserOrg() {
-  const supabase = await createClient();
+export async function getUserOrg(client?: SupabaseClient) {
+  const supabase = client ?? (await createClient());
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -16,9 +17,9 @@ export async function getUserOrg() {
   return membership?.org_id;
 }
 
-export async function getProjects() {
-  const supabase = await createClient();
-  const orgId = await getUserOrg();
+export async function getProjects(client?: SupabaseClient) {
+  const supabase = client ?? (await createClient());
+  const orgId = await getUserOrg(supabase);
 
   const { data } = await supabase
     .from("projects")
@@ -29,8 +30,8 @@ export async function getProjects() {
   return data ?? [];
 }
 
-export async function getProject(slug: string) {
-  const supabase = await createClient();
+export async function getProject(slug: string, client?: SupabaseClient) {
+  const supabase = client ?? (await createClient());
   const { data } = await supabase
     .from("projects")
     .select("*")
@@ -39,9 +40,9 @@ export async function getProject(slug: string) {
   return data;
 }
 
-export async function createProject(name: string, slug: string) {
-  const supabase = await createClient();
-  const orgId = await getUserOrg();
+export async function createProject(name: string, slug: string, client?: SupabaseClient) {
+  const supabase = client ?? (await createClient());
+  const orgId = await getUserOrg(supabase);
 
   const { data, error } = await supabase
     .from("projects")
