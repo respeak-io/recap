@@ -1,10 +1,12 @@
+import { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 
 export async function getArticle(
   projectSlug: string,
-  articleSlug: string
+  articleSlug: string,
+  client?: SupabaseClient
 ) {
-  const supabase = await createClient();
+  const supabase = client ?? (await createClient());
   const { data } = await supabase
     .from("articles")
     .select("*, projects!inner(*), videos(*)")
@@ -18,9 +20,10 @@ export async function getArticle(
 export async function updateArticle(
   id: string,
   contentJson: Record<string, unknown>,
-  contentText: string
+  contentText: string,
+  client?: SupabaseClient
 ) {
-  const supabase = await createClient();
+  const supabase = client ?? (await createClient());
   const { error } = await supabase
     .from("articles")
     .update({ content_json: contentJson, content_text: contentText })
@@ -29,27 +32,27 @@ export async function updateArticle(
   if (error) throw error;
 }
 
-export async function publishArticle(id: string) {
-  const supabase = await createClient();
+export async function publishArticle(id: string, client?: SupabaseClient) {
+  const supabase = client ?? (await createClient());
   await supabase
     .from("articles")
     .update({ status: "published" })
     .eq("id", id);
 }
 
-export async function unpublishArticle(id: string) {
-  const supabase = await createClient();
+export async function unpublishArticle(id: string, client?: SupabaseClient) {
+  const supabase = client ?? (await createClient());
   await supabase.from("articles").update({ status: "draft" }).eq("id", id);
 }
 
-export async function deleteArticle(id: string) {
-  const supabase = await createClient();
+export async function deleteArticle(id: string, client?: SupabaseClient) {
+  const supabase = client ?? (await createClient());
   const { error } = await supabase.from("articles").delete().eq("id", id);
   if (error) throw error;
 }
 
-export async function deleteVideo(id: string) {
-  const supabase = await createClient();
+export async function deleteVideo(id: string, client?: SupabaseClient) {
+  const supabase = client ?? (await createClient());
   const { error } = await supabase.from("videos").delete().eq("id", id);
   if (error) throw error;
 }

@@ -21,17 +21,7 @@ import {
 import { Menu, ChevronRight, Search } from "lucide-react";
 import { SearchDialog } from "./search-dialog";
 import { ThemeToggle } from "./theme-toggle";
-
-const LANGUAGE_CONFIG: Record<string, { label: string; flag: string }> = {
-  en: { label: "English", flag: "\u{1F1FA}\u{1F1F8}" },
-  de: { label: "Deutsch", flag: "\u{1F1E9}\u{1F1EA}" },
-  es: { label: "Espanol", flag: "\u{1F1EA}\u{1F1F8}" },
-  fr: { label: "Francais", flag: "\u{1F1EB}\u{1F1F7}" },
-  ja: { label: "\u65E5\u672C\u8A9E", flag: "\u{1F1EF}\u{1F1F5}" },
-  zh: { label: "\u4E2D\u6587", flag: "\u{1F1E8}\u{1F1F3}" },
-  ko: { label: "\uD55C\uAD6D\uC5B4", flag: "\u{1F1F0}\u{1F1F7}" },
-  pt: { label: "Portugues", flag: "\u{1F1E7}\u{1F1F7}" },
-};
+import { getLanguageLabel, getLanguageFlag } from "@/lib/languages";
 
 interface Chapter {
   id: string;
@@ -259,8 +249,8 @@ function DocsSidebarContent({
             <SelectTrigger className="h-8 w-auto gap-1.5 border-0 bg-transparent px-2 text-sidebar-foreground/60 shadow-none">
               <SelectValue>
                 <span className="flex items-center gap-1.5 text-xs">
-                  <span>{LANGUAGE_CONFIG[currentLang]?.flag ?? "\u{1F310}"}</span>
-                  <span>{LANGUAGE_CONFIG[currentLang]?.label ?? currentLang}</span>
+                  <span>{getLanguageFlag(currentLang)}</span>
+                  <span>{getLanguageLabel(currentLang)}</span>
                 </span>
               </SelectValue>
             </SelectTrigger>
@@ -268,8 +258,8 @@ function DocsSidebarContent({
               {languages.map((l) => (
                 <SelectItem key={l} value={l}>
                   <span className="flex items-center gap-2">
-                    <span>{LANGUAGE_CONFIG[l]?.flag ?? "\u{1F310}"}</span>
-                    <span>{LANGUAGE_CONFIG[l]?.label ?? l}</span>
+                    <span>{getLanguageFlag(l)}</span>
+                    <span>{getLanguageLabel(l)}</span>
                   </span>
                 </SelectItem>
               ))}

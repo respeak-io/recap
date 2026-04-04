@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Trash2, Upload, Loader2, Video } from "lucide-react";
 import { useVideoUpload } from "@/hooks/use-video-upload";
 import { toast } from "sonner";
+import { LANGUAGES as ALL_LANGUAGES } from "@/lib/languages";
 
 interface VideoItem {
   id: string;
@@ -49,17 +50,7 @@ interface UsageItem {
   slug: string;
 }
 
-const AVAILABLE_LANGUAGES = [
-  { code: "en", label: "English" },
-  { code: "de", label: "German" },
-  { code: "fr", label: "French" },
-  { code: "es", label: "Spanish" },
-  { code: "it", label: "Italian" },
-  { code: "pt", label: "Portuguese" },
-  { code: "ja", label: "Japanese" },
-  { code: "ko", label: "Korean" },
-  { code: "zh", label: "Chinese" },
-];
+const AVAILABLE_LANGUAGES = ALL_LANGUAGES;
 
 export function VideoGroupDetailDialog({
   group,

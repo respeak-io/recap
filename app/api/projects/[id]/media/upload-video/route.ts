@@ -1,14 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
-import { randomUUID } from "crypto";
-
-const ALLOWED_TYPES = ["video/mp4", "video/webm", "video/quicktime"];
-const MIME_TO_EXT: Record<string, string> = {
-  "video/mp4": "mp4",
-  "video/webm": "webm",
-  "video/quicktime": "mov",
-};
-const MAX_SIZE = 25 * 1024 * 1024; // 25MB
+import { validateVideoFile, uploadVideo } from "@/lib/services/upload";
 
 export async function POST(
   request: Request,
@@ -22,18 +14,9 @@ export async function POST(
     return NextResponse.json({ error: "Missing file" }, { status: 400 });
   }
 
-  if (!ALLOWED_TYPES.includes(file.type)) {
-    return NextResponse.json(
-      { error: "File must be a video (MP4, WebM, or MOV)" },
-      { status: 400 }
-    );
-  }
-
-  if (file.size > MAX_SIZE) {
-    return NextResponse.json(
-      { error: "File too large (max 25MB)" },
-      { status: 400 }
-    );
+  const validationError = validateVideoFile(file);
+  if (validationError) {
+    return NextResponse.json({ error: validationError }, { status: 400 });
   }
 
   const supabase = await createClient();
@@ -49,51 +32,28 @@ export async function POST(
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
   }
 
-  // Derive title from filename (minus extension)
-  const title = file.name.replace(/\.[^.]+$/, "") || "Untitled Video";
-
   const language = (formData.get("language") as string) || "en";
   const videoGroupId = formData.get("videoGroupId") as string | null;
 
-  const ext = MIME_TO_EXT[file.type] ?? "mp4";
-  const storagePath = `${id}/${randomUUID()}.${ext}`;
+  try {
+    const result = await uploadVideo(supabase, id, file, language, videoGroupId);
 
-  // Upload to videos bucket
-  const { error: uploadError } = await supabase.storage
-    .from("videos")
-    .upload(storagePath, file);
+    // Re-fetch to get title and video_group_id for response
+    const { data: video } = await supabase
+      .from("videos")
+      .select("id, title, video_group_id")
+      .eq("id", result.id)
+      .single();
 
-  if (uploadError) {
-    return NextResponse.json({ error: uploadError.message }, { status: 500 });
+    return NextResponse.json({
+      videoId: video!.id,
+      title: video!.title,
+      videoGroupId: video!.video_group_id,
+    });
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Upload failed" },
+      { status: 500 }
+    );
   }
-
-  // Create videos table row with status 'ready'
-  const insertData: Record<string, unknown> = {
-    project_id: id,
-    title,
-    storage_path: storagePath,
-    status: "ready",
-    language,
-  };
-  if (videoGroupId) {
-    insertData.video_group_id = videoGroupId;
-  }
-
-  const { data: video, error: insertError } = await supabase
-    .from("videos")
-    .insert(insertData)
-    .select("id, title, video_group_id")
-    .single();
-
-  if (insertError) {
-    // Clean up uploaded file if DB insert fails
-    await supabase.storage.from("videos").remove([storagePath]);
-    return NextResponse.json({ error: insertError.message }, { status: 500 });
-  }
-
-  return NextResponse.json({
-    videoId: video.id,
-    title: video.title,
-    videoGroupId: video.video_group_id,
-  });
 }

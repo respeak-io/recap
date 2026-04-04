@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { useUpload } from "./use-upload";
 
 interface VideoUploadResult {
   videoId: string;
@@ -14,41 +15,26 @@ interface UploadOptions {
 }
 
 export function useVideoUpload(projectId: string) {
-  const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [uploadOptions, setUploadOptions] = useState<UploadOptions>({});
+
+  const { upload: baseUpload, uploading, error } = useUpload<VideoUploadResult>(
+    projectId,
+    {
+      endpoint: "media/upload-video",
+      buildFormData: (_file, form) => {
+        if (uploadOptions.language) form.append("language", uploadOptions.language);
+        if (uploadOptions.videoGroupId) form.append("videoGroupId", uploadOptions.videoGroupId);
+      },
+      parseResult: (json) => json as unknown as VideoUploadResult,
+    }
+  );
 
   const upload = useCallback(
     async (file: File, options?: UploadOptions): Promise<VideoUploadResult | null> => {
-      setUploading(true);
-      setError(null);
-
-      const formData = new FormData();
-      formData.append("file", file);
-      if (options?.language) formData.append("language", options.language);
-      if (options?.videoGroupId) formData.append("videoGroupId", options.videoGroupId);
-
-      try {
-        const res = await fetch(
-          `/api/projects/${projectId}/media/upload-video`,
-          { method: "POST", body: formData }
-        );
-
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          throw new Error(data.error || "Upload failed");
-        }
-
-        const result = await res.json();
-        return result as VideoUploadResult;
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : "Upload failed";
-        setError(msg);
-        return null;
-      } finally {
-        setUploading(false);
-      }
+      setUploadOptions(options ?? {});
+      return baseUpload(file);
     },
-    [projectId]
+    [baseUpload]
   );
 
   return { upload, uploading, error };

@@ -13,17 +13,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Save } from "lucide-react";
-
-const LANGUAGE_LABELS: Record<string, string> = {
-  en: "English",
-  de: "Deutsch",
-  es: "Espanol",
-  fr: "Francais",
-  ja: "日本語",
-  zh: "中文",
-  ko: "한국어",
-  pt: "Portugues",
-};
+import { getLanguageLabel } from "@/lib/languages";
 
 type Translations = Record<string, { name?: string; subtitle?: string }>;
 
@@ -120,7 +110,7 @@ export function ProjectDetailsEditor({
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                {LANGUAGE_LABELS[lang] ?? lang}
+                {getLanguageLabel(lang)}
               </button>
             ))}
           </div>
@@ -151,7 +141,7 @@ export function ProjectDetailsEditor({
           <>
             <div className="space-y-2">
               <Label htmlFor={`project-name-${activeLang}`}>
-                Title ({LANGUAGE_LABELS[activeLang] ?? activeLang})
+                Title ({getLanguageLabel(activeLang)})
               </Label>
               <Input
                 id={`project-name-${activeLang}`}
@@ -167,7 +157,7 @@ export function ProjectDetailsEditor({
             </div>
             <div className="space-y-2">
               <Label htmlFor={`project-subtitle-${activeLang}`}>
-                Subtitle ({LANGUAGE_LABELS[activeLang] ?? activeLang})
+                Subtitle ({getLanguageLabel(activeLang)})
               </Label>
               <Input
                 id={`project-subtitle-${activeLang}`}

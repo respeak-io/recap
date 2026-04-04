@@ -1,17 +1,12 @@
 import { createServiceClient } from "@/lib/supabase/service";
 import { validateApiKey, apiError } from "@/lib/api-key-auth";
 import { resolveProject } from "@/lib/api-v1-helpers";
-import { randomUUID } from "crypto";
+import {
+  validateVideoFile,
+  uploadVideo,
+} from "@/lib/services/upload";
 
-const ALLOWED_TYPES = ["video/mp4", "video/webm", "video/quicktime"];
-const MIME_TO_EXT: Record<string, string> = {
-  "video/mp4": "mp4",
-  "video/webm": "webm",
-  "video/quicktime": "mov",
-};
-const MAX_SIZE = 25 * 1024 * 1024; // 25MB
-
-interface UploadResult {
+interface UploadResultV1 {
   videoId: string;
   title: string;
   videoGroupId: string;
@@ -20,12 +15,6 @@ interface UploadResult {
 interface UploadError {
   filename: string;
   error: string;
-}
-
-function validateVideoFile(file: File): string | null {
-  if (!ALLOWED_TYPES.includes(file.type)) return "File must be a video (MP4, WebM, or MOV)";
-  if (file.size > MAX_SIZE) return "File too large (max 25MB)";
-  return null;
 }
 
 export async function POST(
@@ -48,7 +37,7 @@ export async function POST(
 
   if (files.length === 0) return apiError("Missing file", "VALIDATION_ERROR", 400);
 
-  const results: UploadResult[] = [];
+  const results: UploadResultV1[] = [];
   const errors: UploadError[] = [];
 
   for (const file of files) {
@@ -58,45 +47,25 @@ export async function POST(
       continue;
     }
 
-    const title = file.name.replace(/\.[^.]+$/, "") || "Untitled Video";
-    const ext = MIME_TO_EXT[file.type] ?? "mp4";
-    const storagePath = `${project.id}/${randomUUID()}.${ext}`;
+    try {
+      const result = await uploadVideo(db, project.id, file, language, videoGroupId);
+      const { data: video } = await db
+        .from("videos")
+        .select("id, title, video_group_id")
+        .eq("id", result.id)
+        .single();
 
-    const { error: uploadError } = await db.storage
-      .from("videos")
-      .upload(storagePath, file);
-
-    if (uploadError) {
-      errors.push({ filename: file.name, error: uploadError.message });
-      continue;
+      results.push({
+        videoId: video!.id,
+        title: video!.title,
+        videoGroupId: video!.video_group_id,
+      });
+    } catch (err) {
+      errors.push({
+        filename: file.name,
+        error: err instanceof Error ? err.message : "Upload failed",
+      });
     }
-
-    const insertData: Record<string, unknown> = {
-      project_id: project.id,
-      title,
-      storage_path: storagePath,
-      status: "ready",
-      language,
-    };
-    if (videoGroupId) insertData.video_group_id = videoGroupId;
-
-    const { data: video, error: insertError } = await db
-      .from("videos")
-      .insert(insertData)
-      .select("id, title, video_group_id")
-      .single();
-
-    if (insertError) {
-      await db.storage.from("videos").remove([storagePath]);
-      errors.push({ filename: file.name, error: insertError.message });
-      continue;
-    }
-
-    results.push({
-      videoId: video.id,
-      title: video.title,
-      videoGroupId: video.video_group_id,
-    });
   }
 
   if (results.length === 0 && errors.length > 0) {

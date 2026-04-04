@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
-import { randomUUID } from "crypto";
+import { validateImageFile, uploadImage } from "@/lib/services/upload";
 
 export async function POST(
   request: Request,
@@ -14,12 +14,9 @@ export async function POST(
     return NextResponse.json({ error: "Missing file" }, { status: 400 });
   }
 
-  if (!file.type.startsWith("image/")) {
-    return NextResponse.json({ error: "File must be an image" }, { status: 400 });
-  }
-
-  if (file.size > 10 * 1024 * 1024) {
-    return NextResponse.json({ error: "File too large (max 10MB)" }, { status: 400 });
+  const validationError = validateImageFile(file);
+  if (validationError) {
+    return NextResponse.json({ error: validationError }, { status: 400 });
   }
 
   const supabase = await createClient();
@@ -35,31 +32,13 @@ export async function POST(
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
   }
 
-  const ext = file.name.split(".").pop() ?? "png";
-  const storagePath = `${id}/content/${randomUUID()}.${ext}`;
-
-  const { error: uploadError } = await supabase.storage
-    .from("assets")
-    .upload(storagePath, file);
-
-  if (uploadError) {
-    return NextResponse.json({ error: uploadError.message }, { status: 500 });
+  try {
+    const result = await uploadImage(supabase, id, file);
+    return NextResponse.json({ url: result.publicUrl });
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Upload failed" },
+      { status: 500 }
+    );
   }
-
-  // Track the image in the database
-  const { error: insertError } = await supabase.from("images").insert({
-    project_id: id,
-    storage_path: storagePath,
-    filename: file.name,
-    size_bytes: file.size,
-  });
-  if (insertError) {
-    console.error("[media/upload] Failed to track image in DB:", insertError.message);
-  }
-
-  const { data: urlData } = supabase.storage
-    .from("assets")
-    .getPublicUrl(storagePath);
-
-  return NextResponse.json({ url: urlData.publicUrl });
 }
