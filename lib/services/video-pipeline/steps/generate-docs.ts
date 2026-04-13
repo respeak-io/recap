@@ -38,7 +38,9 @@ export const generateDocs: PipelineStep = async (ctx, progress) => {
       progress: 0.3,
     });
 
-    const prompt = getDocGenerationPrompt(ctx.segments!);
+    const prompt = getDocGenerationPrompt(
+      ctx.segments! as unknown as Record<string, unknown>[],
+    );
 
     const responseText = await generateText(prompt, { json: true });
     const sanitizedJson = sanitizeJsonResponse(responseText);

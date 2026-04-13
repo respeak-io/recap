@@ -11,7 +11,9 @@ export const LANGUAGES = [
 
 export type LanguageCode = (typeof LANGUAGES)[number]["code"];
 
-const langMap = new Map(LANGUAGES.map((l) => [l.code, l]));
+const langMap = new Map<string, (typeof LANGUAGES)[number]>(
+  LANGUAGES.map((l) => [l.code, l]),
+);
 
 export function getLanguageLabel(code: string): string {
   return langMap.get(code)?.label ?? code;
