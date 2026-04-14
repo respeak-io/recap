@@ -18,7 +18,7 @@ describe("GET /api/search", () => {
       makeRequest("http://localhost/api/search?projectId=p1")
     );
     const json = await res.json();
-    expect(json).toEqual({ articles: [] });
+    expect(json).toEqual({ articles: [], fallback: null });
   });
 
   it("returns empty articles when projectId is missing", async () => {
@@ -26,7 +26,7 @@ describe("GET /api/search", () => {
       makeRequest("http://localhost/api/search?q=hello")
     );
     const json = await res.json();
-    expect(json).toEqual({ articles: [] });
+    expect(json).toEqual({ articles: [], fallback: null });
   });
 
   it("searches articles and returns results", async () => {

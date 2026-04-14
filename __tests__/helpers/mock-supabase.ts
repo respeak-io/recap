@@ -55,6 +55,7 @@ export interface MockStorageBucket {
 
 export interface MockSupabase {
   from: MockFn;
+  rpc: MockFn;
   auth: { getUser: MockFn };
   storage: { from: MockFn };
   /** Map of table name → chain for fine-grained control */
@@ -102,6 +103,7 @@ export function mockSupabase() {
 
   const mock: MockSupabase = {
     from: vi.fn((table: string) => getOrCreateChain(table)),
+    rpc: vi.fn().mockResolvedValue({ data: null, error: null }),
     auth: {
       getUser: vi.fn().mockResolvedValue({
         data: { user: { id: "user-123", email: "test@example.com" } },
