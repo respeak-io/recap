@@ -30,8 +30,8 @@ Chapters have their own public pages at `/{projectSlug}/{chapterSlug}`. These pa
 
 - `GET /api/v1/projects/:slug/chapters/:chapterSlug` — get single chapter with content_json, translations, and articles
 - `POST /api/v1/projects/:slug/chapters` — create chapter
-  - Body: `{ "title": "...", "description?": "...", "content?": "<markdown>", "slug?": "...", "group?": "...", "order?": 0 }`
-- `PATCH /api/v1/projects/:slug/chapters/:chapterSlug` — update chapter (title, description, content, slug, group, order, translations, content_json)
+  - Body: `{ "title": "...", "description?": "...", "content?": "<markdown>", "slug?": "...", "group?": "...", "order?": 0, "keywords?": ["tag1", "tag2"] }`
+- `PATCH /api/v1/projects/:slug/chapters/:chapterSlug` — update chapter (title, description, content, slug, group, order, translations, content_json, keywords)
 - `DELETE /api/v1/projects/:slug/chapters/:chapterSlug` — delete chapter
 
 Chapter content is editable in the dashboard at `/project/:slug/chapter/:chapterSlug/edit` using the same Tiptap editor as articles. The `content_json` field stores the rich-text content (same format as article `content_json`).
@@ -41,13 +41,54 @@ The `description` field is a short plain-text subtitle shown below the title on 
 ### Articles
 
 - `POST /api/v1/projects/:slug/articles` — create article
-  - Body: `{ "title": "...", "description?": "...", "content": "<markdown>", "chapter_slug?": "...", "slug?": "...", "language?": "en", "status?": "draft" }`
-- `PATCH /api/v1/projects/:slug/articles/:articleSlug?lang=en` — update article (title, description, content, slug, status, language, chapter_slug)
+  - Body: `{ "title": "...", "description?": "...", "content": "<markdown>", "chapter_slug?": "...", "slug?": "...", "language?": "en", "status?": "draft", "keywords?": ["tag1", "tag2"] }`
+- `PATCH /api/v1/projects/:slug/articles/:articleSlug?lang=en` — update article (title, description, content, slug, status, language, chapter_slug, keywords)
 - `DELETE /api/v1/projects/:slug/articles/:articleSlug?lang=en` — delete article
 
 The `description` field is a short plain-text subtitle shown below the article title and in chapter page cards. It should NOT repeat the title — use it to explain what the article covers.
 
 Content is always **Markdown** — the API converts it to the internal format. See the Markdown Features section below for supported syntax including callouts, steps, tabs, and accordions.
+
+### Keywords
+
+Articles and chapters both accept an optional `keywords: string[]` field on `POST` (create) and `PATCH` (update). Keywords boost search ranking — article keywords are weighted equal to the title; chapter keywords contribute lower weight to all articles within the chapter.
+
+**Replace semantics.** `PATCH { "keywords": ["a", "b"] }` sets the array to exactly `["a", "b"]`. `PATCH { "keywords": [] }` clears it. Omitting the field leaves existing keywords unchanged.
+
+**Server-side normalization.** Before persisting, the server:
+
+1. Trims whitespace.
+2. Strips leading `#` characters.
+3. Lowercases each keyword.
+4. Deduplicates (first occurrence wins, order preserved).
+5. Drops empty strings.
+
+Clients may send raw values (e.g. `"#Onboarding"`, `"  Error  "`, duplicates) — they will come back normalized in GET/PATCH responses.
+
+**Limits.**
+
+- Max 20 keywords per article/chapter.
+- Max 40 characters per keyword (after normalization).
+- Unicode allowed (umlauts, non-Latin scripts, emoji).
+
+Exceeding limits returns `422 VALIDATION_ERROR` with a message naming the offending keyword or limit.
+
+**Example:**
+
+```bash
+curl -X PATCH -H "Authorization: Bearer rd_<key>" \
+  -H "Content-Type: application/json" \
+  -d '{"keywords": ["#Onboarding", "error-handling"]}' \
+  https://<domain>/api/v1/projects/<slug>/articles/<articleSlug>
+```
+
+Response:
+
+```json
+{ "id": "...", "title": "...", "keywords": ["onboarding", "error-handling"], ... }
+```
+
+Generation of keywords (e.g. from article content via an LLM) is the caller's responsibility — this API is a pure read/write contract.
 
 ### Media
 
