@@ -31,6 +31,7 @@ export function ChapterEditorClient({
 }: ChapterEditorClientProps) {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [description, setDescription] = useState(chapter.description);
   const [keywords, setKeywords] = useState<string[]>(chapter.keywords ?? []);
   const contentRef = useRef(chapter.content_json);
@@ -42,9 +43,15 @@ export function ChapterEditorClient({
 
   async function handleSave() {
     setSaving(true);
-    await saveChapterAction(chapter.id, JSON.stringify(contentRef.current), description, keywords);
-    setSaving(false);
-    setSaved(true);
+    setSaveError(null);
+    try {
+      await saveChapterAction(chapter.id, JSON.stringify(contentRef.current), description, keywords);
+      setSaved(true);
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Failed to save");
+    } finally {
+      setSaving(false);
+    }
   }
 
   const publicUrl = `/${projectSlug}/${chapter.slug}`;
@@ -79,6 +86,9 @@ export function ChapterEditorClient({
             </Button>
           </div>
         </div>
+        {saveError && (
+          <p className="text-sm text-destructive">{saveError}</p>
+        )}
         <input
           type="text"
           value={description}

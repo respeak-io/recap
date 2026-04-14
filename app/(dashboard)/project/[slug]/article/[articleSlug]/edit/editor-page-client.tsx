@@ -64,6 +64,7 @@ export function EditorPageClient({
 }) {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [translating, setTranslating] = useState(false);
   const [translateError, setTranslateError] = useState<string | null>(null);
   const [status, setStatus] = useState(article.status);
@@ -86,10 +87,16 @@ export function EditorPageClient({
 
   async function handleSave() {
     setSaving(true);
+    setSaveError(null);
     const text = extractText(contentRef.current);
-    await saveArticleAction(article.id, JSON.stringify(contentRef.current), text, description, keywords);
-    setSaving(false);
-    setSaved(true);
+    try {
+      await saveArticleAction(article.id, JSON.stringify(contentRef.current), text, description, keywords);
+      setSaved(true);
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Failed to save");
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function handleTogglePublish() {
@@ -263,6 +270,9 @@ export function EditorPageClient({
       </div>
       {translateError && (
         <p className="text-sm text-destructive">{translateError}</p>
+      )}
+      {saveError && (
+        <p className="text-sm text-destructive">{saveError}</p>
       )}
 
       <input
