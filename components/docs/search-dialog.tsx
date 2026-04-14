@@ -24,6 +24,7 @@ export function SearchDialog({ projectId, projectSlug }: SearchDialogProps) {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [aiAnswer, setAiAnswer] = useState<string | null>(null);
+  const [fallback, setFallback] = useState<"or" | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const searchParamsHook = useSearchParams();
@@ -51,6 +52,7 @@ export function SearchDialog({ projectId, projectSlug }: SearchDialogProps) {
       setQuery("");
       setResults([]);
       setAiAnswer(null);
+      setFallback(null);
       setActiveIndex(0);
     }
   }, [open]);
@@ -60,6 +62,7 @@ export function SearchDialog({ projectId, projectSlug }: SearchDialogProps) {
       if (!q.trim()) {
         setResults([]);
         setAiAnswer(null);
+        setFallback(null);
         return;
       }
 
@@ -70,6 +73,7 @@ export function SearchDialog({ projectId, projectSlug }: SearchDialogProps) {
         );
         const data = await res.json();
         setResults(data.articles ?? []);
+        setFallback(data.fallback ?? null);
         setActiveIndex(0);
 
         // Fetch AI answer in background
@@ -235,6 +239,14 @@ export function SearchDialog({ projectId, projectSlug }: SearchDialogProps) {
                   <div className="mb-2 rounded-lg bg-primary/5 p-3">
                     <p className="mb-1 text-xs font-medium text-primary">AI Answer</p>
                     <p className="text-sm text-muted-foreground leading-relaxed">{aiAnswer}</p>
+                  </div>
+                )}
+
+                {fallback === "or" && results.length > 0 && (
+                  <div className="px-3 py-2 text-xs text-muted-foreground border-b">
+                    {currentLang === "en"
+                      ? `No exact matches for "${query}". Similar results:`
+                      : `Keine genauen Treffer für „${query}". Ähnliche Resultate:`}
                   </div>
                 )}
 
