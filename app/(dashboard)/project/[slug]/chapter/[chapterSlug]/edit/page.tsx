@@ -12,7 +12,7 @@ export default async function ChapterEditPage({
 
   const { data: chapter } = await supabase
     .from("chapters")
-    .select("id, title, description, slug, content_json, project_id, projects!inner(name)")
+    .select("id, title, description, keywords, slug, content_json, project_id, projects!inner(name)")
     .eq("projects.slug", slug)
     .eq("slug", chapterSlug)
     .single();
@@ -21,7 +21,14 @@ export default async function ChapterEditPage({
 
   return (
     <ChapterEditorClient
-      chapter={chapter}
+      chapter={{
+        id: chapter.id,
+        title: chapter.title,
+        description: chapter.description ?? "",
+        keywords: chapter.keywords ?? [],
+        slug: chapter.slug,
+        content_json: chapter.content_json,
+      }}
       projectSlug={slug}
       projectName={(chapter.projects as unknown as { name: string }).name}
       projectId={chapter.project_id}

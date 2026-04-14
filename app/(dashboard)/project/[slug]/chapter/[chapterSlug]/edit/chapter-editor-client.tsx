@@ -6,6 +6,7 @@ import { Editor } from "@/editor/editor";
 import { Button } from "@/components/ui/button";
 import { ExternalLink } from "lucide-react";
 import { BreadcrumbNav } from "@/components/dashboard/breadcrumb-nav";
+import { KeywordInput } from "@/components/editor/keyword-input";
 import { saveChapterAction } from "./actions";
 
 interface ChapterEditorClientProps {
@@ -13,6 +14,7 @@ interface ChapterEditorClientProps {
     id: string;
     title: string;
     description: string;
+    keywords: string[];
     slug: string;
     content_json: Record<string, unknown>;
   };
@@ -30,6 +32,7 @@ export function ChapterEditorClient({
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [description, setDescription] = useState(chapter.description);
+  const [keywords, setKeywords] = useState<string[]>(chapter.keywords ?? []);
   const contentRef = useRef(chapter.content_json);
 
   const handleUpdate = useCallback((json: Record<string, unknown>) => {
@@ -39,7 +42,7 @@ export function ChapterEditorClient({
 
   async function handleSave() {
     setSaving(true);
-    await saveChapterAction(chapter.id, JSON.stringify(contentRef.current), description);
+    await saveChapterAction(chapter.id, JSON.stringify(contentRef.current), description, keywords);
     setSaving(false);
     setSaved(true);
   }
@@ -82,6 +85,10 @@ export function ChapterEditorClient({
           onChange={(e) => { setDescription(e.target.value); setSaved(false); }}
           placeholder="Add a short description..."
           className="w-full text-sm text-muted-foreground bg-transparent border-none outline-none placeholder:text-muted-foreground/50"
+        />
+        <KeywordInput
+          value={keywords}
+          onChange={(next) => { setKeywords(next); setSaved(false); }}
         />
         <Editor
           key={chapter.id}
