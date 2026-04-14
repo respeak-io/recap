@@ -68,14 +68,11 @@ describe("validateKeywords", () => {
   });
 
   it("rejects non-array input", () => {
-    // @ts-expect-error — testing runtime behavior
     expect(validateKeywords("foo").ok).toBe(false);
-    // @ts-expect-error — testing runtime behavior
     expect(validateKeywords(null).ok).toBe(false);
   });
 
   it("rejects non-string entries", () => {
-    // @ts-expect-error — testing runtime behavior
     expect(validateKeywords(["ok", 42]).ok).toBe(false);
   });
 });
