@@ -127,13 +127,15 @@ curl -X PUT \
         "content": "## Overview\n\nThis chapter walks you through initial setup.",
         "slug": "getting-started",
         "group": "Basics",
+        "keywords": ["onboarding", "setup"],
         "articles": [
           {
             "title": "Installation",
             "description": "Install dependencies and configure your environment",
             "slug": "installation",
             "content": "## Install dependencies\n\n...",
-            "status": "published"
+            "status": "published",
+            "keywords": ["install", "deps"]
           }
         ]
       }
@@ -143,6 +145,8 @@ curl -X PUT \
 ```
 
 Sync is declarative — send the full desired state. The API creates, updates, and **deletes** to match. Chapters/articles matched by slug. Order set by array position. Both chapters and articles accept `content` as Markdown — it is converted to the internal format automatically. Optionally include `name`, `subtitle`, and/or `translations` at the top level to update the project itself.
+
+**Keywords behavior:** Sync treats `keywords` differently from other fields. If a chapter or article object **includes** a `keywords` array, it replaces the entity's keywords (with the same normalization + validation as the PATCH endpoints). If `keywords` is **omitted**, existing keywords are preserved (NOT cleared to empty). This is intentional: an external keyword-generation pipeline may run independently of doc sync, and Sync should not silently erase its work. To explicitly clear keywords, send `"keywords": []`.
 
 **Multilingual articles:** Each language variant must be a separate article entry with the same `slug` but different `language` field. If you only send `"language": "en"` entries, all other language variants (e.g. `"de"`) will be **deleted**. The `translations` field only works for chapters (sidebar title/group), NOT for article content.
 

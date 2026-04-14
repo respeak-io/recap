@@ -2,6 +2,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { validateApiKey, apiError } from "@/lib/api-key-auth";
 import { resolveProject, toSlug } from "@/lib/api-v1-helpers";
 import { markdownToTiptapRaw } from "@/lib/ai/markdown-to-tiptap";
+import { validateKeywords } from "@/lib/keywords";
 
 interface SyncChapter {
   title: string;
@@ -9,6 +10,7 @@ interface SyncChapter {
   content?: string;
   slug?: string;
   group?: string;
+  keywords?: string[];
   translations?: Record<string, { title?: string; group?: string; description?: string; content?: string }>;
   articles?: SyncArticle[];
 }
@@ -20,6 +22,19 @@ interface SyncArticle {
   content: string;
   language?: string;
   status?: string;
+  keywords?: string[];
+}
+
+function pickKeywords(
+  input: unknown,
+  path: string
+): { ok: true; value?: string[] } | { ok: false; res: Response } {
+  if (input === undefined) return { ok: true };
+  const result = validateKeywords(input);
+  if (!result.ok) {
+    return { ok: false, res: apiError(`${path}: ${result.error}`, "VALIDATION_ERROR", 422) };
+  }
+  return { ok: true, value: result.value };
 }
 
 export async function PUT(
@@ -84,6 +99,9 @@ export async function PUT(
     const existing = existChapterMap.get(chSlug);
     let chapterId: string;
 
+    const chKeywords = pickKeywords(ch.keywords, `chapters[${ci}]`);
+    if (!chKeywords.ok) return chKeywords.res;
+
     const translations = ch.translations
       ? Object.fromEntries(
           Object.entries(ch.translations).map(([lang, t]) => {
@@ -100,7 +118,15 @@ export async function PUT(
     if (existing) {
       await db
         .from("chapters")
-        .update({ title: ch.title, description: ch.description ?? "", content_json: chapterContentJson, group: ch.group ?? null, translations, order: ci })
+        .update({
+          title: ch.title,
+          description: ch.description ?? "",
+          content_json: chapterContentJson,
+          group: ch.group ?? null,
+          translations,
+          order: ci,
+          ...(chKeywords.value !== undefined ? { keywords: chKeywords.value } : {}),
+        })
         .eq("id", existing.id);
       chapterId = existing.id;
       stats.chapters.updated++;
@@ -116,6 +142,7 @@ export async function PUT(
           group: ch.group ?? null,
           translations,
           order: ci,
+          ...(chKeywords.value !== undefined ? { keywords: chKeywords.value } : {}),
         })
         .select("id")
         .single();
@@ -134,6 +161,9 @@ export async function PUT(
       const { doc, text } = markdownToTiptapRaw(art.content);
       const existingArt = existArticleMap.get(artKey);
 
+      const artKeywords = pickKeywords(art.keywords, `chapters[${ci}].articles[${ai}]`);
+      if (!artKeywords.ok) return artKeywords.res;
+
       if (existingArt) {
         await db
           .from("articles")
@@ -145,6 +175,7 @@ export async function PUT(
             status: art.status || "draft",
             order: ai,
             updated_at: new Date().toISOString(),
+            ...(artKeywords.value !== undefined ? { keywords: artKeywords.value } : {}),
           })
           .eq("id", existingArt.id);
         stats.articles.updated++;
@@ -160,6 +191,7 @@ export async function PUT(
           content_text: text,
           status: art.status || "draft",
           order: ai,
+          ...(artKeywords.value !== undefined ? { keywords: artKeywords.value } : {}),
         });
         stats.articles.created++;
       }
