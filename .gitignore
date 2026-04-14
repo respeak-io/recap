@@ -60,6 +60,10 @@ next-env.d.ts
 supabase/.branches/
 supabase/.temp/
 
+# prod-data dumps (created by scripts/sync-prod-to-local.sh)
+prod-data.sql
+*.dump.sql
+
 # tooling artifacts
 .agents/
 .claude/skills/
