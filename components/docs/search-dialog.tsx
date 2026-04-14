@@ -10,8 +10,7 @@ interface SearchResult {
   title: string;
   slug: string;
   content_text: string;
-  keywords?: string[];
-  chapters?: { title: string; keywords?: string[] | null } | null;
+  chapters?: { title: string } | null;
 }
 
 interface SearchDialogProps {
@@ -78,7 +77,12 @@ export function SearchDialog({ projectId, projectSlug }: SearchDialogProps) {
           fetch("/api/search/answer", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ query: q, articles: data.articles }),
+            body: JSON.stringify({
+              query: q,
+              projectId,
+              articleIds: data.articles.map((a: { id: string }) => a.id),
+              lang: currentLang,
+            }),
           })
             .then((r) => r.json())
             .then((d) => setAiAnswer(d.answer))
