@@ -224,7 +224,7 @@ function DocsSidebarContent({
                                 "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:transition-none",
                                 isActive && [
                                   "bg-sidebar-accent text-sidebar-accent-foreground font-medium hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:transition-colors",
-                                  "before:content-[''] before:bg-sidebar-foreground before:absolute before:w-px before:inset-y-2.5 before:start-[0.625rem]",
+                                  "before:content-[''] before:bg-primary before:absolute before:w-px before:inset-y-2.5 before:start-[0.625rem]",
                                 ]
                               )}
                             >

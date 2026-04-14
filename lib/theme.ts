@@ -12,6 +12,7 @@ export interface ProjectTheme {
   logo_path: string | null;
   favicon_path: string | null;
   colors: Partial<ProjectThemeColors>;
+  colors_dark: Partial<ProjectThemeColors>;
   font: "system" | "geist" | "inter" | "ibm-plex" | "source-serif";
   custom_css: string | null;
   hide_powered_by: boolean;
@@ -21,6 +22,7 @@ export const DEFAULT_THEME: ProjectTheme = {
   logo_path: null,
   favicon_path: null,
   colors: {},
+  colors_dark: {},
   font: "geist",
   custom_css: null,
   hide_powered_by: false,
@@ -41,6 +43,7 @@ export function resolveTheme(stored: Record<string, unknown> | null): ProjectThe
     logo_path: (stored.logo_path as string) ?? null,
     favicon_path: (stored.favicon_path as string) ?? null,
     colors: (stored.colors as Partial<ProjectThemeColors>) ?? {},
+    colors_dark: (stored.colors_dark as Partial<ProjectThemeColors>) ?? {},
     font: (stored.font as ProjectTheme["font"]) ?? "geist",
     custom_css: (stored.custom_css as string) ?? null,
     hide_powered_by: (stored.hide_powered_by as boolean) ?? false,

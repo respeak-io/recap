@@ -21,6 +21,7 @@ import { type ProjectTheme, type ProjectThemeColors, FONT_OPTIONS } from "@/lib/
 interface ThemePreset {
   name: string;
   colors: Partial<ProjectThemeColors>;
+  colorsDark: Partial<ProjectThemeColors>;
   font: ProjectTheme["font"];
 }
 
@@ -28,96 +29,182 @@ const THEME_PRESETS: ThemePreset[] = [
   {
     name: "Default",
     colors: {},
+    colorsDark: {},
     font: "geist",
   },
   {
-    name: "Ocean",
+    name: "Vercel",
     colors: {
-      primary: "#1d4ed8",
+      primary: "#171717",
       primary_foreground: "#ffffff",
-      background: "#f0f4f8",
-      foreground: "#1e293b",
-      accent: "#dbeafe",
-      sidebar_background: "#0f2a5e",
-      sidebar_foreground: "#e0ecff",
+      background: "#ffffff",
+      foreground: "#171717",
+      accent: "#ebebeb",
+      sidebar_background: "#fafafa",
+      sidebar_foreground: "#171717",
+    },
+    colorsDark: {
+      primary: "#ededed",
+      primary_foreground: "#000000",
+      background: "#000000",
+      foreground: "#ededed",
+      accent: "#171717",
+      sidebar_background: "#0a0a0a",
+      sidebar_foreground: "#ededed",
+    },
+    font: "geist",
+  },
+  {
+    name: "Stripe",
+    colors: {
+      primary: "#533afd",
+      primary_foreground: "#ffffff",
+      background: "#ffffff",
+      foreground: "#061b31",
+      accent: "#efeffe",
+      sidebar_background: "#f6f9fc",
+      sidebar_foreground: "#273951",
+    },
+    colorsDark: {
+      primary: "#665efd",
+      primary_foreground: "#ffffff",
+      background: "#0d253d",
+      foreground: "#efeffe",
+      accent: "#1c1e54",
+      sidebar_background: "#061b31",
+      sidebar_foreground: "#b9b9f9",
     },
     font: "inter",
   },
   {
-    name: "Forest",
+    name: "Notion",
     colors: {
-      primary: "#15803d",
+      primary: "#0075de",
       primary_foreground: "#ffffff",
-      background: "#faf8f5",
-      foreground: "#1c1917",
-      accent: "#dcfce7",
-      sidebar_background: "#14532d",
-      sidebar_foreground: "#d9f7e0",
+      background: "#ffffff",
+      foreground: "#37352f",
+      accent: "#f6f5f4",
+      sidebar_background: "#f6f5f4",
+      sidebar_foreground: "#37352f",
     },
-    font: "geist",
+    colorsDark: {
+      primary: "#62aef0",
+      primary_foreground: "#191918",
+      background: "#191918",
+      foreground: "#e7e7e5",
+      accent: "#2f2f2e",
+      sidebar_background: "#202020",
+      sidebar_foreground: "#c9c9c7",
+    },
+    font: "inter",
   },
   {
-    name: "Sunset",
+    name: "Claude",
     colors: {
-      primary: "#e05a3a",
+      primary: "#c96442",
       primary_foreground: "#ffffff",
-      background: "#fdf6f0",
-      foreground: "#292524",
-      accent: "#fed7aa",
-      sidebar_background: "#2c1a14",
-      sidebar_foreground: "#fde8d8",
+      background: "#f5f4ed",
+      foreground: "#141413",
+      accent: "#e8e6dc",
+      sidebar_background: "#faf9f5",
+      sidebar_foreground: "#141413",
+    },
+    colorsDark: {
+      primary: "#d97757",
+      primary_foreground: "#141413",
+      background: "#141413",
+      foreground: "#faf9f5",
+      accent: "#30302e",
+      sidebar_background: "#1a1a19",
+      sidebar_foreground: "#e8e6dc",
     },
     font: "source-serif",
   },
   {
-    name: "Lavender",
+    name: "Mintlify",
     colors: {
-      primary: "#7c3aed",
+      primary: "#0fa76e",
       primary_foreground: "#ffffff",
-      background: "#faf5ff",
-      foreground: "#1e1b2e",
-      accent: "#ede9fe",
-      sidebar_background: "#3b1d7e",
-      sidebar_foreground: "#e8dff5",
+      background: "#ffffff",
+      foreground: "#0d0d0d",
+      accent: "#d4fae8",
+      sidebar_background: "#fafafa",
+      sidebar_foreground: "#333333",
+    },
+    colorsDark: {
+      primary: "#18e299",
+      primary_foreground: "#0d0d0d",
+      background: "#0d0d0d",
+      foreground: "#fafafa",
+      accent: "#1a1a1a",
+      sidebar_background: "#141414",
+      sidebar_foreground: "#a3a3a3",
     },
     font: "inter",
   },
   {
-    name: "Slate",
+    name: "Linear",
     colors: {
-      primary: "#475569",
+      primary: "#5e6ad2",
       primary_foreground: "#ffffff",
-      background: "#f8fafc",
-      foreground: "#0f172a",
-      accent: "#e2e8f0",
-      sidebar_background: "#1e293b",
-      sidebar_foreground: "#cbd5e1",
+      background: "#ffffff",
+      foreground: "#1a1b23",
+      accent: "#ebebff",
+      sidebar_background: "#fafafb",
+      sidebar_foreground: "#3c3e4a",
     },
-    font: "ibm-plex",
+    colorsDark: {
+      primary: "#7170ff",
+      primary_foreground: "#ffffff",
+      background: "#08090a",
+      foreground: "#f7f8f8",
+      accent: "#28282c",
+      sidebar_background: "#0f1011",
+      sidebar_foreground: "#d0d6e0",
+    },
+    font: "inter",
   },
   {
-    name: "Midnight",
+    name: "Resend",
     colors: {
-      primary: "#3b82f6",
+      primary: "#000000",
       primary_foreground: "#ffffff",
-      background: "#0f172a",
-      foreground: "#e2e8f0",
-      accent: "#1e293b",
-      sidebar_background: "#020617",
-      sidebar_foreground: "#94a3b8",
+      background: "#ffffff",
+      foreground: "#000000",
+      accent: "#fafafa",
+      sidebar_background: "#111111",
+      sidebar_foreground: "#e5e5e5",
+    },
+    colorsDark: {
+      primary: "#ffffff",
+      primary_foreground: "#000000",
+      background: "#000000",
+      foreground: "#f0f0f0",
+      accent: "#181818",
+      sidebar_background: "#0a0a0a",
+      sidebar_foreground: "#a1a4a5",
     },
     font: "geist",
   },
   {
-    name: "Rose",
+    name: "Intercom",
     colors: {
-      primary: "#e11d6d",
+      primary: "#ff5600",
       primary_foreground: "#ffffff",
-      background: "#fff1f3",
-      foreground: "#1c1017",
-      accent: "#ffe4e8",
-      sidebar_background: "#4c0d27",
-      sidebar_foreground: "#fdd4de",
+      background: "#ffffff",
+      foreground: "#111111",
+      accent: "#faf9f6",
+      sidebar_background: "#faf9f6",
+      sidebar_foreground: "#313130",
+    },
+    colorsDark: {
+      primary: "#ff7a33",
+      primary_foreground: "#111111",
+      background: "#111111",
+      foreground: "#ffffff",
+      accent: "#1a1a1a",
+      sidebar_background: "#0b0b0b",
+      sidebar_foreground: "#c9c9c7",
     },
     font: "inter",
   },
@@ -317,13 +404,19 @@ export function ThemeEditor({
         <CardContent>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
             {THEME_PRESETS.map((preset) => {
+              const colorsMatch = (
+                a: Partial<ProjectThemeColors>,
+                b: Partial<ProjectThemeColors>
+              ) =>
+                Object.keys({ ...a, ...b }).every(
+                  (k) =>
+                    (a[k as keyof ProjectThemeColors] ?? undefined) ===
+                    (b[k as keyof ProjectThemeColors] ?? undefined)
+                );
               const isActive =
                 theme.font === preset.font &&
-                Object.keys({ ...theme.colors, ...preset.colors }).every(
-                  (k) =>
-                    (theme.colors[k as keyof ProjectThemeColors] ?? undefined) ===
-                    (preset.colors[k as keyof ProjectThemeColors] ?? undefined)
-                );
+                colorsMatch(theme.colors, preset.colors) &&
+                colorsMatch(theme.colors_dark, preset.colorsDark);
               return (
                 <button
                   key={preset.name}
@@ -332,6 +425,7 @@ export function ThemeEditor({
                     setTheme((prev) => ({
                       ...prev,
                       colors: { ...preset.colors },
+                      colors_dark: { ...preset.colorsDark },
                       font: preset.font,
                     }))
                   }
@@ -511,6 +605,7 @@ export function ThemeEditor({
             setTheme((prev) => ({
               ...prev,
               colors: {},
+              colors_dark: {},
               font: "geist",
               custom_css: null,
               hide_powered_by: false,
