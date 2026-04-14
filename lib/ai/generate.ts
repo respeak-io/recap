@@ -9,7 +9,7 @@ export async function generateText(
   opts?: { model?: string; json?: boolean }
 ): Promise<string> {
   const response = await getAI().models.generateContent({
-    model: opts?.model ?? "gemini-2.5-flash",
+    model: opts?.model ?? "gemini-3-flash-preview",
     contents: [{ role: "user", parts: [{ text: prompt }] }],
     config: opts?.json ? { responseMimeType: "application/json" } : undefined,
   });
