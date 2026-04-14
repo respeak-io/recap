@@ -2,6 +2,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { validateApiKey, apiError } from "@/lib/api-key-auth";
 import { resolveProject } from "@/lib/api-v1-helpers";
 import { markdownToTiptapRaw } from "@/lib/ai/markdown-to-tiptap";
+import { validateKeywords } from "@/lib/keywords";
 
 export async function PATCH(
   request: Request,
@@ -26,6 +27,12 @@ export async function PATCH(
   if (body.slug !== undefined) updates.slug = body.slug;
   if (body.status !== undefined) updates.status = body.status;
   if (body.language !== undefined) updates.language = body.language;
+
+  if (body.keywords !== undefined) {
+    const result = validateKeywords(body.keywords);
+    if (!result.ok) return apiError(result.error, "VALIDATION_ERROR", 422);
+    updates.keywords = result.value;
+  }
 
   if (body.content !== undefined) {
     const { doc, text } = markdownToTiptapRaw(body.content);
@@ -60,7 +67,7 @@ export async function PATCH(
     .eq("project_id", project.id)
     .eq("slug", articleSlug)
     .eq("language", lang)
-    .select("id, title, slug, language, status, order")
+    .select("id, title, slug, language, status, order, keywords")
     .single();
 
   if (error) {
