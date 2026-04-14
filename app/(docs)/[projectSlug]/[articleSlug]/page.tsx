@@ -206,7 +206,7 @@ export default async function ArticleOrChapterPage({
   // Try article first
   const { data: article } = await supabase
     .from("articles")
-    .select("*, videos(*), chapters(title, translations)")
+    .select("*, videos(*), chapters(title, slug, translations)")
     .eq("project_id", project.id)
     .eq("slug", articleSlug)
     .eq("language", lang)
@@ -233,6 +233,7 @@ export default async function ArticleOrChapterPage({
             projectName={resolvedProjectName}
             projectSlug={projectSlug}
             chapterTitle={article.chapters?.translations?.[lang]?.title ?? article.chapters?.title}
+            chapterSlug={article.chapters?.slug}
             articleTitle={article.title}
           />
           <ArticleWithVideo

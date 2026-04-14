@@ -14,6 +14,7 @@ interface DocsBreadcrumbProps {
   projectName: string;
   projectSlug: string;
   chapterTitle?: string;
+  chapterSlug?: string;
   articleTitle?: string;
 }
 
@@ -21,6 +22,7 @@ export function DocsBreadcrumb({
   projectName,
   projectSlug,
   chapterTitle,
+  chapterSlug,
   articleTitle,
 }: DocsBreadcrumbProps) {
   const searchParams = useSearchParams();
@@ -39,7 +41,13 @@ export function DocsBreadcrumb({
           <>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
-              <span className="text-muted-foreground">{chapterTitle}</span>
+              {chapterSlug && articleTitle ? (
+                <BreadcrumbLink href={`/${projectSlug}/${chapterSlug}${qs}`}>
+                  {chapterTitle}
+                </BreadcrumbLink>
+              ) : (
+                <span className="text-muted-foreground">{chapterTitle}</span>
+              )}
             </BreadcrumbItem>
           </>
         )}
