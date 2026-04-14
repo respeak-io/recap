@@ -39,6 +39,10 @@ export function KeywordInput({ value, onChange }: Props) {
     }
   }
 
+  function handleBlur() {
+    if (input.trim()) commit(input);
+  }
+
   function handlePaste(e: ClipboardEvent<HTMLInputElement>) {
     const text = e.clipboardData.getData("text");
     if (!text.includes(",")) return; // let normal typing happen
@@ -75,6 +79,7 @@ export function KeywordInput({ value, onChange }: Props) {
         value={input}
         onChange={(e) => setInput(e.target.value)}
         onKeyDown={handleKeyDown}
+        onBlur={handleBlur}
         onPaste={handlePaste}
         disabled={atMax}
         placeholder={atMax ? "" : value.length === 0 ? "Add keywords..." : ""}
