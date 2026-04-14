@@ -2,6 +2,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { validateApiKey, apiError } from "@/lib/api-key-auth";
 import { resolveProject, toSlug } from "@/lib/api-v1-helpers";
 import { markdownToTiptapRaw } from "@/lib/ai/markdown-to-tiptap";
+import { validateKeywords } from "@/lib/keywords";
 
 export async function POST(
   request: Request,
@@ -25,6 +26,13 @@ export async function POST(
   const status = body.status || "draft";
 
   const { doc: contentJson, text: contentText } = markdownToTiptapRaw(body.content);
+
+  let keywords: string[] = [];
+  if (body.keywords !== undefined) {
+    const result = validateKeywords(body.keywords);
+    if (!result.ok) return apiError(result.error, "VALIDATION_ERROR", 422);
+    keywords = result.value;
+  }
 
   let chapterId: string | null = null;
   if (body.chapter_slug) {
@@ -61,8 +69,9 @@ export async function POST(
       content_json: contentJson,
       content_text: contentText,
       order,
+      keywords,
     })
-    .select("id, title, slug, language, status, order")
+    .select("id, title, slug, language, status, order, keywords")
     .single();
 
   if (error) {
