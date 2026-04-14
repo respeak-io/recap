@@ -18,12 +18,14 @@ import {
 import { ChevronDown, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BreadcrumbNav } from "@/components/dashboard/breadcrumb-nav";
+import { KeywordInput } from "@/components/editor/keyword-input";
 import { saveArticleAction, togglePublishAction, batchTogglePublishAction } from "./actions";
 
 interface ArticleData {
   id: string;
   title: string;
   description: string;
+  keywords: string[];
   slug: string;
   status: string;
   content_json: Record<string, unknown>;
@@ -66,6 +68,7 @@ export function EditorPageClient({
   const [translateError, setTranslateError] = useState<string | null>(null);
   const [status, setStatus] = useState(article.status);
   const [description, setDescription] = useState(article.description);
+  const [keywords, setKeywords] = useState<string[]>(article.keywords ?? []);
   const [languageStatuses, setLanguageStatuses] = useState<Record<string, string>>(
     Object.fromEntries(siblingLanguages.map((lang) => [lang.id, lang.status]))
   );
@@ -84,7 +87,7 @@ export function EditorPageClient({
   async function handleSave() {
     setSaving(true);
     const text = extractText(contentRef.current);
-    await saveArticleAction(article.id, JSON.stringify(contentRef.current), text, description);
+    await saveArticleAction(article.id, JSON.stringify(contentRef.current), text, description, keywords);
     setSaving(false);
     setSaved(true);
   }
@@ -268,6 +271,11 @@ export function EditorPageClient({
         onChange={(e) => { setDescription(e.target.value); setSaved(false); }}
         placeholder="Add a short description..."
         className="w-full text-sm text-muted-foreground bg-transparent border-none outline-none placeholder:text-muted-foreground/50"
+      />
+
+      <KeywordInput
+        value={keywords}
+        onChange={(next) => { setKeywords(next); setSaved(false); }}
       />
 
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">

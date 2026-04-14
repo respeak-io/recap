@@ -15,7 +15,7 @@ export default async function ArticleEditPage({
 
   const { data: article } = await supabase
     .from("articles")
-    .select("*, projects!inner(*), videos(*)")
+    .select("*, keywords, projects!inner(*), videos(*)")
     .eq("projects.slug", slug)
     .eq("slug", articleSlug)
     .eq("language", lang)
@@ -45,6 +45,7 @@ export default async function ArticleEditPage({
         id: article.id,
         title: article.title,
         description: article.description ?? "",
+        keywords: article.keywords ?? [],
         slug: article.slug,
         status: article.status,
         content_json: article.content_json,

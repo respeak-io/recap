@@ -2,12 +2,14 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { validateKeywords } from "@/lib/keywords";
 
 export async function saveArticleAction(
   id: string,
   contentJsonStr: string,
   contentText: string,
-  description?: string
+  description?: string,
+  keywords?: string[]
 ) {
   const contentJson = JSON.parse(contentJsonStr);
   const supabase = await createClient();
@@ -16,6 +18,11 @@ export async function saveArticleAction(
     content_text: contentText,
   };
   if (description !== undefined) updates.description = description;
+  if (keywords !== undefined) {
+    const result = validateKeywords(keywords);
+    if (!result.ok) throw new Error(result.error);
+    updates.keywords = result.value;
+  }
 
   const { error } = await supabase
     .from("articles")
