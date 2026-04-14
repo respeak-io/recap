@@ -2,6 +2,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { validateApiKey, apiError } from "@/lib/api-key-auth";
 import { resolveProject, toSlug } from "@/lib/api-v1-helpers";
 import { markdownToTiptapRaw } from "@/lib/ai/markdown-to-tiptap";
+import { validateKeywords } from "@/lib/keywords";
 
 export async function POST(
   request: Request,
@@ -35,6 +36,13 @@ export async function POST(
 
   const contentJson = body.content ? markdownToTiptapRaw(body.content).doc : {};
 
+  let keywords: string[] = [];
+  if (body.keywords !== undefined) {
+    const result = validateKeywords(body.keywords);
+    if (!result.ok) return apiError(result.error, "VALIDATION_ERROR", 422);
+    keywords = result.value;
+  }
+
   const { data, error } = await db
     .from("chapters")
     .insert({
@@ -46,6 +54,7 @@ export async function POST(
       group: body.group ?? null,
       translations: body.translations ?? null,
       order,
+      keywords,
     })
     .select()
     .single();
