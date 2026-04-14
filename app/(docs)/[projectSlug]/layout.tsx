@@ -3,6 +3,29 @@ import { Sidebar } from "@/components/docs/sidebar";
 import { DocsThemeProvider } from "@/components/docs/theme-provider";
 import { resolveTheme } from "@/lib/theme";
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ projectSlug: string }>;
+}): Promise<Metadata> {
+  const { projectSlug } = await params;
+  const supabase = await createClient();
+  const { data: project } = await supabase
+    .from("projects")
+    .select("name")
+    .eq("slug", projectSlug)
+    .eq("is_public", true)
+    .single();
+
+  return {
+    title: {
+      template: "%s",
+      default: project?.name ?? "",
+    },
+  };
+}
 
 export default async function DocsLayout({
   children,
