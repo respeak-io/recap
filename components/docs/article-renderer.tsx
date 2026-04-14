@@ -210,7 +210,7 @@ function renderNode(
         >
           {(node.content ?? []).map((step: TiptapNode, i: number) => (
             <div key={i} className="relative">
-              <div className="absolute -left-[33px] flex size-6 items-center justify-center rounded-full border-2 border-muted-foreground/20 bg-background text-xs font-bold text-muted-foreground">
+              <div className="absolute -left-[37px] -top-0.5 flex size-6 items-center justify-center rounded-full border-2 border-muted-foreground/20 bg-background text-xs font-bold text-muted-foreground">
                 {i + 1}
               </div>
               <p className="font-semibold text-sm mb-1">
