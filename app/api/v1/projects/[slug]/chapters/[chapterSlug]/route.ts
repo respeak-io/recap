@@ -2,6 +2,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { validateApiKey, apiError } from "@/lib/api-key-auth";
 import { resolveProject } from "@/lib/api-v1-helpers";
 import { markdownToTiptapRaw } from "@/lib/ai/markdown-to-tiptap";
+import { validateKeywords } from "@/lib/keywords";
 
 export async function GET(
   request: Request,
@@ -53,6 +54,11 @@ export async function PATCH(
   if (body.group !== undefined) updates.group = body.group;
   if (body.order !== undefined) updates.order = body.order;
   if (body.translations !== undefined) updates.translations = body.translations;
+  if (body.keywords !== undefined) {
+    const result = validateKeywords(body.keywords);
+    if (!result.ok) return apiError(result.error, "VALIDATION_ERROR", 422);
+    updates.keywords = result.value;
+  }
   if (body.content !== undefined) updates.content_json = markdownToTiptapRaw(body.content).doc;
   if (body.content_json !== undefined) updates.content_json = body.content_json;
 
