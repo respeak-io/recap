@@ -14,6 +14,9 @@ export async function GET(request: Request) {
   const supabase = await createClient();
 
   const cleanedQuery = query.replace(/#/g, " ").replace(/\s+/g, " ").trim();
+  if (!cleanedQuery) {
+    return NextResponse.json({ articles: [] });
+  }
 
   let articlesQuery = supabase
     .from("articles")
