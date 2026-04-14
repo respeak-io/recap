@@ -13,12 +13,14 @@ export async function GET(request: Request) {
 
   const supabase = await createClient();
 
+  const cleanedQuery = query.replace(/#/g, " ").replace(/\s+/g, " ").trim();
+
   let articlesQuery = supabase
     .from("articles")
-    .select("id, title, slug, content_text, project_id, chapters(title)")
+    .select("id, title, slug, content_text, keywords, project_id, chapters(title, keywords)")
     .eq("project_id", projectId)
     .eq("status", "published")
-    .textSearch("fts", query, { type: "websearch", config: "english" })
+    .textSearch("fts", cleanedQuery, { type: "websearch", config: "english" })
     .limit(10);
 
   if (lang) {
