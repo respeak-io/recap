@@ -8,7 +8,7 @@ create index chapters_keywords_gin on chapters using gin(keywords);
 
 -- Drop the existing stored generated fts column and its index
 drop index if exists articles_fts_idx;
-alter table articles drop column fts;
+alter table articles drop column fts cascade;
 
 -- Re-create fts as a regular (trigger-populated) tsvector column
 alter table articles add column fts tsvector;
@@ -18,7 +18,7 @@ create index articles_fts_idx on articles using gin(fts);
 create or replace function articles_build_fts(a articles)
 returns tsvector
 language sql
-stable
+volatile
 as $$
   select
     setweight(to_tsvector('english', coalesce(a.title, '')), 'A')
@@ -79,5 +79,15 @@ create trigger chapters_keywords_propagate
   for each row
   execute function chapters_keywords_propagate_trigger();
 
--- Backfill fts for all existing articles
+-- Note: when chapters_keywords_propagate runs `update articles set fts = ...`,
+-- the articles_fts_update trigger does NOT re-fire because that trigger has a
+-- column-level filter (`update of title, content_text, keywords, chapter_id`)
+-- and `fts` is not in that list. Scale assumption: a chapter holds 10–50
+-- articles in normal use, so the cascade is bounded and cheap.
+
+-- Backfill fts for all existing articles.
+-- articles_updated_at trigger (before update on articles) exists and would
+-- corrupt updated_at for every row; disable it for the duration of the backfill.
+alter table articles disable trigger articles_updated_at;
 update articles set fts = articles_build_fts(articles);
+alter table articles enable trigger articles_updated_at;
