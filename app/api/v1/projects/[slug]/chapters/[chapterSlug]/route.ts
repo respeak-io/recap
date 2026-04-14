@@ -19,7 +19,7 @@ export async function GET(
 
   const { data, error } = await db
     .from("chapters")
-    .select("*, articles(id, title, description, slug, language, status, \"order\")")
+    .select("*, articles(id, title, description, keywords, slug, language, status, \"order\")")
     .eq("project_id", project.id)
     .eq("slug", chapterSlug)
     .single();
