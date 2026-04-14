@@ -10,7 +10,8 @@ interface SearchResult {
   title: string;
   slug: string;
   content_text: string;
-  chapters?: { title: string } | null;
+  keywords?: string[];
+  chapters?: { title: string; keywords?: string[] | null } | null;
 }
 
 interface SearchDialogProps {
