@@ -57,7 +57,7 @@ function buildModeVars(colors: Partial<ProjectThemeColors>): [string, string][] 
 export function DocsThemeProvider({
   theme,
   logoUrl: _logoUrl,
-  faviconUrl,
+  faviconUrl: _faviconUrl,
   projectName: _projectName,
   children,
 }: DocsThemeProviderProps) {
@@ -112,10 +112,6 @@ export function DocsThemeProvider({
           rel="stylesheet"
           href={`https://fonts.googleapis.com/css2?family=${fontOption.googleFont}&display=swap`}
         />
-      )}
-
-      {faviconUrl && (
-        <link rel="icon" href={faviconUrl} />
       )}
 
       {children}

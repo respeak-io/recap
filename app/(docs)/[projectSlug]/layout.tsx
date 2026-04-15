@@ -14,16 +14,24 @@ export async function generateMetadata({
   const supabase = await createClient();
   const { data: project } = await supabase
     .from("projects")
-    .select("name")
+    .select("name, theme")
     .eq("slug", projectSlug)
     .eq("is_public", true)
     .single();
+
+  const theme = resolveTheme(project?.theme as Record<string, unknown>);
+  let faviconUrl: string | null = null;
+  if (theme.favicon_path) {
+    const { data } = supabase.storage.from("assets").getPublicUrl(theme.favicon_path);
+    faviconUrl = data.publicUrl;
+  }
 
   return {
     title: {
       template: "%s",
       default: project?.name ?? "",
     },
+    ...(faviconUrl ? { icons: { icon: faviconUrl } } : {}),
   };
 }
 
