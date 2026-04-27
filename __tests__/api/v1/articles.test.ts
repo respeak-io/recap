@@ -30,7 +30,7 @@ vi.mock("@/lib/ai/markdown-to-tiptap", () => ({
 const { POST } = await import(
   "@/app/api/v1/projects/[slug]/articles/route"
 );
-const { PATCH, DELETE } = await import(
+const { GET, PATCH, DELETE } = await import(
   "@/app/api/v1/projects/[slug]/articles/[articleSlug]/route"
 );
 
@@ -153,6 +153,84 @@ describe("POST /api/v1/projects/[slug]/articles", () => {
       { params: Promise.resolve({ slug: "docs" }) }
     );
     expect(res.status).toBe(409);
+  });
+});
+
+describe("GET /api/v1/projects/[slug]/articles/[articleSlug]", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(apiV1Helpers.resolveProject).mockResolvedValue({ id: "proj-1" });
+  });
+
+  it("returns full article including content_json", async () => {
+    const article = {
+      id: "a1",
+      title: "Intro",
+      slug: "intro",
+      language: "en",
+      status: "published",
+      order: 0,
+      content_json: { type: "doc", content: [{ type: "paragraph" }] },
+      content_text: "hello world",
+    };
+    const chain = supabaseMock.getChain("articles");
+    chain.single = vi.fn(() => ({
+      ...chain,
+      then: vi.fn((r: (v: unknown) => void) =>
+        r({ data: article, error: null })
+      ),
+    }));
+
+    const res = await GET(
+      makeRequest("http://localhost/api/v1/projects/docs/articles/intro", {
+        headers: { Authorization: "Bearer rd_key" },
+      }),
+      { params: Promise.resolve({ slug: "docs", articleSlug: "intro" }) }
+    );
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.content_json).toEqual(article.content_json);
+    expect(json.content_text).toBe("hello world");
+  });
+
+  it("filters by lang query param", async () => {
+    const chain = supabaseMock.getChain("articles");
+    chain.single = vi.fn(() => ({
+      ...chain,
+      then: vi.fn((r: (v: unknown) => void) =>
+        r({ data: { id: "a1", slug: "intro", language: "de" }, error: null })
+      ),
+    }));
+
+    await GET(
+      makeRequest(
+        "http://localhost/api/v1/projects/docs/articles/intro?lang=de",
+        { headers: { Authorization: "Bearer rd_key" } }
+      ),
+      { params: Promise.resolve({ slug: "docs", articleSlug: "intro" }) }
+    );
+    const eqCalls = supabaseMock.getChain("articles").eq.mock.calls;
+    expect(
+      eqCalls.some((c: unknown[]) => c[0] === "language" && c[1] === "de")
+    ).toBe(true);
+  });
+
+  it("returns 404 when article not found", async () => {
+    const chain = supabaseMock.getChain("articles");
+    chain.single = vi.fn(() => ({
+      ...chain,
+      then: vi.fn((r: (v: unknown) => void) =>
+        r({ data: null, error: { message: "not found" } })
+      ),
+    }));
+
+    const res = await GET(
+      makeRequest("http://localhost/api/v1/projects/docs/articles/missing", {
+        headers: { Authorization: "Bearer rd_key" },
+      }),
+      { params: Promise.resolve({ slug: "docs", articleSlug: "missing" }) }
+    );
+    expect(res.status).toBe(404);
   });
 });
 

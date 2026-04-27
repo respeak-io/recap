@@ -4,6 +4,34 @@ import { resolveProject } from "@/lib/api-v1-helpers";
 import { markdownToTiptapRaw } from "@/lib/ai/markdown-to-tiptap";
 import { validateKeywords } from "@/lib/keywords";
 
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ slug: string; articleSlug: string }> }
+) {
+  const auth = await validateApiKey(request);
+  if (auth instanceof Response) return auth;
+
+  const { slug, articleSlug } = await params;
+  const db = createServiceClient();
+  const url = new URL(request.url);
+  const lang = url.searchParams.get("lang") || "en";
+
+  const project = await resolveProject(db, auth.orgId, slug);
+  if (project instanceof Response) return project;
+
+  const { data, error } = await db
+    .from("articles")
+    .select("*")
+    .eq("project_id", project.id)
+    .eq("slug", articleSlug)
+    .eq("language", lang)
+    .single();
+
+  if (error || !data) return apiError("Article not found", "NOT_FOUND", 404);
+
+  return Response.json(data);
+}
+
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ slug: string; articleSlug: string }> }

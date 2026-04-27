@@ -198,6 +198,32 @@ POST /api/v1/projects/:slug/articles
 
 **Response:** `201` with the created article.
 
+### Get Article
+
+```
+GET /api/v1/projects/:slug/articles/:articleSlug?lang=en
+```
+
+Returns a single article with all fields including `content_json` and `content_text`. Use this to read back content already on the server (e.g. to diff local source against remote before a sync).
+
+- `?lang=en` targets a specific language variant (defaults to `en`)
+
+**Response:**
+```json
+{
+  "id": "uuid",
+  "title": "Installation",
+  "description": "Install dependencies and configure your environment",
+  "slug": "installation",
+  "language": "en",
+  "status": "published",
+  "order": 0,
+  "keywords": ["install", "deps"],
+  "content_json": { "type": "doc", "content": [...] },
+  "content_text": "Installation\nRun npm install reeldocs..."
+}
+```
+
 ### Update Article
 
 ```
