@@ -2,6 +2,8 @@
 
 Base URL: `https://<your-domain>/api/v1`
 
+For local development: `http://localhost:3000/api/v1`.
+
 ## Authentication
 
 All endpoints require an API key passed as a Bearer token:
@@ -87,6 +89,8 @@ PATCH /api/v1/projects/:slug
 
 **Response:** `200` with `{ "ok": true }`.
 
+Chapters have their own public pages at `/{projectSlug}/{chapterSlug}`. These pages display the chapter title, any rich-text content (also editable via the dashboard at `/project/:slug/chapter/:chapterSlug/edit`), and a card grid linking to all child articles. The `content_json` field stores the rich-text content (same Tiptap format as article `content_json`).
+
 ### Create Chapter
 
 ```
@@ -97,10 +101,12 @@ POST /api/v1/projects/:slug/chapters
 ```json
 {
   "title": "Getting Started",
+  "description": "Set up your project from scratch",
   "slug": "getting-started",
   "group": "Basics",
   "order": 0,
   "content": "## Overview\n\nThis chapter walks you through initial setup.",
+  "keywords": ["onboarding", "setup"],
   "translations": {
     "de": { "title": "Erste Schritte", "group": "Grundlagen" }
   }
@@ -108,9 +114,11 @@ POST /api/v1/projects/:slug/chapters
 ```
 
 - `slug` — optional, auto-generated from title if omitted
+- `description` — optional, short plain-text subtitle shown below the title on the chapter page and in navigation cards
 - `group` — optional, non-clickable section title above the chapter in the sidebar
 - `order` — optional, appended at end if omitted
 - `content` — optional, **Markdown** converted to internal format server-side
+- `keywords` — optional, see [Keywords](#keywords)
 - `translations` — optional, per-language overrides for `title` and `group`. The sidebar shows the translated version for the current language, falling back to the default.
 
 **Response:** `201` with the created chapter.
@@ -146,9 +154,9 @@ Returns a single chapter with all fields including `content_json`, `translations
 PATCH /api/v1/projects/:slug/chapters/:chapterSlug
 ```
 
-**Body:** Any subset of `{ title, description, slug, group, order, content, content_json, translations }`.
+**Body:** Any subset of `{ title, description, slug, group, order, content, content_json, keywords, translations }`.
 
-If `content` is provided (Markdown), it is converted to `content_json`. If both are provided, `content_json` takes precedence.
+If `content` is provided (Markdown), it is converted to `content_json`. If both are provided, `content_json` takes precedence. See [Keywords](#keywords) for `keywords` semantics.
 
 ### Delete Chapter
 
@@ -170,19 +178,23 @@ POST /api/v1/projects/:slug/articles
 ```json
 {
   "title": "Installation Guide",
+  "description": "Install dependencies and configure your environment",
   "slug": "installation",
   "chapter_slug": "getting-started",
   "content": "# Installation\n\nRun `npm install reeldocs`...",
   "language": "en",
-  "status": "published"
+  "status": "published",
+  "keywords": ["install", "deps"]
 }
 ```
 
-- `content` — **Markdown**. Converted to the internal format server-side.
+- `content` — **Markdown**. Converted to the internal format server-side. See [Markdown Features](#markdown-features) for supported syntax.
+- `description` — optional, short plain-text subtitle shown below the title and in chapter page cards. Should not repeat the title — use it to explain what the article covers.
 - `slug` — optional, auto-generated from title if omitted
 - `chapter_slug` — optional, article is uncategorized if omitted
 - `language` — defaults to `"en"`
 - `status` — `"draft"` (default) or `"published"`
+- `keywords` — optional, see [Keywords](#keywords)
 
 **Response:** `201` with the created article.
 
@@ -192,11 +204,12 @@ POST /api/v1/projects/:slug/articles
 PATCH /api/v1/projects/:slug/articles/:articleSlug?lang=en
 ```
 
-**Body:** Any subset of `{ title, slug, chapter_slug, content, language, status }`.
+**Body:** Any subset of `{ title, description, slug, chapter_slug, content, language, status, keywords }`.
 
 - If `content` is provided, it's re-converted from Markdown
 - `?lang=en` targets a specific language variant (defaults to `en`)
 - Set `chapter_slug` to `null` to uncategorize
+- See [Keywords](#keywords) for `keywords` semantics
 
 ### Delete Article
 
@@ -228,18 +241,23 @@ Optionally include `name`, `subtitle`, and/or `translations` at the top level to
   "chapters": [
     {
       "title": "Getting Started",
+      "description": "Set up your project from scratch",
       "slug": "getting-started",
       "group": "Basics",
+      "content": "## Overview\n\nThis chapter walks you through initial setup.",
+      "keywords": ["onboarding", "setup"],
       "translations": {
         "de": { "title": "Erste Schritte", "group": "Grundlagen" }
       },
       "articles": [
         {
           "title": "Installation",
+          "description": "Install dependencies and configure your environment",
           "slug": "installation",
           "content": "# Installation\n\nRun `npm install`...",
           "language": "en",
-          "status": "published"
+          "status": "published",
+          "keywords": ["install", "deps"]
         },
         {
           "title": "Installation",
@@ -267,6 +285,7 @@ Optionally include `name`, `subtitle`, and/or `translations` at the top level to
 - Chapters/articles not in the payload are **deleted**
 - **Multilingual articles:** Each language variant is a separate entry with the same `slug` but different `language`. If you only include `"language": "en"` entries, all other language variants will be deleted.
 - **`translations` is for chapters only** (sidebar title/group). Article content per language must be sent as separate article entries.
+- **Keywords behavior:** Sync treats `keywords` differently from other fields. If a chapter or article object **includes** a `keywords` array, it replaces the entity's keywords (with the same normalization + validation as the PATCH endpoints). If `keywords` is **omitted**, existing keywords are preserved (NOT cleared). This is intentional: an external keyword-generation pipeline may run independently of doc sync, and Sync should not silently erase its work. To explicitly clear keywords, send `"keywords": []`.
 
 **Response:**
 ```json
@@ -424,6 +443,118 @@ POST /api/v1/projects/:slug/media/videos/batch-delete
 **Response:**
 ```json
 { "deleted": ["uuid-1"], "errors": [{ "id": "uuid-2", "error": "Video not found" }] }
+```
+
+## Keywords
+
+Articles and chapters both accept an optional `keywords: string[]` field on `POST` (create) and `PATCH` (update). Keywords boost search ranking — article keywords are weighted equal to the title; chapter keywords contribute lower weight to all articles within the chapter.
+
+**Replace semantics.** `PATCH { "keywords": ["a", "b"] }` sets the array to exactly `["a", "b"]`. `PATCH { "keywords": [] }` clears it. Omitting the field leaves existing keywords unchanged.
+
+**Server-side normalization.** Before persisting, the server:
+
+1. Trims whitespace.
+2. Strips leading `#` characters.
+3. Lowercases each keyword.
+4. Deduplicates (first occurrence wins, order preserved).
+5. Drops empty strings.
+
+Clients may send raw values (e.g. `"#Onboarding"`, `"  Error  "`, duplicates) — they will come back normalized in `GET`/`PATCH` responses.
+
+**Limits.**
+
+- Max 20 keywords per article/chapter.
+- Max 40 characters per keyword (after normalization).
+- Unicode allowed (umlauts, non-Latin scripts, emoji).
+
+Exceeding limits returns `422 VALIDATION_ERROR` with a message naming the offending keyword or limit.
+
+**Example:**
+
+```bash
+curl -X PATCH -H "Authorization: Bearer rd_<key>" \
+  -H "Content-Type: application/json" \
+  -d '{"keywords": ["#Onboarding", "error-handling"]}' \
+  https://<domain>/api/v1/projects/<slug>/articles/<articleSlug>
+```
+
+Response:
+
+```json
+{ "id": "...", "title": "...", "keywords": ["onboarding", "error-handling"], "...": "..." }
+```
+
+Generation of keywords (e.g. from article content via an LLM) is the caller's responsibility — this API is a pure read/write contract.
+
+## Markdown Features
+
+Article and chapter `content` is sent as Markdown and converted to the internal Tiptap format server-side. Standard Markdown is fully supported: headings, paragraphs, bold, italic, inline code, links, images, code blocks (with language), blockquotes, tables, horizontal rules, lists.
+
+Additionally, these custom blocks are converted to rich editor components:
+
+### Callouts
+
+```markdown
+:::note
+This is an informational callout.
+:::
+
+:::warning
+Be careful with this action.
+:::
+
+:::tip
+Here's a useful tip.
+:::
+```
+
+Types: `note` (or `info`), `warning`, `tip`.
+
+### Steps
+
+````markdown
+:::steps
+### Install dependencies
+Run `npm install` to get started.
+
+### Configure the app
+Create a `.env` file with your settings.
+
+### Start the server
+Run `npm run dev` to launch.
+:::
+````
+
+Each `###` heading starts a new step. The heading text becomes the step title.
+
+### Tabs
+
+````markdown
+:::tabs
+::tab{title="npm"}
+```bash
+npm install reeldocs
+```
+
+::tab{title="pnpm"}
+```bash
+pnpm add reeldocs
+```
+
+::tab{title="yarn"}
+```bash
+yarn add reeldocs
+```
+:::
+````
+
+### Accordions
+
+```markdown
+<details>
+<summary>Click to expand</summary>
+This content is hidden by default and revealed on click.
+</details>
 ```
 
 ## Error Format
