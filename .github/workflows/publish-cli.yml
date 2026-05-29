@@ -42,8 +42,8 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - run: pnpm --filter @respeak/recapbuild
+      - run: pnpm --filter @respeak/recap build
 
-      - run: pnpm --filter @respeak/recappublish --no-git-checks --access public --provenance
+      - run: pnpm --filter @respeak/recap publish --no-git-checks --access public --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
