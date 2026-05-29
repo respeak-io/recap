@@ -2,10 +2,8 @@
 
 The official client for syncing a product repo's `docs/` folder to its Reeldocs
 project. It ships as part of the [`@respeak/recap`](../../packages/cli) npm package
-(`recap push` / `recap diff`) and is wrapped by the
-[`recap-sync`](../../.github/actions/recap-sync/action.yml) GitHub Action, so
-product repos no longer carry copy-pasted sync scripts — fixes propagate by
-version bump.
+(`recap push` / `recap diff`), run via `npx -y @respeak/recap@latest`, so product
+repos no longer carry copy-pasted sync scripts — fixes propagate by version bump.
 
 Doc **content** still lives in each product repo as a `docs/` folder (markdown +
 a `sync.json` manifest). This client only reads that folder and reconciles it
@@ -104,30 +102,36 @@ Notes:
 - Chapter `order` sets the sidebar order. Within a chapter, article order follows
   the array.
 
-## CI integration
+## Using it from a product repo
 
-The composite Action lives in this repo at `.github/actions/recap-sync/` and is
-referenced from product repos by its repo path (no separate action repo needed).
-See [`example-consumer-workflow.yml`](./example-consumer-workflow.yml): `diff` on
-PRs, `push` on merge to `main`, triggered when `05_end_user_docs/**` changes.
+Run the published CLI directly with `npx` — product repos no longer need any
+checked-in sync script. Syncs are run manually, so updates are deliberate:
 
-```yaml
-- uses: respeak-io/recap/.github/actions/recap-sync@v1
-  with:
-    docs-dir: 05_end_user_docs
-    api-key: ${{ secrets.RECAP_API_KEY }}
-    mode: ${{ github.event_name == 'pull_request' && 'diff' || 'push' }}
+```bash
+export RECAP_API_KEY=rd_xxx   # org API key from the dashboard → API Keys
+
+# Preview drift (reads only, writes nothing)
+npx -y @respeak/recap@latest diff ./05_end_user_docs
+
+# Sync the folder to its project
+npx -y @respeak/recap@latest push ./05_end_user_docs
 ```
 
-(Tag the platform repo `v1` — or pin to a commit/branch — so the `@v1` ref resolves.)
+Pin to an exact version (e.g. `@respeak/recap@0.3.0`) instead of `@latest` for
+reproducible runs. There is intentionally no GitHub Action / CI wrapper — docs are
+synced by hand so a publish is always a conscious step.
 
 ## Publishing the CLI
 
-`@respeak/recap` is published from this repo by pushing a `recap-v*` tag (see
-[`.github/workflows/publish-cli.yml`](../../.github/workflows/publish-cli.yml)),
-which builds and runs `pnpm --filter @respeak/recap publish`. Bump
-`packages/cli/package.json` version and the `.version(...)` in `src/index.ts`
-together.
+`@respeak/recap` is published manually from `packages/cli`:
+
+```bash
+cd packages/cli
+npm publish            # publishConfig sets --access public; prepublishOnly rebuilds via tsc
+```
+
+Bump `packages/cli/package.json` `version` and the `.version(...)` in
+`src/index.ts` together before publishing.
 
 ## Future / not yet built
 

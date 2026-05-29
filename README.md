@@ -51,7 +51,7 @@ npx @respeak/recap diff ./docs --api-key rd_xxx   # preview changes, writes noth
 npx @respeak/recap push ./docs --api-key rd_xxx   # sync (declarative reconciliation)
 ```
 
-In CI, use the `recap-sync` Action — `respeak-io/recap/.github/actions/recap-sync@v1` (diff on PRs, push on merge). See [`docs/sync-client/`](docs/sync-client/README.md) for the manifest format, cross-link rewriting, and an example workflow.
+Syncs are run manually with `npx` — pin an exact version (e.g. `@respeak/recap@0.3.0`) for reproducible runs. See [`docs/sync-client/`](docs/sync-client/README.md) for the manifest format and cross-link rewriting.
 
 ## Example Output
 
