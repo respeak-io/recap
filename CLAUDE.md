@@ -9,7 +9,7 @@
 ## Git
 
 - Use `--no-gpg-sign` for all git commits
-- `gh` CLI is not installed. Use `git` commands and provide GitHub URLs for PR creation instead.
+- The `gh` CLI is installed and authenticated — use it for GitHub operations (PRs, issues, API).
 
 ## Testing
 
