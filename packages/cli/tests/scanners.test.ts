@@ -9,7 +9,7 @@ describe("scanNextjs", () => {
   let tempDir: string;
 
   beforeEach(async () => {
-    tempDir = await mkdtemp(join(tmpdir(), "reeldocs-test-"));
+    tempDir = await mkdtemp(join(tmpdir(), "recap-test-"));
   });
 
   afterEach(async () => {
@@ -90,7 +90,7 @@ describe("scanGeneric", () => {
   let tempDir: string;
 
   beforeEach(async () => {
-    tempDir = await mkdtemp(join(tmpdir(), "reeldocs-test-"));
+    tempDir = await mkdtemp(join(tmpdir(), "recap-test-"));
   });
 
   afterEach(async () => {

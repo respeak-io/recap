@@ -1,12 +1,12 @@
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL_3.0-blue.svg)](LICENSE)
-[![npm](https://img.shields.io/npm/v/reeldocs)](https://www.npmjs.com/package/reeldocs)
+[![npm](https://img.shields.io/npm/v/@respeak/recap)](https://www.npmjs.com/package/@respeak/recap)
 
 # Reeldocs
 
 Record a product video, get documentation instantly.
 
 ```bash
-npx reeldocs https://youtube.com/watch?v=your-video
+npx @respeak/recap https://youtube.com/watch?v=your-video
 ```
 
 <!-- [Hero GIF placeholder — will be added soon] -->
@@ -21,7 +21,7 @@ npx reeldocs https://youtube.com/watch?v=your-video
 
 ```bash
 export GEMINI_API_KEY=your-key-from-https://ai.google.dev
-npx reeldocs https://youtube.com/watch?v=your-video -o ./docs
+npx @respeak/recap https://youtube.com/watch?v=your-video -o ./docs
 ```
 
 That's it. Check `./docs/` for your generated documentation.
@@ -29,7 +29,7 @@ That's it. Check `./docs/` for your generated documentation.
 ### Options
 
 ```
-Usage: reeldocs [options] <source>
+Usage: recap [options] <source>
 
 Arguments:
   source                 Video file path or URL
@@ -47,11 +47,11 @@ Use `--format mdx` for Docusaurus, Mintlify, or other MDX-based doc sites — ad
 Keep docs in your product repo as a `docs/` folder (Markdown + a `sync.json` manifest) and sync them to a Reeldocs project — no copy-pasted scripts:
 
 ```bash
-npx reeldocs diff ./docs --api-key rd_xxx   # preview changes, writes nothing
-npx reeldocs push ./docs --api-key rd_xxx   # sync (declarative reconciliation)
+npx @respeak/recap diff ./docs --api-key rd_xxx   # preview changes, writes nothing
+npx @respeak/recap push ./docs --api-key rd_xxx   # sync (declarative reconciliation)
 ```
 
-In CI, use the `reeldocs/sync-action@v1` Action (diff on PRs, push on merge). See [`docs/sync-client/`](docs/sync-client/README.md) for the manifest format, cross-link rewriting, and an example workflow.
+In CI, use the `recap-sync` Action — `respeak-io/recap/.github/actions/recap-sync@v1` (diff on PRs, push on merge). See [`docs/sync-client/`](docs/sync-client/README.md) for the manifest format, cross-link rewriting, and an example workflow.
 
 ## Example Output
 
@@ -108,8 +108,8 @@ Some things only have YouTube videos for docs. Reeldocs fixes that:
 ### Setup
 
 ```bash
-git clone https://github.com/respeak-io/reeldocs.git
-cd reeldocs
+git clone https://github.com/respeak-io/recap.git
+cd recap
 pnpm install
 cp .env.example .env.local
 # Fill in your Supabase + Gemini keys

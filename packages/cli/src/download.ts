@@ -14,7 +14,7 @@ export function isYouTubeUrl(url: string): boolean {
 }
 
 export async function downloadYouTube(url: string): Promise<string> {
-  const outPath = join(tmpdir(), `reeldocs-${randomUUID()}.mp4`);
+  const outPath = join(tmpdir(), `recap-${randomUUID()}.mp4`);
 
   return new Promise((resolve, reject) => {
     execFile(

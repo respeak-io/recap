@@ -1,11 +1,11 @@
-name: Publish reeldocs to npm
+name: Publish @respeak/recap to npm
 
-# Publish the reeldocs CLI on a version tag (e.g. `reeldocs-v0.3.0`), so product
+# Publish the recap CLI on a version tag (e.g. `recap-v0.3.0`), so product
 # repos pick up fixes by bumping the version they run via npx / the Action.
 on:
   push:
     tags:
-      - "reeldocs-v*"
+      - "recap-v*"
   workflow_dispatch:
 
 permissions:
@@ -29,11 +29,11 @@ jobs:
           registry-url: https://registry.npmjs.org
 
       # Guard against a tag / package.json version mismatch (e.g. tag
-      # `reeldocs-v0.3.0` must match packages/cli/package.json "version").
+      # `recap-v0.3.0` must match packages/cli/package.json "version").
       - name: Verify tag matches package version
-        if: startsWith(github.ref, 'refs/tags/reeldocs-v')
+        if: startsWith(github.ref, 'refs/tags/recap-v')
         run: |
-          TAG_VERSION="${GITHUB_REF_NAME#reeldocs-v}"
+          TAG_VERSION="${GITHUB_REF_NAME#recap-v}"
           PKG_VERSION="$(node -p "require('./packages/cli/package.json').version")"
           if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
             echo "Tag version ($TAG_VERSION) != package.json version ($PKG_VERSION)"
@@ -42,8 +42,8 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - run: pnpm --filter reeldocs build
+      - run: pnpm --filter @respeak/recapbuild
 
-      - run: pnpm --filter reeldocs publish --no-git-checks --access public --provenance
+      - run: pnpm --filter @respeak/recappublish --no-git-checks --access public --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

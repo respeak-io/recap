@@ -22,7 +22,7 @@
 - **Mocking patterns**:
   - Internal routes: mock `@/lib/supabase/server` → `createClient` returns `mockSupabase().client`
   - V1 routes: mock `@/lib/supabase/service` → `createServiceClient` returns `mockSupabase().client`, mock `@/lib/api-key-auth` → `validateApiKey` returns `{ orgId, keyId }`
-  - For modules with transitive deps on `@/lib/ai/gemini` or `reeldocs/ai`, use `vi.mock()` to stub them before dynamic `await import()`
+  - For modules with transitive deps on `@/lib/ai/gemini` or `@respeak/recap/ai`, use `vi.mock()` to stub them before dynamic `await import()`
   - Use `async` callbacks in `vi.mock()` when you need `await import()` inside (esbuild rejects `await` in non-async functions)
   - Use `vi.mocked(module.fn)` to reset mocks in `beforeEach` — do NOT use `require()` with `@/` path aliases (they don't resolve)
 - **Adding new tests**: Follow existing patterns. Use `mockSupabase()` from the helpers, `makeRequest()` for building Request objects, and `Promise.resolve()` for route handler `params`.

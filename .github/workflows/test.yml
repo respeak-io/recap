@@ -22,11 +22,11 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # Type-check + build the reeldocs CLI (also gates the sync client).
-      - run: pnpm --filter reeldocs build
+      # Type-check + build the recap CLI (also gates the sync client).
+      - run: pnpm --filter @respeak/recapbuild
 
       # App + v1 API route tests (root vitest).
       - run: pnpm test
 
       # CLI unit tests, incl. cross-link rewrite + manifest validation.
-      - run: pnpm --filter reeldocs test
+      - run: pnpm --filter @respeak/recaptest

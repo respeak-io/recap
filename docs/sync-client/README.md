@@ -1,11 +1,11 @@
-# Reeldocs Sync Client
+# Recap Sync Client
 
 The official client for syncing a product repo's `docs/` folder to its Reeldocs
-project. It is shipped as part of the [`reeldocs`](../../packages/cli) npm
-package (`reeldocs push` / `reeldocs diff`) and wrapped by the
-[`reeldocs/sync-action`](../../.github/actions/reeldocs-sync/action.yml) GitHub
-Action, so product repos no longer carry copy-pasted sync scripts — fixes
-propagate by version bump.
+project. It ships as part of the [`@respeak/recap`](../../packages/cli) npm package
+(`recap push` / `recap diff`) and is wrapped by the
+[`recap-sync`](../../.github/actions/recap-sync/action.yml) GitHub Action, so
+product repos no longer carry copy-pasted sync scripts — fixes propagate by
+version bump.
 
 Doc **content** still lives in each product repo as a `docs/` folder (markdown +
 a `sync.json` manifest). This client only reads that folder and reconciles it
@@ -15,17 +15,17 @@ with the server.
 
 ```bash
 # Preview what a sync would change — reads only, writes nothing.
-npx reeldocs diff ./05_end_user_docs --api-key rd_xxx
+npx @respeak/recap diff ./05_end_user_docs --api-key rd_xxx
 
 # Sync the folder to its project (declarative: anything not in sync.json is deleted).
-npx reeldocs push ./05_end_user_docs --api-key rd_xxx
+npx @respeak/recap push ./05_end_user_docs --api-key rd_xxx
 ```
 
 | Option | Default | Notes |
 | --- | --- | --- |
 | `<docsDir>` | — | Folder containing `sync.json` (and `en/`, `de/`, `media/`). |
 | `--url <url>` | `https://docs.respeak.io` | Base URL; use `http://localhost:3000` for local dev. |
-| `--api-key <key>` | `$REELDOCS_API_KEY` | Org API key (`rd_…`), created under **API Keys** in the dashboard. |
+| `--api-key <key>` | `$RECAP_API_KEY` | Org API key (`rd_…`), created under **API Keys** in the dashboard. |
 | `--dry-run` (push) | — | Same as `diff`. |
 | `--exit-code` (diff) | off | Exit `1` when drift is found (default: `diff` is informational and exits `0`). |
 
@@ -106,23 +106,26 @@ Notes:
 
 ## CI integration
 
-Publish the `reeldocs/sync-action@v1` Action and adopt it in product repos. See
-[`example-consumer-workflow.yml`](./example-consumer-workflow.yml): `diff` on PRs,
-`push` on merge to `main`, triggered when `05_end_user_docs/**` changes.
+The composite Action lives in this repo at `.github/actions/recap-sync/` and is
+referenced from product repos by its repo path (no separate action repo needed).
+See [`example-consumer-workflow.yml`](./example-consumer-workflow.yml): `diff` on
+PRs, `push` on merge to `main`, triggered when `05_end_user_docs/**` changes.
 
 ```yaml
-- uses: reeldocs/sync-action@v1
+- uses: respeak-io/recap/.github/actions/recap-sync@v1
   with:
     docs-dir: 05_end_user_docs
-    api-key: ${{ secrets.REELDOCS_API_KEY }}
+    api-key: ${{ secrets.RECAP_API_KEY }}
     mode: ${{ github.event_name == 'pull_request' && 'diff' || 'push' }}
 ```
 
+(Tag the platform repo `v1` — or pin to a commit/branch — so the `@v1` ref resolves.)
+
 ## Publishing the CLI
 
-`reeldocs` is published from this repo by pushing a `reeldocs-v*` tag (see
+`@respeak/recap` is published from this repo by pushing a `recap-v*` tag (see
 [`.github/workflows/publish-cli.yml`](../../.github/workflows/publish-cli.yml)),
-which builds and runs `pnpm --filter reeldocs publish`. Bump
+which builds and runs `pnpm --filter @respeak/recap publish`. Bump
 `packages/cli/package.json` version and the `.version(...)` in `src/index.ts`
 together.
 

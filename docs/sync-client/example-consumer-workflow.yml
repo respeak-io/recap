@@ -4,7 +4,7 @@
 # - On pull requests touching the docs: run `diff` (preview only, never writes).
 # - On merge to `main`: run `push` (syncs the docs to Reeldocs).
 #
-# Requires a repository secret `REELDOCS_API_KEY` (an rd_... org API key).
+# Requires a repository secret `RECAP_API_KEY` (an rd_... org API key).
 name: Sync docs to Reeldocs
 
 on:
@@ -22,10 +22,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # The Action sets up Node and runs the reeldocs CLI via npx.
-      - uses: reeldocs/sync-action@v1
+      # The Action (lives in the platform repo) sets up Node and runs the
+      # recap CLI via npx. Referenced by repo path — no separate action repo.
+      - uses: respeak-io/recap/.github/actions/recap-sync@v1
         with:
           docs-dir: 05_end_user_docs
-          api-key: ${{ secrets.REELDOCS_API_KEY }}
+          api-key: ${{ secrets.RECAP_API_KEY }}
           # diff on PRs (preview), push on merge to main.
           mode: ${{ github.event_name == 'pull_request' && 'diff' || 'push' }}
