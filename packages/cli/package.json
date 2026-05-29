@@ -26,11 +26,21 @@
     "build": "tsc",
     "dev": "tsc --watch",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "prepublishOnly": "tsc"
   },
   "files": [
-    "dist"
+    "dist/src"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/respeak-io/recap.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://github.com/respeak-io/recap#readme",
+  "bugs": {
+    "url": "https://github.com/respeak-io/recap/issues"
+  },
   "keywords": [
     "documentation",
     "video",
