@@ -113,7 +113,11 @@ export async function PUT(
           })
         )
       : null;
-    const chapterContentJson = ch.content ? markdownToTiptapRaw(ch.content).doc : {};
+    // Default-language (en) chapter content: preserve-on-omit, same as keywords.
+    // Only write content_json when `content` is explicitly provided so a sync
+    // that omits it never clobbers the stored doc (the bug the reference client
+    // worked around by PATCHing each chapter's content after sync).
+    const chapterContentJson = ch.content ? markdownToTiptapRaw(ch.content).doc : undefined;
 
     if (existing) {
       await db
@@ -121,10 +125,10 @@ export async function PUT(
         .update({
           title: ch.title,
           description: ch.description ?? "",
-          content_json: chapterContentJson,
           group: ch.group ?? null,
           translations,
           order: ci,
+          ...(chapterContentJson !== undefined ? { content_json: chapterContentJson } : {}),
           ...(chKeywords.value !== undefined ? { keywords: chKeywords.value } : {}),
         })
         .eq("id", existing.id);
@@ -137,7 +141,7 @@ export async function PUT(
           project_id: project.id,
           title: ch.title,
           description: ch.description ?? "",
-          content_json: chapterContentJson,
+          content_json: chapterContentJson ?? { type: "doc", content: [] },
           slug: chSlug,
           group: ch.group ?? null,
           translations,

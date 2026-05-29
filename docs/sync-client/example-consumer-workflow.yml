@@ -1,0 +1,31 @@
+# Example workflow for a PRODUCT repo (e.g. document_expert, Respeak_BRD).
+# Copy this into the product repo as `.github/workflows/sync-docs.yml`.
+#
+# - On pull requests touching the docs: run `diff` (preview only, never writes).
+# - On merge to `main`: run `push` (syncs the docs to Reeldocs).
+#
+# Requires a repository secret `REELDOCS_API_KEY` (an rd_... org API key).
+name: Sync docs to Reeldocs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "05_end_user_docs/**"
+  pull_request:
+    paths:
+      - "05_end_user_docs/**"
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The Action sets up Node and runs the reeldocs CLI via npx.
+      - uses: reeldocs/sync-action@v1
+        with:
+          docs-dir: 05_end_user_docs
+          api-key: ${{ secrets.REELDOCS_API_KEY }}
+          # diff on PRs (preview), push on merge to main.
+          mode: ${{ github.event_name == 'pull_request' && 'diff' || 'push' }}

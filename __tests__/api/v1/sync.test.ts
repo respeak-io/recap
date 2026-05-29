@@ -353,4 +353,106 @@ describe("PUT /api/v1/projects/[slug]/sync", () => {
     const json = await res.json();
     expect(json.error).toMatch(/chapters\[0\]/);
   });
+
+  // --- Chapter content (default-language) ---
+
+  it("writes chapter content_json when content is provided", async () => {
+    supabaseMock.setTable("articles", { data: [] });
+    supabaseMock.setTable("projects", { data: null, error: null });
+
+    const chapChain = supabaseMock.getChain("chapters");
+    const existingData = [{ id: "ch-existing", slug: "getting-started" }];
+    let chapCallCount = 0;
+    chapChain.then = vi.fn((r: (v: unknown) => void) => {
+      chapCallCount++;
+      if (chapCallCount === 1) {
+        return r({ data: existingData, error: null });
+      }
+      return r({ data: null, error: null });
+    });
+
+    await PUT(
+      makeRequest("http://localhost/api/v1/projects/docs/sync", {
+        method: "PUT",
+        body: {
+          chapters: [
+            {
+              title: "Getting Started",
+              slug: "getting-started",
+              content: "## Overview\n\nWelcome.",
+              articles: [],
+            },
+          ],
+        },
+        headers: { Authorization: "Bearer rd_key" },
+      }),
+      { params: Promise.resolve({ slug: "docs" }) }
+    );
+
+    expect(supabaseMock.getChain("chapters").update).toHaveBeenCalledWith(
+      expect.objectContaining({ content_json: { type: "doc", content: [] } })
+    );
+  });
+
+  it("omits chapter content_json on update when content is absent (preserves existing)", async () => {
+    supabaseMock.setTable("articles", { data: [] });
+    supabaseMock.setTable("projects", { data: null, error: null });
+
+    const chapChain = supabaseMock.getChain("chapters");
+    const existingData = [{ id: "ch-existing", slug: "getting-started" }];
+    let chapCallCount = 0;
+    chapChain.then = vi.fn((r: (v: unknown) => void) => {
+      chapCallCount++;
+      if (chapCallCount === 1) {
+        return r({ data: existingData, error: null });
+      }
+      return r({ data: null, error: null });
+    });
+
+    await PUT(
+      makeRequest("http://localhost/api/v1/projects/docs/sync", {
+        method: "PUT",
+        body: {
+          chapters: [
+            { title: "Getting Started", slug: "getting-started", articles: [] },
+          ],
+        },
+        headers: { Authorization: "Bearer rd_key" },
+      }),
+      { params: Promise.resolve({ slug: "docs" }) }
+    );
+
+    const updateArg =
+      supabaseMock.getChain("chapters").update.mock.calls[0]?.[0] ?? {};
+    expect(updateArg).not.toHaveProperty("content_json");
+  });
+
+  it("inserts a valid empty doc for a new chapter without content", async () => {
+    supabaseMock.setTable("chapters", { data: [] });
+    supabaseMock.setTable("articles", { data: [] });
+    supabaseMock.setTable("projects", { data: null, error: null });
+
+    const chapChain = supabaseMock.getChain("chapters");
+    chapChain.single = vi.fn(() => ({
+      ...chapChain,
+      then: vi.fn((r: (v: unknown) => void) =>
+        r({ data: { id: "ch-new-1" }, error: null })
+      ),
+    }));
+
+    await PUT(
+      makeRequest("http://localhost/api/v1/projects/docs/sync", {
+        method: "PUT",
+        body: {
+          chapters: [{ title: "Getting Started", articles: [] }],
+        },
+        headers: { Authorization: "Bearer rd_key" },
+      }),
+      { params: Promise.resolve({ slug: "docs" }) }
+    );
+
+    expect(supabaseMock.getChain("chapters").insert).toHaveBeenCalledWith(
+      expect.objectContaining({ content_json: { type: "doc", content: [] } })
+    );
+  });
 });

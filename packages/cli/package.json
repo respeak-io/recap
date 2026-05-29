@@ -1,11 +1,14 @@
 {
   "name": "reeldocs",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "description": "Generate documentation from product videos",
   "bin": {
     "reeldocs": "./dist/src/index.js"
   },
   "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
   "exports": {
     ".": "./dist/src/ai/pipeline.js",
     "./ai": "./dist/src/ai/gemini.js",
@@ -13,7 +16,8 @@
     "./analyze": "./dist/src/analyze/index.js",
     "./record": "./dist/src/record/index.js",
     "./produce": "./dist/src/produce/index.js",
-    "./plan": "./dist/src/analyze/plan-schema.js"
+    "./plan": "./dist/src/analyze/plan-schema.js",
+    "./sync": "./dist/src/sync/index.js"
   },
   "scripts": {
     "build": "tsc",
