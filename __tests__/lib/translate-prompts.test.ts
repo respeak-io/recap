@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 
-// Mock the generate module to avoid transitive import of reeldocs/ai
+// Mock the generate module to avoid transitive import of @respeak/recap/ai
 vi.mock("@/lib/ai/generate", () => ({
   generateText: vi.fn().mockResolvedValue("mocked"),
 }));

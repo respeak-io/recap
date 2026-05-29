@@ -1,5 +1,5 @@
-name: "Reeldocs Sync"
-description: "Sync a docs folder to Reeldocs (push) or preview drift (diff) with the reeldocs CLI"
+name: "Recap Sync"
+description: "Sync a docs folder to a Reeldocs project (push) or preview drift (diff) with the recap CLI"
 author: "Respeak"
 branding:
   icon: "upload-cloud"
@@ -21,7 +21,7 @@ inputs:
     required: false
     default: "diff"
   version:
-    description: "reeldocs npm version or dist-tag to run"
+    description: "@respeak/recap npm version or dist-tag to run"
     required: false
     default: "latest"
 
@@ -33,9 +33,9 @@ runs:
     - uses: actions/setup-node@v4
       with:
         node-version: "20"
-    - name: "reeldocs ${{ inputs.mode }} ${{ inputs.docs-dir }}"
+    - name: "recap ${{ inputs.mode }} ${{ inputs.docs-dir }}"
       shell: bash
       env:
-        REELDOCS_API_KEY: ${{ inputs.api-key }}
+        RECAP_API_KEY: ${{ inputs.api-key }}
       run: |
-        npx -y "reeldocs@${{ inputs.version }}" "${{ inputs.mode }}" "${{ inputs.docs-dir }}" --url "${{ inputs.url }}"
+        npx -y "@respeak/recap@${{ inputs.version }}" "${{ inputs.mode }}" "${{ inputs.docs-dir }}" --url "${{ inputs.url }}"

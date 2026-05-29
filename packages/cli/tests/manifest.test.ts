@@ -8,7 +8,7 @@ import { parseManifest, validateManifest } from "../src/sync/manifest.js";
 let dir: string;
 
 beforeAll(() => {
-  dir = mkdtempSync(path.join(os.tmpdir(), "reeldocs-manifest-"));
+  dir = mkdtempSync(path.join(os.tmpdir(), "recap-manifest-"));
   mkdirSync(path.join(dir, "en/01_getting-started"), { recursive: true });
   writeFileSync(path.join(dir, "en/01_getting-started/_index.md"), "# Intro\n");
   writeFileSync(path.join(dir, "en/01_getting-started/01_sign-in.md"), "# Sign In\n");

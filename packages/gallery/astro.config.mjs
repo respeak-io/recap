@@ -13,7 +13,7 @@ export default defineConfig({
         {
           icon: "github",
           label: "GitHub",
-          href: "https://github.com/respeak-io/reeldocs",
+          href: "https://github.com/respeak-io/recap",
         },
       ],
       sidebar: [

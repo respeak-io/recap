@@ -13,8 +13,8 @@ import { buildPayload } from "./payload.js";
 import { computeDiff, type DiffReport } from "./diff.js";
 import { imageDimensions } from "./image-dimensions.js";
 import {
-  ReeldocsClient,
-  type ReeldocsImage,
+  RecapClient,
+  type RecapImage,
   type RemoteArticle,
   type SyncStats,
 } from "./client.js";
@@ -46,7 +46,7 @@ export async function push(options: SyncOptions): Promise<PushResult> {
   const onProgress = options.onProgress ?? (() => {});
 
   const manifest = await loadAndValidate(options.docsDir, onProgress, onWarn);
-  const client = new ReeldocsClient({ baseUrl: options.url, apiKey: options.apiKey });
+  const client = new RecapClient({ baseUrl: options.url, apiKey: options.apiKey });
 
   const imageUrls = await syncMedia(manifest, client, options.docsDir, onProgress);
 
@@ -67,7 +67,7 @@ export async function diff(options: SyncOptions): Promise<DiffResult> {
   const onProgress = options.onProgress ?? (() => {});
 
   const manifest = await loadAndValidate(options.docsDir, onProgress, onWarn);
-  const client = new ReeldocsClient({ baseUrl: options.url, apiKey: options.apiKey });
+  const client = new RecapClient({ baseUrl: options.url, apiKey: options.apiKey });
 
   onProgress("Fetching remote project...");
   let remote;
@@ -146,7 +146,7 @@ async function loadAndValidate(
 
 async function syncMedia(
   manifest: SyncManifest,
-  client: ReeldocsClient,
+  client: RecapClient,
   docsDir: string,
   onProgress: (message: string) => void,
 ): Promise<Record<string, string>> {
@@ -158,7 +158,7 @@ async function syncMedia(
   if (localFiles.length === 0) return {};
 
   onProgress(`Uploading ${localFiles.length} media file(s)...`);
-  const existing = new Map<string, ReeldocsImage>();
+  const existing = new Map<string, RecapImage>();
   const list = await client.listImages(manifest.project_slug);
   for (const img of list.images) existing.set(img.filename, img);
 

@@ -3,7 +3,7 @@ import path from "node:path";
 
 // --- Remote response shapes (subset of the v1 API) ---
 
-export interface ReeldocsImage {
+export interface RecapImage {
   id: string;
   url: string;
   filename: string;
@@ -82,7 +82,7 @@ export interface ClientOptions {
   apiKey: string;
 }
 
-export class ReeldocsClient {
+export class RecapClient {
   private readonly apiBase: string;
   private readonly apiKey: string;
 
@@ -106,16 +106,16 @@ export class ReeldocsClient {
     }
   }
 
-  listImages(slug: string): Promise<{ images: ReeldocsImage[] }> {
-    return this.request<{ images: ReeldocsImage[] }>("GET", `/projects/${slug}/media/images`);
+  listImages(slug: string): Promise<{ images: RecapImage[] }> {
+    return this.request<{ images: RecapImage[] }>("GET", `/projects/${slug}/media/images`);
   }
 
   patchImage(
     slug: string,
     imageId: string,
     body: { width?: number; height?: number; alt_text?: string },
-  ): Promise<ReeldocsImage> {
-    return this.request<ReeldocsImage>("PATCH", `/projects/${slug}/media/images/${imageId}`, body);
+  ): Promise<RecapImage> {
+    return this.request<RecapImage>("PATCH", `/projects/${slug}/media/images/${imageId}`, body);
   }
 
   sync(slug: string, payload: unknown): Promise<SyncStats> {

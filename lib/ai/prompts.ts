@@ -1,1 +1,1 @@
-export { getDocGenerationPrompt } from "reeldocs/prompts";
+export { getDocGenerationPrompt } from "@respeak/recap/prompts";

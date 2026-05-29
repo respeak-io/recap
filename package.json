@@ -1,5 +1,5 @@
 {
-  "name": "reeldocs-app",
+  "name": "recap-app",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -44,7 +44,7 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "recharts": "^2.15.4",
-    "reeldocs": "workspace:*",
+    "@respeak/recap": "workspace:*",
     "shadcn": "^3.8.4",
     "shiki": "^4.0.2",
     "slugify": "^1.6.6",

@@ -35,7 +35,7 @@ export async function recordFeatures(options: RecordOptions): Promise<RecordingM
   await mkdir(screenshotDir, { recursive: true });
 
   // Temp dir for Playwright's raw video output
-  const tempVideoDir = join(tmpdir(), `reeldocs-video-${randomUUID()}`);
+  const tempVideoDir = join(tmpdir(), `recap-video-${randomUUID()}`);
   await mkdir(tempVideoDir, { recursive: true });
 
   // Run setup script if configured

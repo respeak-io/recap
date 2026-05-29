@@ -1,11 +1,14 @@
 {
-  "name": "reeldocs",
+  "name": "@respeak/recap",
   "version": "0.3.0",
   "description": "Generate documentation from product videos",
   "bin": {
-    "reeldocs": "./dist/src/index.js"
+    "recap": "./dist/src/index.js"
   },
   "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
   "engines": {
     "node": ">=18"
   },

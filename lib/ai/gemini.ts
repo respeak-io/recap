@@ -1,5 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
-export { extractVideoContent } from "reeldocs/ai";
+export { extractVideoContent } from "@respeak/recap/ai";
 
 let _ai: GoogleGenAI | null = null;
 

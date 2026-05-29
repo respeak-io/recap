@@ -14,7 +14,7 @@ import { createInterface } from "node:readline/promises";
 const program = new Command();
 
 program
-  .name("reeldocs")
+  .name("recap")
   .description("Generate documentation from product videos")
   .version("0.3.0");
 
@@ -103,7 +103,7 @@ program
       spinner.succeed(`Found ${featureCount} features across ${categories.size} categories`);
       console.log(`\nPlan written to ${opts.output}`);
       console.log("Review the plan, fill in auth credentials, then run:");
-      console.log(`  reeldocs record --plan ${opts.output}`);
+      console.log(`  recap record --plan ${opts.output}`);
     } catch (err) {
       spinner.fail(err instanceof Error ? err.message : "Analysis failed");
       process.exit(1);
@@ -148,7 +148,7 @@ program
         }
       }
       console.log("\nNext step:");
-      console.log(`  reeldocs produce --plan ${opts.plan}`);
+      console.log(`  recap produce --plan ${opts.plan}`);
     } catch (err) {
       spinner.fail(err instanceof Error ? err.message : "Recording failed");
       process.exit(1);
@@ -234,7 +234,7 @@ program
         const answer = await rl.question("\nProceed with recording? (y/N) ");
         rl.close();
         if (answer.toLowerCase() !== "y") {
-          console.log("Aborted. Edit the plan file and run: reeldocs record --plan " + opts.output);
+          console.log("Aborted. Edit the plan file and run: recap record --plan " + opts.output);
           return;
         }
       }
@@ -272,12 +272,12 @@ program
   .description("Sync a docs folder (sync.json) to its Reeldocs project")
   .argument("<docsDir>", "Path to the docs folder containing sync.json")
   .option("--url <url>", "Reeldocs base URL", "https://docs.respeak.io")
-  .option("--api-key <key>", "Reeldocs API key (or set REELDOCS_API_KEY)")
-  .option("--dry-run", "Preview changes without writing (same as `reeldocs diff`)")
+  .option("--api-key <key>", "Reeldocs API key (or set RECAP_API_KEY)")
+  .option("--dry-run", "Preview changes without writing (same as `recap diff`)")
   .action(async (docsDir: string, opts: { url: string; apiKey?: string; dryRun?: boolean }) => {
-    const apiKey = opts.apiKey || process.env.REELDOCS_API_KEY;
+    const apiKey = opts.apiKey || process.env.RECAP_API_KEY;
     if (!apiKey) {
-      console.error("Error: Reeldocs API key required. Set REELDOCS_API_KEY or use --api-key");
+      console.error("Error: Reeldocs API key required. Set RECAP_API_KEY or use --api-key");
       process.exit(1);
     }
 
@@ -315,12 +315,12 @@ program
   .description("Preview differences between a docs folder and its Reeldocs project (changes nothing)")
   .argument("<docsDir>", "Path to the docs folder containing sync.json")
   .option("--url <url>", "Reeldocs base URL", "https://docs.respeak.io")
-  .option("--api-key <key>", "Reeldocs API key (or set REELDOCS_API_KEY)")
+  .option("--api-key <key>", "Reeldocs API key (or set RECAP_API_KEY)")
   .option("--exit-code", "Exit with status 1 when differences are found")
   .action(async (docsDir: string, opts: { url: string; apiKey?: string; exitCode?: boolean }) => {
-    const apiKey = opts.apiKey || process.env.REELDOCS_API_KEY;
+    const apiKey = opts.apiKey || process.env.RECAP_API_KEY;
     if (!apiKey) {
-      console.error("Error: Reeldocs API key required. Set REELDOCS_API_KEY or use --api-key");
+      console.error("Error: Reeldocs API key required. Set RECAP_API_KEY or use --api-key");
       process.exit(1);
     }
     await runDiff({ docsDir, url: opts.url, apiKey, exitCode: opts.exitCode });
