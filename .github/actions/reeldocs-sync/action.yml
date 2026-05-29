@@ -1,0 +1,41 @@
+name: "Reeldocs Sync"
+description: "Sync a docs folder to Reeldocs (push) or preview drift (diff) with the reeldocs CLI"
+author: "Respeak"
+branding:
+  icon: "upload-cloud"
+  color: "blue"
+
+inputs:
+  docs-dir:
+    description: "Path to the docs folder containing sync.json"
+    required: true
+  api-key:
+    description: "Reeldocs API key (rd_...). Pass from a repository secret."
+    required: true
+  url:
+    description: "Reeldocs base URL"
+    required: false
+    default: "https://docs.respeak.io"
+  mode:
+    description: "push (write changes) or diff (preview only, changes nothing)"
+    required: false
+    default: "diff"
+  version:
+    description: "reeldocs npm version or dist-tag to run"
+    required: false
+    default: "latest"
+
+runs:
+  using: "composite"
+  steps:
+    # Ensure Node is available so the CLI can be run via npx, without the
+    # consumer needing to add their own setup-node step.
+    - uses: actions/setup-node@v4
+      with:
+        node-version: "20"
+    - name: "reeldocs ${{ inputs.mode }} ${{ inputs.docs-dir }}"
+      shell: bash
+      env:
+        REELDOCS_API_KEY: ${{ inputs.api-key }}
+      run: |
+        npx -y "reeldocs@${{ inputs.version }}" "${{ inputs.mode }}" "${{ inputs.docs-dir }}" --url "${{ inputs.url }}"

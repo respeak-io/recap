@@ -311,6 +311,7 @@ Optionally include `name`, `subtitle`, and/or `translations` at the top level to
 - Chapters/articles not in the payload are **deleted**
 - **Multilingual articles:** Each language variant is a separate entry with the same `slug` but different `language`. If you only include `"language": "en"` entries, all other language variants will be deleted.
 - **`translations` is for chapters only** (sidebar title/group). Article content per language must be sent as separate article entries.
+- **Chapter content:** A chapter's default-language (`en`) body is set from its top-level `content` (Markdown), persisted directly to `content_json`. Like `keywords`, chapter `content` is **preserve-on-omit**: a chapter sent without `content` keeps its existing body (it is not wiped), and a newly-created chapter without `content` starts from an empty document. Other languages' chapter bodies are sent as `translations.<lang>.content`.
 - **Keywords behavior:** Sync treats `keywords` differently from other fields. If a chapter or article object **includes** a `keywords` array, it replaces the entity's keywords (with the same normalization + validation as the PATCH endpoints). If `keywords` is **omitted**, existing keywords are preserved (NOT cleared). This is intentional: an external keyword-generation pipeline may run independently of doc sync, and Sync should not silently erase its work. To explicitly clear keywords, send `"keywords": []`.
 
 **Response:**

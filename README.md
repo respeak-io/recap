@@ -42,6 +42,17 @@ Options:
 
 Use `--format mdx` for Docusaurus, Mintlify, or other MDX-based doc sites — adds YAML frontmatter with `title` and `sidebar_position`.
 
+## Sync a docs folder to Reeldocs
+
+Keep docs in your product repo as a `docs/` folder (Markdown + a `sync.json` manifest) and sync them to a Reeldocs project — no copy-pasted scripts:
+
+```bash
+npx reeldocs diff ./docs --api-key rd_xxx   # preview changes, writes nothing
+npx reeldocs push ./docs --api-key rd_xxx   # sync (declarative reconciliation)
+```
+
+In CI, use the `reeldocs/sync-action@v1` Action (diff on PRs, push on merge). See [`docs/sync-client/`](docs/sync-client/README.md) for the manifest format, cross-link rewriting, and an example workflow.
+
 ## Example Output
 
 Some things only have YouTube videos for docs. Reeldocs fixes that:

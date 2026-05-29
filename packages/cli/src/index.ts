@@ -8,6 +8,7 @@ import { writeMdx } from "./output/mdx.js";
 import { analyzeCodebase } from "./analyze/index.js";
 import { recordFeatures } from "./record/index.js";
 import { produceOutput } from "./produce/index.js";
+import { push as pushDocs, diff as diffDocs } from "./sync/index.js";
 import { createInterface } from "node:readline/promises";
 
 const program = new Command();
@@ -15,7 +16,7 @@ const program = new Command();
 program
   .name("reeldocs")
   .description("Generate documentation from product videos")
-  .version("0.2.0");
+  .version("0.3.0");
 
 // --- Original video-to-docs command (default) ---
 
@@ -263,5 +264,104 @@ program
       process.exit(1);
     }
   });
+
+// --- push command ---
+
+program
+  .command("push")
+  .description("Sync a docs folder (sync.json) to its Reeldocs project")
+  .argument("<docsDir>", "Path to the docs folder containing sync.json")
+  .option("--url <url>", "Reeldocs base URL", "https://docs.respeak.io")
+  .option("--api-key <key>", "Reeldocs API key (or set REELDOCS_API_KEY)")
+  .option("--dry-run", "Preview changes without writing (same as `reeldocs diff`)")
+  .action(async (docsDir: string, opts: { url: string; apiKey?: string; dryRun?: boolean }) => {
+    const apiKey = opts.apiKey || process.env.REELDOCS_API_KEY;
+    if (!apiKey) {
+      console.error("Error: Reeldocs API key required. Set REELDOCS_API_KEY or use --api-key");
+      process.exit(1);
+    }
+
+    if (opts.dryRun) {
+      await runDiff({ docsDir, url: opts.url, apiKey });
+      return;
+    }
+
+    const spinner = ora("Starting sync...").start();
+    try {
+      const { stats, warnings } = await pushDocs({
+        docsDir,
+        url: opts.url,
+        apiKey,
+        onProgress: (msg) => { spinner.text = msg; },
+      });
+      spinner.succeed(`Synced to ${opts.url}`);
+      console.log(
+        `  chapters: +${stats.chapters.created} ~${stats.chapters.updated} -${stats.chapters.deleted}`
+      );
+      console.log(
+        `  articles: +${stats.articles.created} ~${stats.articles.updated} -${stats.articles.deleted}`
+      );
+      for (const w of warnings) console.log(`  ? ${w}`);
+    } catch (err) {
+      spinner.fail(err instanceof Error ? err.message : "Sync failed");
+      process.exit(1);
+    }
+  });
+
+// --- diff command (preview only) ---
+
+program
+  .command("diff")
+  .description("Preview differences between a docs folder and its Reeldocs project (changes nothing)")
+  .argument("<docsDir>", "Path to the docs folder containing sync.json")
+  .option("--url <url>", "Reeldocs base URL", "https://docs.respeak.io")
+  .option("--api-key <key>", "Reeldocs API key (or set REELDOCS_API_KEY)")
+  .option("--exit-code", "Exit with status 1 when differences are found")
+  .action(async (docsDir: string, opts: { url: string; apiKey?: string; exitCode?: boolean }) => {
+    const apiKey = opts.apiKey || process.env.REELDOCS_API_KEY;
+    if (!apiKey) {
+      console.error("Error: Reeldocs API key required. Set REELDOCS_API_KEY or use --api-key");
+      process.exit(1);
+    }
+    await runDiff({ docsDir, url: opts.url, apiKey, exitCode: opts.exitCode });
+  });
+
+// Shared diff runner for `diff` and `push --dry-run`. Informational by default:
+// exits 0 even when drift exists (so the Action stays green on docs PRs); only
+// errors exit non-zero, or drift when `--exit-code` is set.
+async function runDiff(opts: {
+  docsDir: string;
+  url: string;
+  apiKey: string;
+  exitCode?: boolean;
+}): Promise<void> {
+  const spinner = ora("Comparing with remote...").start();
+  try {
+    const { report, warnings } = await diffDocs({
+      docsDir: opts.docsDir,
+      url: opts.url,
+      apiKey: opts.apiKey,
+      onProgress: (msg) => { spinner.text = msg; },
+    });
+    spinner.stop();
+
+    for (const w of warnings) console.log(`  ? ${w}`);
+    if (report.info.length > 0) {
+      console.log("\nINFO:");
+      for (const i of report.info) console.log(`  ${i}`);
+    }
+    if (report.diffs.length > 0) {
+      console.log(`\n${report.diffs.length} DIFFERENCE(S):`);
+      for (const d of report.diffs) console.log(`  ✗ ${d}`);
+      console.log("\nLocal and remote are OUT OF SYNC.");
+      if (opts.exitCode) process.exit(1);
+    } else {
+      console.log("\nLocal and remote are IN SYNC.");
+    }
+  } catch (err) {
+    spinner.fail(err instanceof Error ? err.message : "Diff failed");
+    process.exit(1);
+  }
+}
 
 program.parse();
