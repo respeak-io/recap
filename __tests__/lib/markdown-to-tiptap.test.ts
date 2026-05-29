@@ -263,4 +263,128 @@ describe("markdownToTiptapRaw", () => {
     expect(codeSpan).toBeDefined();
     expect(codeSpan!.text).toBe("console.log()");
   });
+
+  // --- Regression: ::: directives nested inside raw-HTML <details> blocks ---
+  // The placeholder-restore pass must recurse into restored custom blocks, else
+  // directives nested inside <details> are dropped and replaced by literal
+  // <!--CB:n--> markers. See restoreBlock() in markdown-to-tiptap.ts.
+  type N = { type?: string; attrs?: Record<string, unknown>; content?: N[]; text?: string };
+  const kids = (n: N | undefined): N[] => n?.content ?? [];
+  const childOfType = (n: N | undefined, type: string): N | undefined =>
+    kids(n).find((c) => c.type === type);
+
+  it("rehydrates ::: directives nested inside <details> (no CB placeholders leak)", () => {
+    const md = [
+      "Intro paragraph.",
+      "",
+      "<details>",
+      "<summary>Configuring (for managers)</summary>",
+      "",
+      "Lead-in paragraph.",
+      "",
+      ":::steps",
+      "### Open settings",
+      "",
+      "Open the **Example questions** section.",
+      "",
+      "### Manage questions",
+      "",
+      "Here you can **add** or **remove** questions.",
+      ":::",
+      "",
+      ":::note",
+      "There is a maximum number of questions.",
+      ":::",
+      "",
+      "</details>",
+    ].join("\n");
+
+    const { doc } = markdownToTiptapRaw(md);
+
+    // No raw placeholder markers survive anywhere in the output.
+    expect(JSON.stringify(doc)).not.toContain("CB:");
+
+    const root = doc.content as unknown as N[];
+    const details = root.find((n) => n.type === "details");
+    expect(details).toBeDefined();
+    const inner = kids(childOfType(details, "detailsContent"));
+
+    // The nested :::steps became a real steps node with both step titles.
+    const steps = inner.find((n) => n.type === "steps");
+    expect(steps).toBeDefined();
+    expect(kids(steps).map((s) => s.attrs!.title)).toEqual([
+      "Open settings",
+      "Manage questions",
+    ]);
+
+    // The nested :::note became a callout (info).
+    const note = inner.find((n) => n.type === "callout");
+    expect(note).toBeDefined();
+    expect(note!.attrs).toMatchObject({ type: "info" });
+  });
+
+  it("rehydrates directives nested two levels deep (:::note inside :::steps inside <details>)", () => {
+    const md = [
+      "<details>",
+      "<summary>Outer</summary>",
+      "",
+      ":::steps",
+      "### First step",
+      "",
+      "Do the first thing.",
+      "",
+      ":::note",
+      "A note inside a step.",
+      ":::",
+      "",
+      "### Second step",
+      "",
+      "Do the second thing.",
+      ":::",
+      "",
+      "</details>",
+    ].join("\n");
+
+    const { doc } = markdownToTiptapRaw(md);
+    expect(JSON.stringify(doc)).not.toContain("CB:");
+
+    const root = doc.content as unknown as N[];
+    const details = root.find((n) => n.type === "details");
+    const steps = childOfType(childOfType(details, "detailsContent"), "steps");
+    expect(steps).toBeDefined();
+    const firstStep = kids(steps)[0];
+    expect(firstStep.attrs!.title).toBe("First step");
+    // The :::note nested inside the first step is rehydrated as a callout.
+    const noteInStep = childOfType(firstStep, "callout");
+    expect(noteInStep).toBeDefined();
+    expect(noteInStep!.attrs).toMatchObject({ type: "info" });
+  });
+
+  it("does not regress top-level directives alongside a <details>", () => {
+    const md = [
+      ":::tip",
+      "Top-level tip.",
+      ":::",
+      "",
+      "<details><summary>Box</summary>",
+      "",
+      ":::warning",
+      "Nested warning.",
+      ":::",
+      "",
+      "</details>",
+    ].join("\n");
+
+    const { doc } = markdownToTiptapRaw(md);
+    expect(JSON.stringify(doc)).not.toContain("CB:");
+
+    const root = doc.content as unknown as N[];
+    // Top-level tip still rehydrated at the document root.
+    const topTip = root.find((n) => n.type === "callout");
+    expect(topTip!.attrs).toMatchObject({ type: "tip" });
+    // Nested warning rehydrated inside the details.
+    const details = root.find((n) => n.type === "details");
+    const warn = childOfType(childOfType(details, "detailsContent"), "callout");
+    expect(warn!.attrs).toMatchObject({ type: "warning" });
+  });
 });

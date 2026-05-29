@@ -93,7 +93,7 @@ function replacePlaceholders(
         if (match) {
           const idx = parseInt(match[1], 10);
           if (customBlocks[idx]) {
-            result.push(customBlocks[idx]);
+            result.push(restoreBlock(customBlocks[idx], customBlocks));
             continue;
           }
         }
@@ -109,7 +109,7 @@ function replacePlaceholders(
           const m = childText.match(PLACEHOLDER_RE);
           if (m) {
             const idx = parseInt(m[1], 10);
-            if (customBlocks[idx]) result.push(customBlocks[idx]);
+            if (customBlocks[idx]) result.push(restoreBlock(customBlocks[idx], customBlocks));
           } else if (childText) {
             result.push({ type: "paragraph", content: [child] });
           }
@@ -124,7 +124,7 @@ function replacePlaceholders(
       if (match) {
         const idx = parseInt(match[1], 10);
         if (customBlocks[idx]) {
-          result.push(customBlocks[idx]);
+          result.push(restoreBlock(customBlocks[idx], customBlocks));
           continue;
         }
       }
@@ -142,6 +142,24 @@ function replacePlaceholders(
   }
 
   return result;
+}
+
+/**
+ * Re-run placeholder restoration inside a restored custom block, so directives
+ * nested inside another block (e.g. a :::steps or :::note inside a <details>)
+ * are rehydrated too — not left as literal <!--CB:n--> text. Inner directives
+ * are always extracted before their container, so they hold lower indices than
+ * the block being restored; recursion always terminates (no block references
+ * itself or a later block).
+ */
+function restoreBlock(block: TiptapNode, customBlocks: TiptapNode[]): TiptapNode {
+  if (Array.isArray(block.content)) {
+    return {
+      ...block,
+      content: replacePlaceholders(block.content as TiptapNode[], customBlocks),
+    };
+  }
+  return block;
 }
 
 /**
