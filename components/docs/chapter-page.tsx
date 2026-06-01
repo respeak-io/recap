@@ -13,7 +13,7 @@ interface ChapterPageProps {
   articles: { id: string; title: string; description?: string; slug: string }[];
   prev?: NavItem | null;
   next?: NavItem | null;
-  lang: string;
+  locale: string;
   videoUrls?: Record<string, string>;
 }
 
@@ -32,16 +32,15 @@ export function ChapterPage({
   articles,
   prev,
   next,
-  lang,
+  locale,
   videoUrls,
 }: ChapterPageProps) {
-  const qs = lang !== "en" ? `?lang=${lang}` : "";
-
   return (
     <div className="flex-1 max-w-[720px] mx-auto px-8 py-12 min-w-0">
       <DocsBreadcrumb
         projectName={projectName}
         projectSlug={projectSlug}
+        locale={locale}
         chapterTitle={chapterTitle}
       />
       <h1 className="text-3xl font-bold mt-4 mb-2">{chapterTitle}</h1>
@@ -51,7 +50,7 @@ export function ChapterPage({
       {!chapterDescription && <div className="mb-6" />}
       {hasContent(contentJson) && (
         <div className="mb-8">
-          <ArticleRenderer content={contentJson} videoUrls={videoUrls} />
+          <ArticleRenderer content={contentJson} videoUrls={videoUrls} locale={locale} />
         </div>
       )}
       {articles.length > 0 ? (
@@ -59,7 +58,7 @@ export function ChapterPage({
           {articles.map((article) => (
             <Link
               key={article.id}
-              href={`/${projectSlug}/${article.slug}${qs}`}
+              href={`/${locale}/${projectSlug}/${article.slug}`}
               className="group rounded-xl border bg-card p-4 transition-colors hover:bg-accent/50"
             >
               <p className="font-medium text-card-foreground group-hover:text-accent-foreground">
@@ -76,7 +75,7 @@ export function ChapterPage({
       ) : (
         <p className="text-muted-foreground">No articles in this chapter yet.</p>
       )}
-      <PageNav prev={prev} next={next} projectSlug={projectSlug} lang={lang} />
+      <PageNav prev={prev} next={next} projectSlug={projectSlug} locale={locale} />
     </div>
   );
 }

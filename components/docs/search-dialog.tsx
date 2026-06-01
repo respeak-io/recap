@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Search as SearchIcon, FileText, Hash, X } from "lucide-react";
 
 interface SearchResult {
@@ -16,9 +16,10 @@ interface SearchResult {
 interface SearchDialogProps {
   projectId: string;
   projectSlug: string;
+  locale: string;
 }
 
-export function SearchDialog({ projectId, projectSlug }: SearchDialogProps) {
+export function SearchDialog({ projectId, projectSlug, locale }: SearchDialogProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -27,8 +28,7 @@ export function SearchDialog({ projectId, projectSlug }: SearchDialogProps) {
   const [fallback, setFallback] = useState<"or" | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const searchParamsHook = useSearchParams();
-  const currentLang = searchParamsHook.get("lang") ?? "en";
+  const currentLang = locale;
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -112,8 +112,7 @@ export function SearchDialog({ projectId, projectSlug }: SearchDialogProps) {
 
   function handleSelect(slug: string) {
     setOpen(false);
-    const langParam = currentLang !== "en" ? `?lang=${currentLang}` : "";
-    router.push(`/${projectSlug}/${slug}${langParam}`);
+    router.push(`/${locale}/${projectSlug}/${slug}`);
   }
 
   // Keyboard navigation

@@ -6,8 +6,13 @@ import { DocsBreadcrumb } from "@/components/docs/docs-breadcrumb";
 import { AnalyticsTracker } from "@/components/docs/analytics-tracker";
 import { ChapterPage } from "@/components/docs/chapter-page";
 import { PageNav, type NavItem } from "@/components/docs/page-nav";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { ArticleWithVideo } from "./article-with-video";
+import {
+  buildAlternates,
+  isLocale,
+  projectDefaultLocale,
+} from "@/lib/docs-locale";
 
 interface NavChapter {
   slug: string;
@@ -129,14 +134,49 @@ function findPrevNext(navList: NavItem[], currentSlug: string) {
 
 export async function generateMetadata({
   params,
-  searchParams,
 }: {
-  params: Promise<{ projectSlug: string; articleSlug: string }>;
-  searchParams: Promise<{ lang?: string }>;
+  params: Promise<{ locale: string; projectSlug: string; articleSlug: string }>;
 }): Promise<Metadata> {
-  const { projectSlug, articleSlug } = await params;
-  const { lang = "en" } = await searchParams;
+  const { locale, projectSlug, articleSlug } = await params;
+  const lang = locale;
   const supabase = await createClient();
+
+  // Languages this slug is published in — drives the hreflang alternates.
+  const { data: variants } = await supabase
+    .from("articles")
+    .select("language, projects!inner(slug)")
+    .eq("projects.slug", projectSlug)
+    .eq("slug", articleSlug)
+    .eq("status", "published");
+
+  let available = [
+    ...new Set((variants ?? []).map((v) => v.language)),
+  ].filter(isLocale);
+
+  // Chapters have no per-language rows; fall back to the project's published locales.
+  if (available.length === 0) {
+    const { data } = await supabase
+      .from("projects")
+      .select("articles(language, status)")
+      .eq("slug", projectSlug)
+      .eq("is_public", true)
+      .single();
+    available = [
+      ...new Set(
+        ((data?.articles ?? []) as { language: string; status: string }[])
+          .filter((a) => a.status === "published")
+          .map((a) => a.language),
+      ),
+    ].filter(isLocale);
+  }
+
+  const alternates = available.length
+    ? buildAlternates({
+        pathWithoutLocale: `/${projectSlug}/${articleSlug}`,
+        available,
+        currentLocale: locale,
+      })
+    : undefined;
 
   // Try article first
   const { data: article } = await supabase
@@ -150,20 +190,23 @@ export async function generateMetadata({
 
   if (article) {
     const projectName = (article.projects as unknown as { name: string }).name;
-    return { title: `${article.title} | ${projectName}` };
+    return { title: `${article.title} | ${projectName}`, alternates };
   }
 
   // Try chapter
   const { data: chapter } = await supabase
     .from("chapters")
-    .select("title, projects!inner(name)")
+    .select("title, translations, projects!inner(name)")
     .eq("projects.slug", projectSlug)
     .eq("slug", articleSlug)
     .single();
 
   if (chapter) {
     const projectName = (chapter.projects as unknown as { name: string }).name;
-    return { title: `${chapter.title} | ${projectName}` };
+    const title =
+      (chapter.translations as Record<string, { title?: string }> | null)?.[lang]
+        ?.title ?? chapter.title;
+    return { title: `${title} | ${projectName}`, alternates };
   }
 
   return { title: "Not Found" };
@@ -171,13 +214,11 @@ export async function generateMetadata({
 
 export default async function ArticleOrChapterPage({
   params,
-  searchParams,
 }: {
-  params: Promise<{ projectSlug: string; articleSlug: string }>;
-  searchParams: Promise<{ lang?: string }>;
+  params: Promise<{ locale: string; projectSlug: string; articleSlug: string }>;
 }) {
-  const { projectSlug, articleSlug } = await params;
-  const { lang = "en" } = await searchParams;
+  const { locale, projectSlug, articleSlug } = await params;
+  const lang = locale;
   const supabase = await createClient();
 
   // Resolve project ID first
@@ -232,6 +273,7 @@ export default async function ArticleOrChapterPage({
           <DocsBreadcrumb
             projectName={resolvedProjectName}
             projectSlug={projectSlug}
+            locale={locale}
             chapterTitle={article.chapters?.translations?.[lang]?.title ?? article.chapters?.title}
             chapterSlug={article.chapters?.slug}
             articleTitle={article.title}
@@ -242,8 +284,9 @@ export default async function ArticleOrChapterPage({
             content={article.content_json}
             videoUrl={videoUrl}
             videoUrls={embeddedVideoUrls}
+            locale={locale}
           />
-          <PageNav prev={prev} next={next} projectSlug={projectSlug} lang={lang} />
+          <PageNav prev={prev} next={next} projectSlug={projectSlug} locale={locale} />
         </article>
         <Toc headings={headings} />
         <AnalyticsTracker
@@ -256,7 +299,9 @@ export default async function ArticleOrChapterPage({
     );
   }
 
-  // Try chapter
+  // Try chapter next. Chapters are locale-agnostic (they render in every locale via
+  // translation fallback), so a chapter matching this slug wins over redirecting the
+  // reader to an article variant in another language.
   const { data: chapter } = await supabase
     .from("chapters")
     .select("*, articles(id, title, description, slug, language, status, \"order\")")
@@ -264,7 +309,26 @@ export default async function ArticleOrChapterPage({
     .eq("slug", articleSlug)
     .single();
 
-  if (!chapter) notFound();
+  if (!chapter) {
+    // No article in this locale and no chapter: if this slug is published as an
+    // article in another locale, send the reader there (e.g. an English deep-link
+    // to a German-only article → `/de/…`); otherwise 404.
+    const { data: otherVariants } = await supabase
+      .from("articles")
+      .select("language")
+      .eq("project_id", project.id)
+      .eq("slug", articleSlug)
+      .eq("status", "published");
+
+    const otherLocales = [
+      ...new Set((otherVariants ?? []).map((v) => v.language)),
+    ].filter(isLocale);
+    if (otherLocales.length > 0) {
+      redirect(`/${projectDefaultLocale(otherLocales)}/${projectSlug}/${articleSlug}`);
+    }
+
+    notFound();
+  }
 
   const chapterTitle =
     chapter.translations?.[lang]?.title ?? chapter.title;
@@ -289,13 +353,13 @@ export default async function ArticleOrChapterPage({
     <ChapterPage
       projectName={project.name}
       projectSlug={projectSlug}
+      locale={locale}
       chapterTitle={chapterTitle}
       chapterDescription={chapterDescription}
       contentJson={chapterContentJson}
       articles={articles}
       prev={prev}
       next={next}
-      lang={lang}
       videoUrls={chapterVideoUrls}
     />
   );

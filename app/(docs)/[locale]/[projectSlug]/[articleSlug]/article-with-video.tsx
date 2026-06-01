@@ -11,6 +11,7 @@ interface ArticleWithVideoProps {
   content: any;
   videoUrl: string | null;
   videoUrls?: Record<string, string>;
+  locale: string;
 }
 
 export function ArticleWithVideo({
@@ -19,6 +20,7 @@ export function ArticleWithVideo({
   content,
   videoUrl,
   videoUrls,
+  locale,
 }: ArticleWithVideoProps) {
   const playerRef = useRef<VideoPlayerHandle>(null);
 
@@ -40,6 +42,7 @@ export function ArticleWithVideo({
         content={content}
         onTimestampClick={handleTimestampClick}
         videoUrls={videoUrls}
+        locale={locale}
       />
     </>
   );

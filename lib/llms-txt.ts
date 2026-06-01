@@ -1,12 +1,28 @@
 import { createClient } from "@/lib/supabase/server";
+import { getSiteUrl, localizeDocsPath } from "@/lib/docs-locale";
 
 interface LlmsChapter {
   title: string;
   articles: { title: string; slug: string; content_text: string }[];
 }
 
+interface RawChapter {
+  title: string;
+  order: number;
+  translations?: Record<string, { title?: string }> | null;
+  articles: {
+    language: string;
+    status: string;
+    title: string;
+    slug: string;
+    content_text: string;
+    order: number;
+  }[];
+}
+
 async function fetchLlmsData(
-  projectSlug: string
+  projectSlug: string,
+  locale: string,
 ): Promise<{ name: string; chapters: LlmsChapter[] } | null> {
   const supabase = await createClient();
 
@@ -21,25 +37,26 @@ async function fetchLlmsData(
 
   if (!project) return null;
 
-  const chapters = project.chapters
-    .sort((a: { order: number }, b: { order: number }) => a.order - b.order)
-    .map((ch: { title: string; order: number; articles: { language: string; status: string; title: string; slug: string; content_text: string; order: number }[] }) => ({
-      title: ch.title,
+  const chapters = (project.chapters as RawChapter[])
+    .sort((a, b) => a.order - b.order)
+    .map((ch) => ({
+      title: ch.translations?.[locale]?.title ?? ch.title,
       articles: ch.articles
-        .filter((a) => a.language === "en" && a.status === "published")
+        .filter((a) => a.language === locale && a.status === "published")
         .sort((a, b) => a.order - b.order),
     }))
-    .filter((ch: { articles: unknown[] }) => ch.articles.length > 0);
+    .filter((ch) => ch.articles.length > 0);
 
   if (chapters.length === 0) return null;
 
   return { name: project.name, chapters };
 }
 
-export async function generateLlmsTxt(projectSlug: string) {
-  const data = await fetchLlmsData(projectSlug);
+export async function generateLlmsTxt(projectSlug: string, locale: string) {
+  const data = await fetchLlmsData(projectSlug, locale);
   if (!data) return null;
 
+  const siteUrl = getSiteUrl();
   const lines = [`# ${data.name}\n`];
   lines.push(
     `> Documentation for ${data.name}, optimized for LLM consumption.\n`
@@ -48,7 +65,7 @@ export async function generateLlmsTxt(projectSlug: string) {
   for (const chapter of data.chapters) {
     lines.push(`## ${chapter.title}`);
     for (const article of chapter.articles) {
-      const url = `/${projectSlug}/${article.slug}`;
+      const url = `${siteUrl}${localizeDocsPath(locale, `${projectSlug}/${article.slug}`)}`;
       lines.push(
         `- [${article.title}](${url}): ${article.content_text.slice(0, 120)}`
       );
@@ -59,8 +76,8 @@ export async function generateLlmsTxt(projectSlug: string) {
   return lines.join("\n");
 }
 
-export async function generateLlmsFullTxt(projectSlug: string) {
-  const data = await fetchLlmsData(projectSlug);
+export async function generateLlmsFullTxt(projectSlug: string, locale: string) {
+  const data = await fetchLlmsData(projectSlug, locale);
   if (!data) return null;
 
   const lines = [`# ${data.name}\n`];

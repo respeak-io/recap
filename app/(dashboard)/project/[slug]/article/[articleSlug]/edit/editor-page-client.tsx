@@ -153,7 +153,7 @@ export function EditorPageClient({
     }
   }
 
-  const publicUrl = `/${projectSlug}/${article.slug}`;
+  const publicUrl = `/${currentLanguage}/${projectSlug}/${article.slug}`;
 
   return (
     <>

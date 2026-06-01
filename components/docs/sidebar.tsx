@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -43,6 +43,7 @@ interface SidebarProps {
   projectId: string;
   projectName: string;
   projectSlug: string;
+  locale: string;
   chapters: Chapter[];
   languages: string[];
   logoUrl?: string | null;
@@ -53,15 +54,16 @@ function DocsSidebarContent({
   projectId,
   projectName,
   projectSlug,
+  locale,
   chapters,
   languages,
   logoUrl,
   translations,
 }: SidebarProps) {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const currentLang = searchParams.get("lang") ?? "en";
+  const currentLang = locale;
   const resolvedProjectName = translations?.[currentLang]?.name || projectName;
+  const basePath = `/${locale}/${projectSlug}`;
 
   const filteredChapters = chapters
     .map((ch) => ({
@@ -76,8 +78,8 @@ function DocsSidebarContent({
     }))
     .filter((ch) => ch.articles.length > 0);
 
-  const activeArticleSlug = pathname.startsWith(`/${projectSlug}/`)
-    ? pathname.slice(`/${projectSlug}/`.length).split("/")[0]
+  const activeArticleSlug = pathname.startsWith(`${basePath}/`)
+    ? pathname.slice(`${basePath}/`.length).split("/")[0]
     : "";
   const activeChapterId = filteredChapters.find((ch) =>
     ch.articles.some((a) => a.slug === activeArticleSlug)
@@ -107,18 +109,8 @@ function DocsSidebarContent({
     });
   }
 
-  function buildQuery(overrides: Record<string, string>) {
-    const params: Record<string, string> = { lang: currentLang, ...overrides };
-    const parts: string[] = [];
-    if (params.lang !== "en") parts.push(`lang=${params.lang}`);
-    return parts.length > 0 ? `?${parts.join("&")}` : "";
-  }
-
   function handleLanguageChange(lang: string) {
-    const query = buildQuery({ lang });
-    const articleSlug = pathname.startsWith(`/${projectSlug}/`)
-      ? pathname.slice(`/${projectSlug}/`.length).split("/")[0]
-      : "";
+    const articleSlug = activeArticleSlug;
     if (articleSlug) {
       const exists = chapters.some((ch) =>
         ch.articles.some(
@@ -126,11 +118,11 @@ function DocsSidebarContent({
         )
       );
       if (exists) {
-        window.location.href = `/${projectSlug}/${articleSlug}${query}`;
+        window.location.href = `/${lang}/${projectSlug}/${articleSlug}`;
         return;
       }
     }
-    window.location.href = `/${projectSlug}${query}`;
+    window.location.href = `/${lang}/${projectSlug}`;
   }
 
   function chapterTitle(ch: Chapter): string {
@@ -155,14 +147,14 @@ function DocsSidebarContent({
     <div className="flex flex-col h-full text-sm">
       {/* Header: logo + search */}
       <div className="flex flex-col gap-3 p-4 pb-2">
-        <Link href={`/${projectSlug}`} className="inline-flex items-center gap-2.5 text-[0.9375rem] font-medium">
+        <Link href={basePath} className="inline-flex items-center gap-2.5 text-[0.9375rem] font-medium">
           {logoUrl ? (
             <img src={logoUrl} alt={resolvedProjectName} className="max-h-7 object-contain" />
           ) : (
             resolvedProjectName
           )}
         </Link>
-        <SearchDialog projectId={projectId} projectSlug={projectSlug} />
+        <SearchDialog projectId={projectId} projectSlug={projectSlug} locale={locale} />
       </div>
 
       {/* Nav */}
@@ -177,8 +169,8 @@ function DocsSidebarContent({
             <div className="flex flex-col gap-0.5">
               {group.chapters.map((chapter) => {
                 const isExpanded = expandedChapters.has(chapter.id);
-                const chapterHref = `/${projectSlug}/${chapter.slug}${buildQuery({})}`;
-                const isChapterActive = pathname === `/${projectSlug}/${chapter.slug}`;
+                const chapterHref = `${basePath}/${chapter.slug}`;
+                const isChapterActive = pathname === `${basePath}/${chapter.slug}`;
                 return (
                   <Collapsible
                     key={chapter.id}
@@ -212,8 +204,8 @@ function DocsSidebarContent({
                         {/* Vertical connector line */}
                         <div className="absolute w-px inset-y-1 start-[0.625rem] bg-sidebar-foreground/15" />
                         {chapter.articles.map((article) => {
-                          const href = `/${projectSlug}/${article.slug}${buildQuery({})}`;
-                          const isActive = pathname === `/${projectSlug}/${article.slug}`;
+                          const href = `${basePath}/${article.slug}`;
+                          const isActive = pathname === `${basePath}/${article.slug}`;
                           return (
                             <Link
                               key={article.id}

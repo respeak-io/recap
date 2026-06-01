@@ -15,6 +15,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import slugify from "slugify";
+import { isReservedDocsSlug } from "@/lib/docs-locale";
 
 export function CreateProjectDialog() {
   const [open, setOpen] = useState(false);
@@ -34,6 +35,14 @@ export function CreateProjectDialog() {
     e.preventDefault();
     setLoading(true);
     setError(null);
+
+    // Docs URLs are /<locale>/<slug>/…, so a slug that is a language code or a
+    // reserved route segment would be unreachable. Reject it before inserting.
+    if (isReservedDocsSlug(slug)) {
+      setError(`"${slug}" is reserved — please choose a different slug.`);
+      setLoading(false);
+      return;
+    }
 
     // Get user's org
     const {

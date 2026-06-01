@@ -3,10 +3,10 @@ import { NextResponse } from "next/server";
 
 export async function GET(
   _: Request,
-  { params }: { params: Promise<{ projectSlug: string }> }
+  { params }: { params: Promise<{ locale: string; projectSlug: string }> }
 ) {
-  const { projectSlug } = await params;
-  const content = await generateLlmsFullTxt(projectSlug);
+  const { locale, projectSlug } = await params;
+  const content = await generateLlmsFullTxt(projectSlug, locale);
 
   if (!content) {
     return new NextResponse("Not found", { status: 404 });

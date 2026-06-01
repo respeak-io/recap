@@ -8,7 +8,7 @@ import type { Metadata } from "next";
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ projectSlug: string }>;
+  params: Promise<{ locale: string; projectSlug: string }>;
 }): Promise<Metadata> {
   const { projectSlug } = await params;
   const supabase = await createClient();
@@ -40,9 +40,9 @@ export default async function DocsLayout({
   params,
 }: {
   children: React.ReactNode;
-  params: Promise<{ projectSlug: string }>;
+  params: Promise<{ locale: string; projectSlug: string }>;
 }) {
-  const { projectSlug } = await params;
+  const { locale, projectSlug } = await params;
   const supabase = await createClient();
 
   const { data: project } = await supabase
@@ -97,6 +97,7 @@ export default async function DocsLayout({
           projectId={project.id}
           projectName={project.name}
           projectSlug={projectSlug}
+          locale={locale}
           chapters={chapters}
           languages={languages}
           logoUrl={logoUrl}
