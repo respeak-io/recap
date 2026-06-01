@@ -1,7 +1,7 @@
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL_3.0-blue.svg)](LICENSE)
 [![npm](https://img.shields.io/npm/v/@respeak/recap)](https://www.npmjs.com/package/@respeak/recap)
 
-# Reeldocs
+# Recap
 
 Record a product video, get documentation instantly.
 
@@ -42,9 +42,9 @@ Options:
 
 Use `--format mdx` for Docusaurus, Mintlify, or other MDX-based doc sites — adds YAML frontmatter with `title` and `sidebar_position`.
 
-## Sync a docs folder to Reeldocs
+## Sync a docs folder to Recap
 
-Keep docs in your product repo as a `docs/` folder (Markdown + a `sync.json` manifest) and sync them to a Reeldocs project — no copy-pasted scripts:
+Keep docs in your product repo as a `docs/` folder (Markdown + a `sync.json` manifest) and sync them to a Recap project — no copy-pasted scripts:
 
 ```bash
 npx @respeak/recap diff ./docs --api-key rd_xxx   # preview changes, writes nothing
@@ -55,13 +55,13 @@ Syncs are run manually with `npx` — pin an exact version (e.g. `@respeak/recap
 
 ## Example Output
 
-Some things only have YouTube videos for docs. Reeldocs fixes that:
+Some things only have YouTube videos for docs. Recap fixes that:
 
 - [BundID](gallery/bundid/) — Germany's digital identity system, docs scattered across government PDFs
 - [Elektronische Patientenakte](gallery/elektronische-patientenakte/) — Germany's digital health record, docs fragmented across dozens of sites
 - [ELSTER Tax Filing](gallery/elster-tax-filing/) — Germany's tax portal, so confusing it spawned an entire paid-software industry
 - [FFmpeg](gallery/ffmpeg/) — the most used multimedia tool in the world, famously impenetrable docs
-- [Respeak Document Intelligence](gallery/respeak-document-intelligence/) — our own platform, dogfooding Reeldocs
+- [Respeak Document Intelligence](gallery/respeak-document-intelligence/) — our own platform, dogfooding Recap
 
 <details>
 <summary>More examples</summary>
@@ -73,7 +73,7 @@ Some things only have YouTube videos for docs. Reeldocs fixes that:
 
 ## Comparison
 
-| | Reeldocs | Scribe | Tango | Manual |
+| | Recap | Scribe | Tango | Manual |
 |---|---|---|---|---|
 | Open source | Yes | No | No | N/A |
 | From video | Yes | No (screenshots) | No (screenshots) | No |
@@ -84,7 +84,7 @@ Some things only have YouTube videos for docs. Reeldocs fixes that:
 ## Full Platform
 
 <details>
-<summary>Reeldocs also includes a full web platform with a rich text editor, published docs site, and more.</summary>
+<summary>Recap also includes a full web platform with a rich text editor, published docs site, and more.</summary>
 
 ### Features
 
