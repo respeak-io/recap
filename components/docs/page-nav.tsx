@@ -11,19 +11,17 @@ interface PageNavProps {
   prev?: NavItem | null;
   next?: NavItem | null;
   projectSlug: string;
-  lang: string;
+  locale: string;
 }
 
-export function PageNav({ prev, next, projectSlug, lang }: PageNavProps) {
+export function PageNav({ prev, next, projectSlug, locale }: PageNavProps) {
   if (!prev && !next) return null;
-
-  const qs = lang !== "en" ? `?lang=${lang}` : "";
 
   return (
     <div className="grid grid-cols-2 gap-4 mt-12 pt-6 border-t">
       {prev ? (
         <Link
-          href={`/${projectSlug}/${prev.slug}${qs}`}
+          href={`/${locale}/${projectSlug}/${prev.slug}`}
           className="group flex flex-col gap-1 rounded-xl border p-4 transition-colors hover:bg-accent/50 min-w-0"
         >
           <span className="flex items-center gap-1 text-sm text-muted-foreground">
@@ -44,7 +42,7 @@ export function PageNav({ prev, next, projectSlug, lang }: PageNavProps) {
       )}
       {next ? (
         <Link
-          href={`/${projectSlug}/${next.slug}${qs}`}
+          href={`/${locale}/${projectSlug}/${next.slug}`}
           className="group flex flex-col items-end gap-1 rounded-xl border p-4 transition-colors hover:bg-accent/50 text-right min-w-0"
         >
           <span className="flex items-center gap-1 text-sm text-muted-foreground">

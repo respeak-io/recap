@@ -1,5 +1,6 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
+import { isReservedDocsSlug } from "@/lib/docs-locale";
 
 export async function getUserOrg(client?: SupabaseClient) {
   const supabase = client ?? (await createClient());
@@ -41,6 +42,9 @@ export async function getProject(slug: string, client?: SupabaseClient) {
 }
 
 export async function createProject(name: string, slug: string, client?: SupabaseClient) {
+  if (isReservedDocsSlug(slug)) {
+    throw new Error(`Project slug "${slug}" is reserved (a language code or route segment).`);
+  }
   const supabase = client ?? (await createClient());
   const orgId = await getUserOrg(supabase);
 

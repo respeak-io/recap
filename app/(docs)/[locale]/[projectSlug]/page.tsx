@@ -1,7 +1,13 @@
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { ChevronRight, FileText } from "lucide-react";
+import {
+  buildAlternates,
+  isLocale,
+  projectDefaultLocale,
+} from "@/lib/docs-locale";
 
 interface Chapter {
   id: string;
@@ -25,15 +31,51 @@ interface Chapter {
   }[];
 }
 
+function publishedLocales(
+  articles: { language: string; status: string }[],
+): string[] {
+  return [
+    ...new Set(
+      articles.filter((a) => a.status === "published").map((a) => a.language),
+    ),
+  ].filter(isLocale);
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string; projectSlug: string }>;
+}): Promise<Metadata> {
+  const { locale, projectSlug } = await params;
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("projects")
+    .select("articles(language, status)")
+    .eq("slug", projectSlug)
+    .eq("is_public", true)
+    .single();
+
+  const available = publishedLocales(
+    (data?.articles ?? []) as { language: string; status: string }[],
+  );
+  if (available.length === 0) return {};
+
+  return {
+    alternates: buildAlternates({
+      pathWithoutLocale: `/${projectSlug}`,
+      available,
+      currentLocale: locale,
+    }),
+  };
+}
+
 export default async function DocsIndexPage({
   params,
-  searchParams,
 }: {
-  params: Promise<{ projectSlug: string }>;
-  searchParams: Promise<{ lang?: string }>;
+  params: Promise<{ locale: string; projectSlug: string }>;
 }) {
-  const { projectSlug } = await params;
-  const { lang = "en" } = await searchParams;
+  const { locale, projectSlug } = await params;
+  const lang = locale;
   const supabase = await createClient();
 
   const { data: project } = await supabase
@@ -47,7 +89,16 @@ export default async function DocsIndexPage({
 
   if (!project) notFound();
 
-  const qs = lang !== "en" ? `?lang=${lang}` : "";
+  // Redirect to a locale that has content (e.g. `/en/<german-only-project>` → `/de/…`),
+  // so a stale/mistyped locale never renders an empty page.
+  const allArticles = ((project.chapters ?? []) as Chapter[]).flatMap(
+    (ch) => ch.articles,
+  );
+  const available = publishedLocales(allArticles);
+  if (available.length > 0 && !available.includes(locale)) {
+    redirect(`/${projectDefaultLocale(available)}/${projectSlug}`);
+  }
+
   const projectTranslations = project.translations as Record<string, { name?: string; subtitle?: string }> | null;
   const resolvedName = projectTranslations?.[lang]?.name || project.name;
   const resolvedSubtitle = projectTranslations?.[lang]?.subtitle || project.subtitle;
@@ -116,7 +167,7 @@ export default async function DocsIndexPage({
                   >
                     {/* Chapter header */}
                     <Link
-                      href={`/${projectSlug}/${chapter.slug}${qs}`}
+                      href={`/${locale}/${projectSlug}/${chapter.slug}`}
                       className="block p-4 pb-3 hover:bg-accent/30 transition-colors"
                     >
                       <h3 className="font-semibold text-card-foreground">
@@ -134,7 +185,7 @@ export default async function DocsIndexPage({
                       {chapter.articles.map((article) => (
                         <Link
                           key={article.id}
-                          href={`/${projectSlug}/${article.slug}${qs}`}
+                          href={`/${locale}/${projectSlug}/${article.slug}`}
                           className="group flex items-start gap-3 px-4 py-2.5 hover:bg-accent/30 transition-colors"
                         >
                           <FileText className="size-4 mt-0.5 shrink-0 text-muted-foreground/60" />

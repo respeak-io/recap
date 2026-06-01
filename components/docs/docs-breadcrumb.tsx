@@ -1,6 +1,3 @@
-"use client";
-
-import { useSearchParams } from "next/navigation";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -13,6 +10,7 @@ import {
 interface DocsBreadcrumbProps {
   projectName: string;
   projectSlug: string;
+  locale: string;
   chapterTitle?: string;
   chapterSlug?: string;
   articleTitle?: string;
@@ -21,19 +19,16 @@ interface DocsBreadcrumbProps {
 export function DocsBreadcrumb({
   projectName,
   projectSlug,
+  locale,
   chapterTitle,
   chapterSlug,
   articleTitle,
 }: DocsBreadcrumbProps) {
-  const searchParams = useSearchParams();
-  const queryString = searchParams.toString();
-  const qs = queryString ? `?${queryString}` : "";
-
   return (
     <Breadcrumb className="mb-6">
       <BreadcrumbList>
         <BreadcrumbItem>
-          <BreadcrumbLink href={`/${projectSlug}${qs}`}>
+          <BreadcrumbLink href={`/${locale}/${projectSlug}`}>
             {projectName}
           </BreadcrumbLink>
         </BreadcrumbItem>
@@ -42,7 +37,7 @@ export function DocsBreadcrumb({
             <BreadcrumbSeparator />
             <BreadcrumbItem>
               {chapterSlug && articleTitle ? (
-                <BreadcrumbLink href={`/${projectSlug}/${chapterSlug}${qs}`}>
+                <BreadcrumbLink href={`/${locale}/${projectSlug}/${chapterSlug}`}>
                   {chapterTitle}
                 </BreadcrumbLink>
               ) : (

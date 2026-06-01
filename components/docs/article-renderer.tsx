@@ -3,6 +3,20 @@
 import slugify from "slugify";
 import { TabsRenderer } from "./tabs-renderer";
 import { ShikiCodeBlock } from "./shiki-code-block";
+import { isLocale } from "@/lib/docs-locale";
+
+/**
+ * Prefix an internal docs link with the active locale. Content cross-links are
+ * stored language-neutral (`/<projectSlug>/<slug>`, emitted by the CLI rewriter),
+ * so at render time they must carry the reader's locale. External links,
+ * protocol-relative links, in-page anchors and already-localized links pass through.
+ */
+function localizeHref(href: string | undefined, locale: string): string | undefined {
+  if (!href || !href.startsWith("/") || href.startsWith("//")) return href;
+  const first = href.split("/").filter(Boolean)[0];
+  if (isLocale(first)) return href;
+  return `/${locale}${href}`;
+}
 
 interface TiptapNode {
   type: string;
@@ -16,12 +30,14 @@ interface ArticleRendererProps {
   content: { type: string; content?: TiptapNode[] };
   onTimestampClick?: (seconds: number) => void;
   videoUrls?: Record<string, string>;
+  locale: string;
 }
 
 export { extractHeadings } from "@/lib/extract-headings";
 
 function renderInline(
   node: TiptapNode,
+  locale: string,
   onTimestampClick?: (seconds: number) => void
 ): React.ReactNode {
   if (node.type === "text") {
@@ -39,7 +55,7 @@ function renderInline(
         if (mark.type === "link")
           content = (
             <a
-              href={mark.attrs?.href as string}
+              href={localizeHref(mark.attrs?.href as string, locale)}
               className="underline text-primary"
             >
               {content}
@@ -71,16 +87,17 @@ function renderInline(
 function renderNode(
   node: TiptapNode,
   index: number,
+  locale: string,
   onTimestampClick?: (seconds: number) => void,
   videoUrls?: Record<string, string>,
 ): React.ReactNode {
   const children = node.content?.map((child, i) => {
     if (child.type === "text" || child.type === "timestampLink") {
       return (
-        <span key={i}>{renderInline(child, onTimestampClick)}</span>
+        <span key={i}>{renderInline(child, locale, onTimestampClick)}</span>
       );
     }
-    return renderNode(child, i, onTimestampClick, videoUrls);
+    return renderNode(child, i, locale, onTimestampClick, videoUrls);
   });
 
   switch (node.type) {
@@ -152,7 +169,7 @@ function renderNode(
       return (
         <details key={index} className="my-4 rounded-lg border p-4 group">
           {(node.content ?? []).map((child: TiptapNode, i: number) =>
-            renderNode(child, i, onTimestampClick, videoUrls)
+            renderNode(child, i, locale, onTimestampClick, videoUrls)
           )}
         </details>
       );
@@ -179,7 +196,7 @@ function renderNode(
       return (
         <div key={index} className="mt-2 pl-6">
           {(node.content ?? []).map((child: TiptapNode, i: number) =>
-            renderNode(child, i, onTimestampClick, videoUrls)
+            renderNode(child, i, locale, onTimestampClick, videoUrls)
           )}
         </div>
       );
@@ -194,7 +211,7 @@ function renderNode(
           tabs={tabs}
           renderContent={(nodes, prefix) =>
             nodes.map((n: TiptapNode, i: number) =>
-              renderNode(n, `${prefix}-${i}` as unknown as number, onTimestampClick, videoUrls)
+              renderNode(n, `${prefix}-${i}` as unknown as number, locale, onTimestampClick, videoUrls)
             )
           }
         />
@@ -218,7 +235,7 @@ function renderNode(
               </p>
               <div>
                 {(step.content ?? []).map((child: TiptapNode, j: number) =>
-                  renderNode(child, j, onTimestampClick, videoUrls)
+                  renderNode(child, j, locale, onTimestampClick, videoUrls)
                 )}
               </div>
             </div>
@@ -279,12 +296,13 @@ export function ArticleRenderer({
   content,
   onTimestampClick,
   videoUrls,
+  locale,
 }: ArticleRendererProps) {
   if (!content.content) return null;
 
   return (
     <div className="prose prose-neutral dark:prose-invert max-w-none">
-      {content.content.map((node, i) => renderNode(node, i, onTimestampClick, videoUrls))}
+      {content.content.map((node, i) => renderNode(node, i, locale, onTimestampClick, videoUrls))}
     </div>
   );
 }
