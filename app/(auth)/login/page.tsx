@@ -51,7 +51,7 @@ export default function LoginPage() {
     <Card>
       <CardHeader>
         <CardTitle>Sign in</CardTitle>
-        <CardDescription>Sign in to your vidtodoc account</CardDescription>
+        <CardDescription>Sign in to your Recap account</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleLogin} className="grid gap-4">

@@ -107,7 +107,7 @@ export default async function DocsLayout({
           {children}
           {!theme.hide_powered_by && (
             <footer className="border-t px-8 py-4 text-xs text-muted-foreground text-center">
-              Powered by vidtodoc
+              Powered by Recap
             </footer>
           )}
         </div>

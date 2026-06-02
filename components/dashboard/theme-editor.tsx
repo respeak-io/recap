@@ -586,7 +586,7 @@ export function ThemeEditor({
         <CardContent>
           <div className="flex items-center justify-between">
             <div>
-              <Label className="text-sm font-medium">Hide &ldquo;Powered by vidtodoc&rdquo;</Label>
+              <Label className="text-sm font-medium">Hide &ldquo;Powered by Recap&rdquo;</Label>
               <p className="text-xs text-muted-foreground">Remove the footer attribution on public docs.</p>
             </div>
             <Switch

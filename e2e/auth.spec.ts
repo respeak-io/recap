@@ -14,7 +14,7 @@ test("unauthenticated user is redirected from /dashboard to /login", async ({
 test("new user can sign up and reach dashboard", async ({ page }) => {
   await page.goto("/signup");
 
-  await page.getByLabel("Email").fill(`signup-${Date.now()}@vidtodoc.local`);
+  await page.getByLabel("Email").fill(`signup-${Date.now()}@recap.local`);
   await page.getByLabel("Password").fill("SignupTest123!");
   await page.getByRole("button", { name: "Sign up" }).click();
 

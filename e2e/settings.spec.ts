@@ -89,7 +89,7 @@ test("hide powered-by toggle exists", async ({ page }) => {
 
   // Uses curly quotes (&ldquo;/&rdquo;) in the rendered HTML
   await expect(
-    page.getByText('Hide \u201CPowered by vidtodoc\u201D')
+    page.getByText('Hide \u201CPowered by Recap\u201D')
   ).toBeVisible();
 
   // Switch should be present
@@ -100,7 +100,7 @@ test("public docs show powered-by footer by default", async ({ page }) => {
   // Use unauthenticated context for public docs
   await page.goto(`/${TEST_PROJECT.slug}`);
 
-  await expect(page.getByText("Powered by vidtodoc")).toBeVisible();
+  await expect(page.getByText("Powered by Recap")).toBeVisible();
 });
 
 test("settings page is accessible from dashboard sidebar", async ({

@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export const TEST_USER = {
-  email: "e2e-test@vidtodoc.local",
+  email: "e2e-test@recap.local",
   password: "TestPassword123!",
 };
 
@@ -55,12 +55,12 @@ export const TEST_ARTICLES = {
         {
           type: "codeBlock",
           attrs: { language: "bash" },
-          content: [{ type: "text", text: "npm install vidtodoc" }],
+          content: [{ type: "text", text: "npm install @respeak/recap" }],
         },
       ],
     },
     content_text:
-      "Prerequisites\nBefore you begin, make sure you have Node.js 18 or later installed on your system.\nInstallation\nRun the following command to install the package:\nnpm install vidtodoc",
+      "Prerequisites\nBefore you begin, make sure you have Node.js 18 or later installed on your system.\nInstallation\nRun the following command to install the package:\nnpm install @respeak/recap",
   },
   de: {
     title: "Installationsanleitung",
