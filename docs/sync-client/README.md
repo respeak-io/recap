@@ -1,6 +1,6 @@
 # Recap Sync Client
 
-The official client for syncing a product repo's `docs/` folder to its Reeldocs
+The official client for syncing a product repo's `docs/` folder to its Recap
 project. It ships as part of the [`@respeak/recap`](../../packages/cli) npm package
 (`recap push` / `recap diff`), run via `npx -y @respeak/recap@latest`, so product
 repos no longer carry copy-pasted sync scripts — fixes propagate by version bump.

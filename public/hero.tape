@@ -1,4 +1,4 @@
-# VHS tape file for recording Reeldocs hero GIF
+# VHS tape file for recording Recap hero GIF
 # Install VHS: brew install charmbracelet/tap/vhs
 # Run: vhs public/hero.tape
 
@@ -10,7 +10,7 @@ Set Width 800
 Set Height 400
 Set Theme "Dracula"
 
-Type "npx reeldocs https://youtube.com/watch?v=_Wf0NikMyAA"
+Type "npx @respeak/recap https://youtube.com/watch?v=_Wf0NikMyAA"
 Enter
 Sleep 120s
 Sleep 5s

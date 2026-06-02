@@ -3,30 +3,52 @@
 
 # Recap
 
-Record a product video, get documentation instantly.
+Turn your product into documentation. Point Recap at a **codebase** or a **video**, and it generates structured Markdown docs — then publishes them as a polished, multi-language docs site.
 
 ```bash
-npx @respeak/recap https://youtube.com/watch?v=your-video
+npx @respeak/recap generate --codebase . --app http://localhost:3000
 ```
 
-<!-- [Hero GIF placeholder — will be added soon] -->
+![A docs site generated and published with Recap](assets/docs-site-overview.png)
 
-## What It Does
+*A docs site generated with Recap and published to [docs.respeak.io](https://docs.respeak.io/en/experte) — searchable, multi-language, three-column layout.*
 
-- **Video in, docs out** — Point it at a YouTube URL or local video file, get structured Markdown or MDX documentation
-- **AI-powered** — Uses Gemini to extract transcription, visual context, and generate developer-friendly docs with timestamp references
-- **Zero setup** — One command, no account needed. Just a free Gemini API key
+## Generate docs from your codebase (AI-first)
 
-## Try It Now
+Point Recap at your repo and your running app. It discovers the features, drives a real browser through each one, narrates the walkthrough, and produces **narrated videos + Markdown docs with screenshots** — no manual capture.
 
 ```bash
 export GEMINI_API_KEY=your-key-from-https://ai.google.dev
-npx @respeak/recap https://youtube.com/watch?v=your-video -o ./docs
+npx @respeak/recap generate --codebase . --app http://localhost:3000
 ```
 
-That's it. Check `./docs/` for your generated documentation.
+`generate` chains three steps you can also run on their own — handy for reviewing the plan before it records anything:
 
-### Options
+1. **`analyze`** — scans the codebase (Next.js-aware, with a generic fallback), asks Gemini to identify user-facing features, and writes an editable `plan.yaml`.
+   ```bash
+   npx @respeak/recap analyze --codebase . --app http://localhost:3000 --hints "focus on settings + billing"
+   ```
+   Open `plan.yaml`, fill in app auth (login credentials), tweak the feature list and narration, choose output languages and a TTS voice.
+
+2. **`record`** — drives a real browser (Playwright) through every feature in the plan, capturing video and step-by-step screenshots.
+   ```bash
+   npx @respeak/recap record --plan plan.yaml
+   ```
+
+3. **`produce`** — generates TTS narration, merges audio + video with `ffmpeg`, translates into your configured languages, and writes Markdown docs with the captured screenshots.
+   ```bash
+   npx @respeak/recap produce --plan plan.yaml
+   ```
+
+Output lands in `./generated/videos` and `./generated/docs` by default. Requires a free [Gemini API key](https://ai.google.dev); `produce` also needs [`ffmpeg`](https://ffmpeg.org) installed.
+
+## Or generate from a video
+
+Some things only have a YouTube video for docs. Point Recap at a URL or a local file and get structured Markdown back:
+
+```bash
+npx @respeak/recap https://youtube.com/watch?v=your-video -o ./docs
+```
 
 ```
 Usage: recap [options] <source>
@@ -40,32 +62,48 @@ Options:
   -f, --format <format>  Output format: markdown, mdx (default: "markdown")
 ```
 
-Use `--format mdx` for Docusaurus, Mintlify, or other MDX-based doc sites — adds YAML frontmatter with `title` and `sidebar_position`.
+Use `--format mdx` for Docusaurus, Mintlify, or other MDX-based doc sites — it adds YAML frontmatter with `title` and `sidebar_position`.
 
-## Sync a docs folder to Recap
+## Publish as a docs site
 
 Keep docs in your product repo as a `docs/` folder (Markdown + a `sync.json` manifest) and sync them to a Recap project — no copy-pasted scripts:
 
 ```bash
 npx @respeak/recap diff ./docs --api-key rd_xxx   # preview changes, writes nothing
-npx @respeak/recap push ./docs --api-key rd_xxx   # sync (declarative reconciliation)
+npx @respeak/recap push ./docs --api-key rd_xxx   # publish (declarative reconciliation)
 ```
 
-Syncs are run manually with `npx` — pin an exact version (e.g. `@respeak/recap@0.3.0`) for reproducible runs. See [`docs/sync-client/`](docs/sync-client/README.md) for the manifest format and cross-link rewriting.
+Get an org API key (`rd_…`) from the Recap dashboard under **API Keys**, or set `RECAP_API_KEY`. Always `diff` before `push` — `push` is declarative, so anything not in `sync.json` is removed on the server. Syncs run manually with `npx` — pin an exact version (e.g. `@respeak/recap@0.4.0`) for reproducible runs. See [`docs/sync-client/`](docs/sync-client/README.md) for the manifest format and cross-link rewriting.
+
+![A generated article page on the published docs site](assets/docs-site-article.png)
+
+*What readers get: numbered steps, screenshots auto-captured from your app, an on-page table of contents, full-text search, and a language switcher.*
+
+## Drive it from your repo with a coding agent
+
+Recap is built to be run by a coding agent right inside your repo. Install the bundled skill and the agent picks up the workflow — the diff-before-push gate, the Markdown block syntax, and the cross-link rules:
+
+```bash
+npx @respeak/recap skill --update   # writes .claude/skills/recap/SKILL.md
+npx @respeak/recap skill --check    # exit 1 if the local skill drifted from the installed CLI
+```
+
+The skill is generated from the installed CLI version (the single source of truth), so a version bump shows up as drift in `--check`. Paired with the `generate` pipeline above, an agent can author docs from your codebase and keep your live docs site in sync — without you copy-pasting commands.
 
 ## Example Output
 
 Some things only have YouTube videos for docs. Recap fixes that:
 
-- [BundID](gallery/bundid/) — Germany's digital identity system, docs scattered across government PDFs
-- [Elektronische Patientenakte](gallery/elektronische-patientenakte/) — Germany's digital health record, docs fragmented across dozens of sites
+- [AusweisApp & Online ID](gallery/ausweisapp-online-id/) — Germany's eID function, docs scattered across government PDFs
+- [Elektronische Patientenakte](gallery/epa-patientenakte/) — Germany's digital health record, docs fragmented across dozens of sites
 - [ELSTER Tax Filing](gallery/elster-tax-filing/) — Germany's tax portal, so confusing it spawned an entire paid-software industry
 - [FFmpeg](gallery/ffmpeg/) — the most used multimedia tool in the world, famously impenetrable docs
-- [Respeak Document Intelligence](gallery/respeak-document-intelligence/) — our own platform, dogfooding Recap
+- [Respeak Expert Platform](gallery/respeak-document-intelligence/) — our own platform, dogfooding Recap
 
 <details>
 <summary>More examples</summary>
 
+- [Langdock Workflows](gallery/langdock-workflows/) — building AI agent workflows, from a product tour
 - [n8n Workflow Automation](gallery/n8n-workflow-automation/) — from a 2-min tutorial
 - [Supabase Overview](gallery/supabase-overview/) — from the official product tour
 
@@ -76,6 +114,7 @@ Some things only have YouTube videos for docs. Recap fixes that:
 | | Recap | Scribe | Tango | Manual |
 |---|---|---|---|---|
 | Open source | Yes | No | No | N/A |
+| From a codebase | Yes | No | No | No |
 | From video | Yes | No (screenshots) | No (screenshots) | No |
 | Self-hosted | Yes | No | No | N/A |
 | Markdown/MDX output | Yes | No | No | Yes |

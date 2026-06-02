@@ -275,10 +275,10 @@ program
 
 program
   .command("push")
-  .description("Sync a docs folder (sync.json) to its Reeldocs project")
+  .description("Sync a docs folder (sync.json) to its Recap project")
   .argument("<docsDir>", "Path to the docs folder containing sync.json")
-  .option("--url <url>", "Reeldocs base URL", "https://docs.respeak.io")
-  .option("--api-key <key>", "Reeldocs API key (or set RECAP_API_KEY)")
+  .option("--url <url>", "Recap base URL", "https://docs.respeak.io")
+  .option("--api-key <key>", "Recap API key (or set RECAP_API_KEY)")
   .option("--dry-run", "Preview changes without writing (same as `recap diff`)")
   .option("-v, --verbose", "On --dry-run, show the text that differs per article")
   .action(async (
@@ -288,7 +288,7 @@ program
   ) => {
     const apiKey = cmd.optsWithGlobals().apiKey || process.env.RECAP_API_KEY;
     if (!apiKey) {
-      console.error("Error: Reeldocs API key required. Set RECAP_API_KEY or use --api-key");
+      console.error("Error: Recap API key required. Set RECAP_API_KEY or use --api-key");
       process.exit(1);
     }
 
@@ -324,10 +324,10 @@ program
 
 program
   .command("diff")
-  .description("Preview differences between a docs folder and its Reeldocs project (changes nothing)")
+  .description("Preview differences between a docs folder and its Recap project (changes nothing)")
   .argument("<docsDir>", "Path to the docs folder containing sync.json")
-  .option("--url <url>", "Reeldocs base URL", "https://docs.respeak.io")
-  .option("--api-key <key>", "Reeldocs API key (or set RECAP_API_KEY)")
+  .option("--url <url>", "Recap base URL", "https://docs.respeak.io")
+  .option("--api-key <key>", "Recap API key (or set RECAP_API_KEY)")
   .option("--exit-code", "Exit with status 1 when differences are found")
   .option("-v, --verbose", "Show the text that differs per article")
   .action(async (
@@ -337,7 +337,7 @@ program
   ) => {
     const apiKey = cmd.optsWithGlobals().apiKey || process.env.RECAP_API_KEY;
     if (!apiKey) {
-      console.error("Error: Reeldocs API key required. Set RECAP_API_KEY or use --api-key");
+      console.error("Error: Recap API key required. Set RECAP_API_KEY or use --api-key");
       process.exit(1);
     }
     await runDiff({ docsDir, url: opts.url, apiKey, exitCode: opts.exitCode, verbose: opts.verbose });

@@ -1,4 +1,4 @@
-# Reeldocs API Reference
+# Recap API Reference
 
 Base URL: `https://<your-domain>/api/v1`
 
@@ -181,7 +181,7 @@ POST /api/v1/projects/:slug/articles
   "description": "Install dependencies and configure your environment",
   "slug": "installation",
   "chapter_slug": "getting-started",
-  "content": "# Installation\n\nRun `npm install reeldocs`...",
+  "content": "# Installation\n\nRun `npm install @respeak/recap`...",
   "language": "en",
   "status": "published",
   "keywords": ["install", "deps"]
@@ -220,7 +220,7 @@ Returns a single article with all fields including `content_json` and `content_t
   "order": 0,
   "keywords": ["install", "deps"],
   "content_json": { "type": "doc", "content": [...] },
-  "content_text": "Installation\nRun npm install reeldocs..."
+  "content_text": "Installation\nRun npm install @respeak/recap..."
 }
 ```
 
@@ -560,17 +560,17 @@ Each `###` heading starts a new step. The heading text becomes the step title.
 :::tabs
 ::tab{title="npm"}
 ```bash
-npm install reeldocs
+npm install @respeak/recap
 ```
 
 ::tab{title="pnpm"}
 ```bash
-pnpm add reeldocs
+pnpm add @respeak/recap
 ```
 
 ::tab{title="yarn"}
 ```bash
-yarn add reeldocs
+yarn add @respeak/recap
 ```
 :::
 ````

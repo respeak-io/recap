@@ -6,9 +6,9 @@ export default defineConfig({
   base: "/recap",
   integrations: [
     starlight({
-      title: "Reeldocs Gallery",
+      title: "Recap Gallery",
       description:
-        "Real documentation generated from real product videos — by Reeldocs",
+        "Real documentation generated from real product videos — by Recap",
       social: [
         {
           icon: "github",
