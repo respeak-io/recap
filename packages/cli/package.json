@@ -1,6 +1,6 @@
 {
   "name": "@respeak/recap",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Generate documentation from product videos",
   "bin": {
     "recap": "./dist/src/index.js"
@@ -15,6 +15,7 @@
   "exports": {
     ".": "./dist/src/ai/pipeline.js",
     "./ai": "./dist/src/ai/gemini.js",
+    "./markdown": "./dist/src/markdown/markdown-to-tiptap.js",
     "./prompts": "./dist/src/ai/prompts.js",
     "./analyze": "./dist/src/analyze/index.js",
     "./record": "./dist/src/record/index.js",
@@ -30,7 +31,8 @@
     "prepublishOnly": "tsc"
   },
   "files": [
-    "dist/src"
+    "dist/src",
+    "skill"
   ],
   "repository": {
     "type": "git",

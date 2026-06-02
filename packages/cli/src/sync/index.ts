@@ -8,7 +8,8 @@ import {
   type SyncManifest,
 } from "./manifest.js";
 import { buildLinkMap } from "./links.js";
-import { toPlainText } from "./markdown.js";
+import { processMarkdown } from "./markdown.js";
+import { markdownToTiptapRaw } from "../markdown/markdown-to-tiptap.js";
 import { buildPayload } from "./payload.js";
 import { computeDiff, type DiffReport } from "./diff.js";
 import { imageDimensions } from "./image-dimensions.js";
@@ -29,8 +30,15 @@ export interface SyncOptions {
   onWarn?: (message: string) => void;
 }
 
+/** Media upload tally for the push summary line. Sync never deletes images. */
+export interface MediaStats {
+  uploaded: number;
+  reused: number;
+}
+
 export interface PushResult {
   stats: SyncStats;
+  media: MediaStats;
   warnings: string[];
 }
 
@@ -48,7 +56,7 @@ export async function push(options: SyncOptions): Promise<PushResult> {
   const manifest = await loadAndValidate(options.docsDir, onProgress, onWarn);
   const client = new RecapClient({ baseUrl: options.url, apiKey: options.apiKey });
 
-  const imageUrls = await syncMedia(manifest, client, options.docsDir, onProgress);
+  const { urls: imageUrls, media } = await syncMedia(manifest, client, options.docsDir, onProgress);
 
   onProgress("Building sync payload...");
   const linkMap = buildLinkMap(manifest);
@@ -57,7 +65,7 @@ export async function push(options: SyncOptions): Promise<PushResult> {
   onProgress("Syncing documentation...");
   const stats = await client.sync(manifest.project_slug, payload);
 
-  return { stats, warnings };
+  return { stats, media, warnings };
 }
 
 /** Preview differences without mutating anything (`push --dry-run`). */
@@ -68,6 +76,9 @@ export async function diff(options: SyncOptions): Promise<DiffResult> {
 
   const manifest = await loadAndValidate(options.docsDir, onProgress, onWarn);
   const client = new RecapClient({ baseUrl: options.url, apiKey: options.apiKey });
+  // Rewriting cross-links during diff also surfaces unresolved `.md` links via
+  // onWarn — the same check push does — so broken links are caught read-only.
+  const linkMap = buildLinkMap(manifest);
 
   onProgress("Fetching remote project...");
   let remote;
@@ -86,6 +97,7 @@ export async function diff(options: SyncOptions): Promise<DiffResult> {
 
   const remoteArticles = new Map<string, RemoteArticle>();
   const localTexts = new Map<string, string>();
+  const localFiles = new Map<string, string>();
 
   onProgress("Checking article content...");
   for (const chapter of manifest.chapters) {
@@ -96,7 +108,20 @@ export async function diff(options: SyncOptions): Promise<DiffResult> {
         if (!got || !got.ok) continue;
         const key = `${article.slug}:${lang}`;
         const raw = await readFile(path.join(options.docsDir, got.value.file), "utf-8");
-        localTexts.set(key, toPlainText(raw));
+        // Render local content_text through the SAME pipeline as push/server:
+        // process the markdown (strip H1, rewrite cross-links, swap media), then
+        // run the shared markdown->Tiptap converter and take its plain text. A
+        // truly-synced article is byte-identical to the remote content_text.
+        const processed = processMarkdown(
+          raw,
+          got.value.file,
+          linkMap,
+          manifest.project_slug,
+          {},
+          onWarn,
+        );
+        localTexts.set(key, markdownToTiptapRaw(processed).text);
+        localFiles.set(key, got.value.file);
         // Only fetch remote content for articles that exist on both sides.
         if (!remoteChapterSlugs.has(chapter.slug) || !remoteKeys?.has(key)) continue;
         const ra = await client.getArticle(manifest.project_slug, article.slug, lang);
@@ -122,6 +147,7 @@ export async function diff(options: SyncOptions): Promise<DiffResult> {
     remoteImages,
     localImages,
     localTexts,
+    localFiles,
   });
 
   return { report, warnings };
@@ -149,13 +175,13 @@ async function syncMedia(
   client: RecapClient,
   docsDir: string,
   onProgress: (message: string) => void,
-): Promise<Record<string, string>> {
+): Promise<{ urls: Record<string, string>; media: MediaStats }> {
   const mediaDir = path.join(docsDir, "media");
-  if (!existsSync(mediaDir)) return {};
+  if (!existsSync(mediaDir)) return { urls: {}, media: { uploaded: 0, reused: 0 } };
   const localFiles = (await readdir(mediaDir))
     .filter((f) => IMAGE_EXTENSIONS.has(path.extname(f).toLowerCase()))
     .sort();
-  if (localFiles.length === 0) return {};
+  if (localFiles.length === 0) return { urls: {}, media: { uploaded: 0, reused: 0 } };
 
   onProgress(`Uploading ${localFiles.length} media file(s)...`);
   const existing = new Map<string, RecapImage>();
@@ -163,11 +189,14 @@ async function syncMedia(
   for (const img of list.images) existing.set(img.filename, img);
 
   const urls: Record<string, string> = {};
+  let uploaded = 0;
+  let reused = 0;
   for (const filename of localFiles) {
     const filepath = path.join(mediaDir, filename);
     const ex = existing.get(filename);
     if (ex) {
       urls[filename] = ex.url;
+      reused++;
       if (!ex.width || !ex.height) {
         const dim = imageDimensions(await readFile(filepath));
         if (dim) await client.patchImage(manifest.project_slug, ex.id, dim);
@@ -176,11 +205,12 @@ async function syncMedia(
       onProgress(`Uploading ${filename}...`);
       const result = await client.uploadImage(manifest.project_slug, filepath);
       urls[filename] = result.url;
+      uploaded++;
       const dim = imageDimensions(await readFile(filepath));
       if (dim) await client.patchImage(manifest.project_slug, result.imageId, dim);
     }
   }
-  return urls;
+  return { urls, media: { uploaded, reused } };
 }
 
 async function listLocalImages(docsDir: string): Promise<string[]> {

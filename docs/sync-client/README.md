@@ -26,6 +26,7 @@ npx @respeak/recap push ./05_end_user_docs --api-key rd_xxx
 | `--api-key <key>` | `$RECAP_API_KEY` | Org API key (`rd_…`), created under **API Keys** in the dashboard. |
 | `--dry-run` (push) | — | Same as `diff`. |
 | `--exit-code` (diff) | off | Exit `1` when drift is found (default: `diff` is informational and exits `0`). |
+| `-v, --verbose` (diff) | off | Print the text that differs for each changed article. |
 
 ## What it does
 
@@ -43,8 +44,12 @@ npx @respeak/recap push ./05_end_user_docs --api-key rd_xxx
    is **deleted**. Omitting `keywords` preserves them; `[]` clears them.
 
 `diff` reports the same picture without mutating: structural drift, per-article
-content differences as a word-overlap %, media present on only one side, and
-project-metadata differences.
+content changes, unresolved cross-links, media present on only one side, and
+project-metadata differences. Content is compared by rendering each local file
+through the **same** markdown→Tiptap converter the server uses (`@respeak/recap/markdown`),
+so an unedited article is byte-identical to the published `content_text` and
+reports as in sync — formatting (lists, tables, steps, image alt) never shows up
+as phantom drift. Pass `--verbose` to print the text that changed per article.
 
 ## Cross-links
 

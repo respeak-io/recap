@@ -1,10 +1,5 @@
 import { getArticleLang, type SyncManifest, type ArticleLang } from "./manifest.js";
-import { tokenize } from "./markdown.js";
 import type { RemoteProject, RemoteArticle, RemoteArticleSummary } from "./client.js";
-
-// Content word-overlap below this threshold is reported as a substantive
-// difference; at/above it as a minor (formatting) difference.
-const OVERLAP_THRESHOLD = 0.95;
 
 export interface DiffInput {
   manifest: SyncManifest;
@@ -14,13 +9,29 @@ export interface DiffInput {
   /** null when the remote image list could not be fetched (skip media comparison). */
   remoteImages: string[] | null;
   localImages: string[];
-  /** key `${slug}:${lang}` -> local plain text */
+  /**
+   * key `${slug}:${lang}` -> local `content_text`, rendered with the SAME
+   * markdown->Tiptap converter the server uses. A truly-synced article is
+   * therefore byte-identical to the remote `content_text`.
+   */
   localTexts: Map<string, string>;
+  /** key `${slug}:${lang}` -> repo-relative markdown file (for verbose output) */
+  localFiles: Map<string, string>;
+}
+
+/** A per-article content difference, carrying both rendered texts for `--verbose`. */
+export interface ContentDiff {
+  slug: string;
+  lang: string;
+  file: string;
+  local: string;
+  remote: string;
 }
 
 export interface DiffReport {
   diffs: string[];
   info: string[];
+  contentDiffs: ContentDiff[];
 }
 
 /**
@@ -50,9 +61,11 @@ export function normalizeKeywords(input: unknown): string[] {
  * reference `compare_with_remote.py`.
  */
 export function computeDiff(input: DiffInput): DiffReport {
-  const { manifest, remote, remoteArticles, remoteImages, localImages, localTexts } = input;
+  const { manifest, remote, remoteArticles, remoteImages, localImages, localTexts, localFiles } =
+    input;
   const diffs: string[] = [];
   const info: string[] = [];
+  const contentDiffs: ContentDiff[] = [];
   const languages = manifest.languages;
 
   // --- Project metadata ---
@@ -159,9 +172,13 @@ export function computeDiff(input: DiffInput): DiffReport {
     }
   }
 
-  // --- Content (word overlap of plain text) ---
+  // --- Content ---
+  // `localTexts` is rendered through the same converter the server uses, so a
+  // synced article is byte-identical to the remote `content_text`. Any
+  // remaining difference is a genuine content change (not formatting noise),
+  // which is why this is a plain equality check rather than a fuzzy overlap.
   let matches = 0;
-  let contentDiffs = 0;
+  let differing = 0;
   let skipped = 0;
   for (const slug of commonChapters) {
     const lc = localChapters.get(slug)!;
@@ -178,7 +195,7 @@ export function computeDiff(input: DiffInput): DiffReport {
         const localText = localTexts.get(key);
         if (localText === undefined) continue;
         const ra = remoteArticles.get(key);
-        if (!ra || !ra.content_text) {
+        if (!ra || ra.content_text === undefined) {
           info.push(`Article '${article.slug}' (${lang}) — could not fetch content`);
           skipped++;
           continue;
@@ -189,26 +206,16 @@ export function computeDiff(input: DiffInput): DiffReport {
           matches++;
           continue;
         }
-        contentDiffs++;
-        const lTok = tokenize(localNorm);
-        const rTok = tokenize(remoteNorm);
-        if (lTok.size === 0 || rTok.size === 0) {
-          // No comparable word tokens on one side — report a bare difference.
-          diffs.push(`Article '${article.slug}' (${lang}) content differs`);
-        } else {
-          let inter = 0;
-          for (const w of lTok) if (rTok.has(w)) inter++;
-          const overlap = inter / Math.max(lTok.size, rTok.size);
-          diffs.push(
-            overlap < OVERLAP_THRESHOLD
-              ? `Article '${article.slug}' (${lang}) content differs (~${pct(overlap)} word overlap)`
-              : `Article '${article.slug}' (${lang}) content differs (minor — ${pct(overlap)} word overlap)`,
-          );
-        }
+        differing++;
+        const file = localFiles.get(key) ?? "";
+        diffs.push(
+          `Article '${article.slug}' (${lang}) content differs${file ? `  [${file}]` : ""}`,
+        );
+        contentDiffs.push({ slug: article.slug, lang, file, local: localNorm, remote: remoteNorm });
       }
     }
   }
-  let summary = `Content: ${matches} match, ${contentDiffs} differ`;
+  let summary = `Content: ${matches} match, ${differing} differ`;
   if (skipped) summary += `, ${skipped} skipped`;
   info.push(summary);
 
@@ -227,7 +234,7 @@ export function computeDiff(input: DiffInput): DiffReport {
     }
   }
 
-  return { diffs, info };
+  return { diffs, info, contentDiffs };
 }
 
 // --- helpers ---
@@ -242,10 +249,6 @@ function arr(a: string[]): string {
 
 function arrEq(a: string[], b: string[]): boolean {
   return a.length === b.length && a.every((x, i) => x === b[i]);
-}
-
-function pct(n: number): string {
-  return `${Math.round(n * 100)}%`;
 }
 
 function collapse(s: string): string {

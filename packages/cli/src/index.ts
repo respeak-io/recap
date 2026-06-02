@@ -9,6 +9,12 @@ import { analyzeCodebase } from "./analyze/index.js";
 import { recordFeatures } from "./record/index.js";
 import { produceOutput } from "./produce/index.js";
 import { push as pushDocs, diff as diffDocs } from "./sync/index.js";
+import {
+  printSkill,
+  checkSkill,
+  updateSkill,
+  DEFAULT_SKILL_PATH,
+} from "./skill/index.js";
 import { createInterface } from "node:readline/promises";
 
 const program = new Command();
@@ -16,7 +22,7 @@ const program = new Command();
 program
   .name("recap")
   .description("Generate documentation from product videos")
-  .version("0.3.0");
+  .version("0.4.0");
 
 // --- Original video-to-docs command (default) ---
 
@@ -78,8 +84,8 @@ program
   .option("-m, --model <model>", "Gemini model", "gemini-2.5-flash")
   .option("-o, --output <path>", "Plan file output path", "./plan.yaml")
   .option("--hints <text>", "Focus hints for feature discovery")
-  .action(async (opts) => {
-    const apiKey = opts.apiKey || process.env.GEMINI_API_KEY;
+  .action(async (opts, cmd: Command) => {
+    const apiKey = cmd.optsWithGlobals().apiKey || process.env.GEMINI_API_KEY;
     if (!apiKey) {
       console.error("Error: Gemini API key required. Set GEMINI_API_KEY or use --api-key");
       process.exit(1);
@@ -119,8 +125,8 @@ program
   .option("-k, --api-key <key>", "Gemini API key (or set GEMINI_API_KEY)")
   .option("-m, --model <model>", "Gemini model", "gemini-2.5-flash")
   .option("--concurrency <n>", "Max concurrent recordings", parseInt)
-  .action(async (opts) => {
-    const apiKey = opts.apiKey || process.env.GEMINI_API_KEY;
+  .action(async (opts, cmd: Command) => {
+    const apiKey = cmd.optsWithGlobals().apiKey || process.env.GEMINI_API_KEY;
     if (!apiKey) {
       console.error("Error: Gemini API key required. Set GEMINI_API_KEY or use --api-key");
       process.exit(1);
@@ -163,8 +169,8 @@ program
   .requiredOption("--plan <path>", "Path to the plan YAML file")
   .option("-k, --api-key <key>", "Gemini API key (or set GEMINI_API_KEY)")
   .option("-m, --model <model>", "Gemini model", "gemini-2.5-flash")
-  .action(async (opts) => {
-    const apiKey = opts.apiKey || process.env.GEMINI_API_KEY;
+  .action(async (opts, cmd: Command) => {
+    const apiKey = cmd.optsWithGlobals().apiKey || process.env.GEMINI_API_KEY;
     if (!apiKey) {
       console.error("Error: Gemini API key required. Set GEMINI_API_KEY or use --api-key");
       process.exit(1);
@@ -200,8 +206,8 @@ program
   .option("--hints <text>", "Focus hints for feature discovery")
   .option("--concurrency <n>", "Max concurrent recordings", parseInt)
   .option("-y, --yes", "Skip confirmation prompt")
-  .action(async (opts) => {
-    const apiKey = opts.apiKey || process.env.GEMINI_API_KEY;
+  .action(async (opts, cmd: Command) => {
+    const apiKey = cmd.optsWithGlobals().apiKey || process.env.GEMINI_API_KEY;
     if (!apiKey) {
       console.error("Error: Gemini API key required. Set GEMINI_API_KEY or use --api-key");
       process.exit(1);
@@ -274,21 +280,26 @@ program
   .option("--url <url>", "Reeldocs base URL", "https://docs.respeak.io")
   .option("--api-key <key>", "Reeldocs API key (or set RECAP_API_KEY)")
   .option("--dry-run", "Preview changes without writing (same as `recap diff`)")
-  .action(async (docsDir: string, opts: { url: string; apiKey?: string; dryRun?: boolean }) => {
-    const apiKey = opts.apiKey || process.env.RECAP_API_KEY;
+  .option("-v, --verbose", "On --dry-run, show the text that differs per article")
+  .action(async (
+    docsDir: string,
+    opts: { url: string; apiKey?: string; dryRun?: boolean; verbose?: boolean },
+    cmd: Command,
+  ) => {
+    const apiKey = cmd.optsWithGlobals().apiKey || process.env.RECAP_API_KEY;
     if (!apiKey) {
       console.error("Error: Reeldocs API key required. Set RECAP_API_KEY or use --api-key");
       process.exit(1);
     }
 
     if (opts.dryRun) {
-      await runDiff({ docsDir, url: opts.url, apiKey });
+      await runDiff({ docsDir, url: opts.url, apiKey, verbose: opts.verbose });
       return;
     }
 
     const spinner = ora("Starting sync...").start();
     try {
-      const { stats, warnings } = await pushDocs({
+      const { stats, media, warnings } = await pushDocs({
         docsDir,
         url: opts.url,
         apiKey,
@@ -301,6 +312,7 @@ program
       console.log(
         `  articles: +${stats.articles.created} ~${stats.articles.updated} -${stats.articles.deleted}`
       );
+      console.log(`  images:   +${media.uploaded} uploaded, ${media.reused} unchanged`);
       for (const w of warnings) console.log(`  ? ${w}`);
     } catch (err) {
       spinner.fail(err instanceof Error ? err.message : "Sync failed");
@@ -317,13 +329,56 @@ program
   .option("--url <url>", "Reeldocs base URL", "https://docs.respeak.io")
   .option("--api-key <key>", "Reeldocs API key (or set RECAP_API_KEY)")
   .option("--exit-code", "Exit with status 1 when differences are found")
-  .action(async (docsDir: string, opts: { url: string; apiKey?: string; exitCode?: boolean }) => {
-    const apiKey = opts.apiKey || process.env.RECAP_API_KEY;
+  .option("-v, --verbose", "Show the text that differs per article")
+  .action(async (
+    docsDir: string,
+    opts: { url: string; apiKey?: string; exitCode?: boolean; verbose?: boolean },
+    cmd: Command,
+  ) => {
+    const apiKey = cmd.optsWithGlobals().apiKey || process.env.RECAP_API_KEY;
     if (!apiKey) {
       console.error("Error: Reeldocs API key required. Set RECAP_API_KEY or use --api-key");
       process.exit(1);
     }
-    await runDiff({ docsDir, url: opts.url, apiKey, exitCode: opts.exitCode });
+    await runDiff({ docsDir, url: opts.url, apiKey, exitCode: opts.exitCode, verbose: opts.verbose });
+  });
+
+// --- skill command ---
+// The canonical agent skill for this CLI lives IN this package and is published
+// with it, so consuming repos pull one versioned source of truth instead of
+// hand-maintaining copies. `recap skill` prints it; `--update`/`--check` keep a
+// repo's local skill file in sync with the installed CLI version.
+
+program
+  .command("skill")
+  .description("Print the canonical agent skill for this CLI (source of truth for repos)")
+  .option("--check [path]", `Compare a skill file against canonical; exit 1 on drift (default: ${DEFAULT_SKILL_PATH})`)
+  .option("--update [path]", `Write the canonical skill to a file (default: ${DEFAULT_SKILL_PATH})`)
+  .action(async (opts: { check?: string | boolean; update?: string | boolean }) => {
+    try {
+      if (opts.update !== undefined) {
+        const target = typeof opts.update === "string" ? opts.update : DEFAULT_SKILL_PATH;
+        await updateSkill(target);
+        console.log(`Wrote canonical skill to ${target}`);
+        return;
+      }
+      if (opts.check !== undefined) {
+        const target = typeof opts.check === "string" ? opts.check : DEFAULT_SKILL_PATH;
+        if (await checkSkill(target)) {
+          console.log(`In sync: ${target} matches the canonical skill.`);
+        } else {
+          const arg = typeof opts.check === "string" ? ` ${target}` : "";
+          console.log(`DRIFT: ${target} differs from the canonical skill.`);
+          console.log(`  Run \`recap skill --update${arg}\` to refresh it.`);
+          process.exit(1);
+        }
+        return;
+      }
+      await printSkill();
+    } catch (err) {
+      console.error(err instanceof Error ? err.message : "skill command failed");
+      process.exit(1);
+    }
   });
 
 // Shared diff runner for `diff` and `push --dry-run`. Informational by default:
@@ -334,6 +389,7 @@ async function runDiff(opts: {
   url: string;
   apiKey: string;
   exitCode?: boolean;
+  verbose?: boolean;
 }): Promise<void> {
   const spinner = ora("Comparing with remote...").start();
   try {
@@ -353,6 +409,17 @@ async function runDiff(opts: {
     if (report.diffs.length > 0) {
       console.log(`\n${report.diffs.length} DIFFERENCE(S):`);
       for (const d of report.diffs) console.log(`  ✗ ${d}`);
+      if (opts.verbose && report.contentDiffs.length > 0) {
+        console.log("\nCONTENT DETAIL:");
+        for (const cd of report.contentDiffs) {
+          console.log(`\n  ${cd.slug} (${cd.lang})  [${cd.file}]`);
+          const { local, remote } = firstDiffWindow(cd.local, cd.remote);
+          console.log(`    local : …${local}…`);
+          console.log(`    remote: …${remote}…`);
+        }
+      } else if (report.contentDiffs.length > 0 && !opts.verbose) {
+        console.log("\n  (re-run with --verbose to see the changed text)");
+      }
       console.log("\nLocal and remote are OUT OF SYNC.");
       if (opts.exitCode) process.exit(1);
     } else {
@@ -362,6 +429,21 @@ async function runDiff(opts: {
     spinner.fail(err instanceof Error ? err.message : "Diff failed");
     process.exit(1);
   }
+}
+
+/**
+ * Return a small window of each string around the first character where they
+ * diverge, so `--verbose` can show *what* changed without dumping whole
+ * articles. Both sides are already normalized plain text.
+ */
+function firstDiffWindow(a: string, b: string, ctx = 50): { local: string; remote: string } {
+  let i = 0;
+  while (i < a.length && i < b.length && a[i] === b[i]) i++;
+  const start = Math.max(0, i - ctx);
+  return {
+    local: a.slice(start, i + ctx),
+    remote: b.slice(start, i + ctx),
+  };
 }
 
 program.parse();
