@@ -8,7 +8,7 @@ import { writeMdx } from "./output/mdx.js";
 import { analyzeCodebase } from "./analyze/index.js";
 import { recordFeatures } from "./record/index.js";
 import { produceOutput } from "./produce/index.js";
-import { push as pushDocs, diff as diffDocs } from "./sync/index.js";
+import { push as pushDocs, diff as diffDocs, remove as removeDocs } from "./sync/index.js";
 import {
   printSkill,
   checkSkill,
@@ -22,7 +22,7 @@ const program = new Command();
 program
   .name("recap")
   .description("Generate documentation from product videos")
-  .version("0.4.0");
+  .version("0.5.0");
 
 // --- Original video-to-docs command (default) ---
 
@@ -279,11 +279,23 @@ program
   .argument("<docsDir>", "Path to the docs folder containing sync.json")
   .option("--url <url>", "Recap base URL", "https://docs.respeak.io")
   .option("--api-key <key>", "Recap API key (or set RECAP_API_KEY)")
+  .option(
+    "--only <selector...>",
+    "Push only these chapter or chapter/article slugs (additive — nothing is deleted)",
+  )
+  .option("--no-prune", "Upsert everything but never delete remote items absent from sync.json")
   .option("--dry-run", "Preview changes without writing (same as `recap diff`)")
   .option("-v, --verbose", "On --dry-run, show the text that differs per article")
   .action(async (
     docsDir: string,
-    opts: { url: string; apiKey?: string; dryRun?: boolean; verbose?: boolean },
+    opts: {
+      url: string;
+      apiKey?: string;
+      only?: string[];
+      prune?: boolean;
+      dryRun?: boolean;
+      verbose?: boolean;
+    },
     cmd: Command,
   ) => {
     const apiKey = cmd.optsWithGlobals().apiKey || process.env.RECAP_API_KEY;
@@ -293,6 +305,11 @@ program
     }
 
     if (opts.dryRun) {
+      // `diff` compares the whole manifest; --only/--no-prune only shape the
+      // mutation, so they don't apply to a read-only preview.
+      if (opts.only?.length) {
+        console.log("Note: --only is ignored with --dry-run (diff always previews the full project).");
+      }
       await runDiff({ docsDir, url: opts.url, apiKey, verbose: opts.verbose });
       return;
     }
@@ -303,6 +320,8 @@ program
         docsDir,
         url: opts.url,
         apiKey,
+        only: opts.only,
+        prune: opts.prune,
         onProgress: (msg) => { spinner.text = msg; },
       });
       spinner.succeed(`Synced to ${opts.url}`);
@@ -313,6 +332,11 @@ program
         `  articles: +${stats.articles.created} ~${stats.articles.updated} -${stats.articles.deleted}`
       );
       console.log(`  images:   +${media.uploaded} uploaded, ${media.reused} unchanged`);
+      if (opts.only?.length) {
+        console.log(`  scope:    ${opts.only.join(", ")} (additive — nothing deleted)`);
+      } else if (opts.prune === false) {
+        console.log(`  prune:    off (additive — nothing deleted)`);
+      }
       for (const w of warnings) console.log(`  ? ${w}`);
     } catch (err) {
       spinner.fail(err instanceof Error ? err.message : "Sync failed");
@@ -341,6 +365,63 @@ program
       process.exit(1);
     }
     await runDiff({ docsDir, url: opts.url, apiKey, exitCode: opts.exitCode, verbose: opts.verbose });
+  });
+
+// --- rm command (targeted delete) ---
+// The additive counterpart to `push --only`: removes remote chapters/articles by
+// slug. `sync.json` is read only for its `project_slug`, so the targets need not
+// still exist locally (you typically run this after deleting the files).
+
+program
+  .command("rm")
+  .description("Delete chapters or articles from a Recap project by slug selector")
+  .argument("<docsDir>", "Path to the docs folder containing sync.json (for project_slug)")
+  .requiredOption(
+    "--only <selector...>",
+    "Chapter (slug) or article (chapter/article) slugs to delete",
+  )
+  .option("--url <url>", "Recap base URL", "https://docs.respeak.io")
+  .option("--api-key <key>", "Recap API key (or set RECAP_API_KEY)")
+  .option("-y, --yes", "Skip the confirmation prompt")
+  .action(async (
+    docsDir: string,
+    opts: { only: string[]; url: string; apiKey?: string; yes?: boolean },
+    cmd: Command,
+  ) => {
+    const apiKey = cmd.optsWithGlobals().apiKey || process.env.RECAP_API_KEY;
+    if (!apiKey) {
+      console.error("Error: Recap API key required. Set RECAP_API_KEY or use --api-key");
+      process.exit(1);
+    }
+
+    if (!opts.yes) {
+      console.log(`About to DELETE from ${opts.url}:`);
+      for (const sel of opts.only) console.log(`  ✗ ${sel}`);
+      const rl = createInterface({ input: process.stdin, output: process.stdout });
+      const answer = await rl.question("\nProceed? (y/N) ");
+      rl.close();
+      if (answer.toLowerCase() !== "y") {
+        console.log("Aborted.");
+        return;
+      }
+    }
+
+    const spinner = ora("Deleting...").start();
+    try {
+      const result = await removeDocs({
+        docsDir,
+        url: opts.url,
+        apiKey,
+        selectors: opts.only,
+        onProgress: (msg) => { spinner.text = msg; },
+      });
+      spinner.succeed(`Deleted from ${opts.url}`);
+      console.log(`  chapters: ${result.chapters.length ? result.chapters.join(", ") : "none"}`);
+      console.log(`  articles: ${result.articles.length ? result.articles.join(", ") : "none"}`);
+    } catch (err) {
+      spinner.fail(err instanceof Error ? err.message : "Delete failed");
+      process.exit(1);
+    }
   });
 
 // --- skill command ---

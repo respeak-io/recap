@@ -45,10 +45,44 @@ repo prints **"Local and remote are IN SYNC."** — trust it as a pre-push gate.
 npx @respeak/recap push ./docs
 ```
 
-⚠️ **`push` is declarative: any chapter or article NOT in `sync.json` is DELETED
-on the server.** Always `diff` first and read what would be removed. `push
---dry-run` is identical to `diff`. Push prints a summary including an `images:`
-line so you can confirm media uploaded.
+⚠️ **`push` is declarative by default: any chapter or article NOT in `sync.json`
+is DELETED on the server.** Always `diff` first and read what would be removed.
+`push --dry-run` is identical to `diff`. Push prints a summary including an
+`images:` line so you can confirm media uploaded.
+
+### Granular / additive push
+
+When you only changed part of the docs, or your local folder is a partial copy,
+scope the push so nothing else is touched:
+
+```bash
+# Push one article (chapter-slug/article-slug). Additive — deletes nothing.
+npx @respeak/recap push ./docs --only getting-started/installation
+
+# Push a whole chapter (all its articles). Additive.
+npx @respeak/recap push ./docs --only getting-started
+
+# Push everything but never delete remote items missing locally.
+npx @respeak/recap push ./docs --no-prune
+```
+
+`--only` selectors are `chapter-slug` or `chapter-slug/article-slug` (the slugs
+from `sync.json`); pass several to push a set. Both `--only` and `--no-prune`
+are **additive**: only the upserts happen, and remote items absent from the
+payload are left alone. Cross-links still resolve against the full doc set, so a
+scoped push won't break links to pages it didn't send. A selector that matches
+nothing in `sync.json` fails loudly.
+
+To remove something from the server (the additive counterpart to `--only`):
+
+```bash
+npx @respeak/recap rm ./docs --only old-chapter            # delete a chapter (articles cascade)
+npx @respeak/recap rm ./docs --only guides/deprecated      # delete one article (all languages)
+```
+
+`rm` reads only `project_slug` from `sync.json`, so the targets need not still
+exist locally — run it after deleting the files. It confirms before deleting
+(`-y` skips the prompt).
 
 ## Behaviors worth remembering
 
@@ -72,6 +106,7 @@ version-accurate option list, ask the CLI directly:
 ```bash
 npx @respeak/recap diff --help
 npx @respeak/recap push --help
+npx @respeak/recap rm --help
 ```
 
 ## Keeping this skill current

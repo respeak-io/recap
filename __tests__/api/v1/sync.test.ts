@@ -180,6 +180,42 @@ describe("PUT /api/v1/projects/[slug]/sync", () => {
     expect(json.chapters.deleted).toBe(1);
   });
 
+  it("preserves chapters absent from payload when prune is false", async () => {
+    supabaseMock.setTable("articles", { data: [] });
+    supabaseMock.setTable("projects", { data: null, error: null });
+
+    const chapChain = supabaseMock.getChain("chapters");
+    const existingData = [
+      { id: "ch-keep", slug: "keep" },
+      { id: "ch-untouched", slug: "not-in-payload" },
+    ];
+    let chapCallCount = 0;
+    chapChain.then = vi.fn((r: (v: unknown) => void) => {
+      chapCallCount++;
+      if (chapCallCount === 1) {
+        return r({ data: existingData, error: null });
+      }
+      return r({ data: null, error: null });
+    });
+
+    const res = await PUT(
+      makeRequest("http://localhost/api/v1/projects/docs/sync", {
+        method: "PUT",
+        body: {
+          prune: false,
+          chapters: [{ title: "Keep", slug: "keep", articles: [] }],
+        },
+        headers: { Authorization: "Bearer rd_key" },
+      }),
+      { params: Promise.resolve({ slug: "docs" }) }
+    );
+
+    const json = await res.json();
+    expect(json.chapters.deleted).toBe(0);
+    // The chapter delete pass never runs, so .delete() is not invoked.
+    expect(supabaseMock.getChain("chapters").delete).not.toHaveBeenCalled();
+  });
+
   it("updates project-level fields when provided", async () => {
     supabaseMock.setTable("chapters", { data: [] });
     supabaseMock.setTable("articles", { data: [] });

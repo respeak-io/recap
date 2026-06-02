@@ -55,6 +55,11 @@ export async function PUT(
     return apiError("chapters array is required", "VALIDATION_ERROR", 422);
   }
 
+  // Mirror by default: anything absent from the payload is deleted. A scoped or
+  // additive push sends `prune: false` to keep the unsent chapters/articles —
+  // omitting the field preserves the historical full-mirror behavior.
+  const prune = body.prune !== false;
+
   // Update project-level fields if provided
   const projectUpdate: Record<string, unknown> = {};
   if (typeof body.name === "string") projectUpdate.name = body.name;
@@ -202,38 +207,43 @@ export async function PUT(
     }
   }
 
-  // Delete chapters not in payload
-  for (const [chSlug, ch] of existChapterMap) {
-    if (!seenChapterSlugs.has(chSlug)) {
-      await db.from("chapters").delete().eq("id", ch.id);
-      stats.chapters.deleted++;
+  // Pruning is skipped for additive/scoped pushes (`prune: false`): only the
+  // upserts above happen, and chapters/articles absent from the payload are left
+  // untouched.
+  if (prune) {
+    // Delete chapters not in payload
+    for (const [chSlug, ch] of existChapterMap) {
+      if (!seenChapterSlugs.has(chSlug)) {
+        await db.from("chapters").delete().eq("id", ch.id);
+        stats.chapters.deleted++;
+      }
     }
-  }
 
-  // Clean up articles that were orphaned by chapter deletion (chapter_id set to null)
-  const deletedChapterIds = new Set(
-    [...existChapterMap.entries()]
-      .filter(([slug]) => !seenChapterSlugs.has(slug))
-      .map(([, ch]) => ch.id)
-  );
-  for (const [artKey, art] of existArticleMap) {
-    if (art.chapter_id && deletedChapterIds.has(art.chapter_id) && !seenArticleKeys.has(artKey)) {
-      await db.from("articles").delete().eq("id", art.id);
-      stats.articles.deleted++;
-    }
-  }
-
-  // Delete articles not in payload (only those whose chapter survived — deleted chapters cascade)
-  const survivingChapterIds = new Set(
-    [...existChapterMap.entries()]
-      .filter(([slug]) => seenChapterSlugs.has(slug))
-      .map(([, ch]) => ch.id)
-  );
-  for (const [artKey, art] of existArticleMap) {
-    if (!seenArticleKeys.has(artKey)) {
-      if (!art.chapter_id || survivingChapterIds.has(art.chapter_id)) {
+    // Clean up articles that were orphaned by chapter deletion (chapter_id set to null)
+    const deletedChapterIds = new Set(
+      [...existChapterMap.entries()]
+        .filter(([slug]) => !seenChapterSlugs.has(slug))
+        .map(([, ch]) => ch.id)
+    );
+    for (const [artKey, art] of existArticleMap) {
+      if (art.chapter_id && deletedChapterIds.has(art.chapter_id) && !seenArticleKeys.has(artKey)) {
         await db.from("articles").delete().eq("id", art.id);
         stats.articles.deleted++;
+      }
+    }
+
+    // Delete articles not in payload (only those whose chapter survived — deleted chapters cascade)
+    const survivingChapterIds = new Set(
+      [...existChapterMap.entries()]
+        .filter(([slug]) => seenChapterSlugs.has(slug))
+        .map(([, ch]) => ch.id)
+    );
+    for (const [artKey, art] of existArticleMap) {
+      if (!seenArticleKeys.has(artKey)) {
+        if (!art.chapter_id || survivingChapterIds.has(art.chapter_id)) {
+          await db.from("articles").delete().eq("id", art.id);
+          stats.articles.deleted++;
+        }
       }
     }
   }

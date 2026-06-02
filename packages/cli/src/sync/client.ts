@@ -122,6 +122,23 @@ export class RecapClient {
     return this.request<SyncStats>("PUT", `/projects/${slug}/sync`, payload);
   }
 
+  /** Delete a chapter (articles cascade server-side). 204 on success. */
+  deleteChapter(slug: string, chapterSlug: string): Promise<void> {
+    return this.request<void>(
+      "DELETE",
+      `/projects/${slug}/chapters/${encodeURIComponent(chapterSlug)}`,
+    );
+  }
+
+  /** Delete an article. Without `lang`, removes every language sharing the slug. */
+  deleteArticle(slug: string, articleSlug: string, lang?: string): Promise<void> {
+    const query = lang ? `?lang=${encodeURIComponent(lang)}` : "";
+    return this.request<void>(
+      "DELETE",
+      `/projects/${slug}/articles/${encodeURIComponent(articleSlug)}${query}`,
+    );
+  }
+
   async uploadImage(slug: string, filepath: string): Promise<UploadResult> {
     const buf = await readFile(filepath);
     const name = path.basename(filepath);

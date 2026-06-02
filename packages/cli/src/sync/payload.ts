@@ -29,6 +29,12 @@ export interface SyncPayload {
   name?: string;
   subtitle?: string;
   translations?: Record<string, { name?: string; subtitle?: string }>;
+  /**
+   * When false, the server skips its deletion passes — chapters/articles absent
+   * from this payload are preserved instead of pruned. Omitted (or true) keeps
+   * the default full-mirror behavior.
+   */
+  prune?: boolean;
   chapters: SyncChapterPayload[];
 }
 

@@ -7,6 +7,7 @@ import {
   getArticleLang,
   type SyncManifest,
 } from "./manifest.js";
+import { selectManifest, parseSelectors } from "./select.js";
 import { buildLinkMap } from "./links.js";
 import { processMarkdown } from "./markdown.js";
 import { markdownToTiptapRaw } from "../markdown/markdown-to-tiptap.js";
@@ -26,6 +27,18 @@ export interface SyncOptions {
   docsDir: string;
   url: string;
   apiKey: string;
+  /**
+   * Restrict the push to these chapter (`slug`) or article (`chapter/article`)
+   * selectors. A scoped push is always additive — the unsent chapters/articles
+   * are never pruned. Ignored by `diff`.
+   */
+  only?: string[];
+  /**
+   * Set false to push additively without `--only`: upsert everything local but
+   * never delete remote items absent from the manifest. Defaults to a full
+   * mirror. Ignored by `diff`.
+   */
+  prune?: boolean;
   onProgress?: (message: string) => void;
   onWarn?: (message: string) => void;
 }
@@ -59,11 +72,18 @@ export async function push(options: SyncOptions): Promise<PushResult> {
   const { urls: imageUrls, media } = await syncMedia(manifest, client, options.docsDir, onProgress);
 
   onProgress("Building sync payload...");
+  // Cross-links must resolve against the WHOLE doc set even on a scoped push, so
+  // build the link map from the full manifest, then narrow what we actually send.
   const linkMap = buildLinkMap(manifest);
-  const payload = await buildPayload(manifest, options.docsDir, imageUrls, linkMap, onWarn);
+  const scoped = options.only?.length ? selectManifest(manifest, options.only) : manifest;
+  const payload = await buildPayload(scoped, options.docsDir, imageUrls, linkMap, onWarn);
+
+  // `--only` is inherently additive (a scoped push must never delete the rest);
+  // `prune: false` opts a full push out of deletions too. Default stays a mirror.
+  payload.prune = options.prune !== false && !options.only?.length;
 
   onProgress("Syncing documentation...");
-  const stats = await client.sync(manifest.project_slug, payload);
+  const stats = await client.sync(scoped.project_slug, payload);
 
   return { stats, media, warnings };
 }
@@ -151,6 +171,49 @@ export async function diff(options: SyncOptions): Promise<DiffResult> {
   });
 
   return { report, warnings };
+}
+
+export interface RemoveOptions {
+  docsDir: string;
+  url: string;
+  apiKey: string;
+  /** Chapter (`slug`) or article (`chapter/article`) selectors to delete. */
+  selectors: string[];
+  onProgress?: (message: string) => void;
+}
+
+export interface RemoveResult {
+  /** Deleted whole-chapter slugs (articles cascade server-side). */
+  chapters: string[];
+  /** Deleted article selectors (`chapter/article`). */
+  articles: string[];
+}
+
+/**
+ * Delete chapters/articles from the remote project by slug selector — the
+ * additive counterpart to a scoped `push`. Only `sync.json`'s `project_slug` is
+ * read from the docs folder; the targets need not exist locally (you typically
+ * run this after removing files). Whole-chapter deletes cascade to their
+ * articles; article deletes remove every language sharing that slug.
+ */
+export async function remove(options: RemoveOptions): Promise<RemoveResult> {
+  const manifest = await loadManifest(options.docsDir);
+  const client = new RecapClient({ baseUrl: options.url, apiKey: options.apiKey });
+  const onProgress = options.onProgress ?? (() => {});
+  const { chapters, articles } = parseSelectors(options.selectors);
+
+  const result: RemoveResult = { chapters: [], articles: [] };
+  for (const ch of chapters) {
+    onProgress(`Deleting chapter '${ch}'...`);
+    await client.deleteChapter(manifest.project_slug, ch);
+    result.chapters.push(ch);
+  }
+  for (const { chapter, article } of articles) {
+    onProgress(`Deleting article '${chapter}/${article}'...`);
+    await client.deleteArticle(manifest.project_slug, article);
+    result.articles.push(`${chapter}/${article}`);
+  }
+  return result;
 }
 
 // --- internals ---
