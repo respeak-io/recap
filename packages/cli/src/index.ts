@@ -16,13 +16,20 @@ import {
   DEFAULT_SKILL_PATH,
 } from "./skill/index.js";
 import { createInterface } from "node:readline/promises";
+import { readFileSync } from "node:fs";
+
+// Read the version from package.json (dist/src/index.js -> ../../package.json)
+// so `--version` can't drift from what was published.
+const { version } = JSON.parse(
+  readFileSync(new URL("../../package.json", import.meta.url), "utf-8"),
+) as { version: string };
 
 const program = new Command();
 
 program
   .name("recap")
   .description("Generate documentation from product videos")
-  .version("0.5.0");
+  .version(version);
 
 // --- Original video-to-docs command (default) ---
 
