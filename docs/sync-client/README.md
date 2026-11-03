@@ -30,8 +30,10 @@ npx @respeak/recap push ./05_end_user_docs --api-key rd_xxx
 
 ## What it does
 
-1. **Validate** `sync.json` against the folder: every referenced file must exist
-   (error → abort); orphan `.md` files are reported as warnings.
+1. **Validate** `sync.json` against the folder: every referenced file must exist,
+   keywords stay within the server limits (20 per chapter/article, 40 chars
+   each), and article slugs are unique across chapters (error → abort, before
+   anything is uploaded); orphan `.md` files are reported as warnings.
 2. **Upload media** in `media/` (images): new files are uploaded, existing ones
    reused, and image width/height set from the file header. Local `media/<file>`
    references in markdown are rewritten to the returned URLs.
@@ -40,8 +42,13 @@ npx @respeak/recap push ./05_end_user_docs --api-key rd_xxx
    (`[t](../05_multichat/02_trigger.md#step)` → `[t](/<project_slug>/trigger#step)`),
    and swap `media/<file>` paths for the uploaded URLs.
 4. **Sync** the full structure via `PUT /api/v1/projects/:slug/sync`. Chapters are
-   matched by `slug`, articles by `slug` + `language`; anything not in the payload
-   is **deleted**. Omitting `keywords` preserves them; `[]` clears them.
+   matched by `slug`, articles by `slug` + `language` (so moving an article to
+   another chapter moves it); anything not in the payload is **deleted**. The
+   whole payload is validated before any write, and a failed write aborts the
+   sync with an error. Omitting `keywords` preserves them; `[]` clears them.
+5. **Clean up media** (full push only): remote images no longer in local
+   `media/` are deleted, unless their URL still appears in the pushed content.
+   Skipped with `--only` / `--no-prune`, and when there is no `media/` folder.
 
 `diff` reports the same picture without mutating: structural drift, per-article
 content changes, unresolved cross-links, media present on only one side, and

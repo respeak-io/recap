@@ -45,8 +45,8 @@ repo prints **"Local and remote are IN SYNC."** — trust it as a pre-push gate.
 npx @respeak/recap push ./docs
 ```
 
-⚠️ **`push` is declarative by default: any chapter or article NOT in `sync.json`
-is DELETED on the server.** Always `diff` first and read what would be removed.
+⚠️ **`push` is declarative by default: any chapter or article NOT in `sync.json`,
+and any remote image no longer in local `media/`, is DELETED on the server.** Always `diff` first and read what would be removed.
 `push --dry-run` is identical to `diff`. Push prints a summary including an
 `images:` line so you can confirm media uploaded.
 
@@ -94,7 +94,14 @@ exist locally — run it after deleting the files. It confirms before deleting
   `[x](../other/page.md)`); they're rewritten to public slug URLs at sync.
   Unresolved links are reported by both `diff` and `push`.
 - `keywords`: omitting the field preserves existing keywords; `"keywords": []`
-  clears them.
+  clears them. Max 20 per chapter/article, 40 characters each; `diff` and `push`
+  check this before uploading anything.
+- Article slugs are unique across chapters. Moving a slug to another chapter in
+  `sync.json` moves the article on push (even if its old chapter is deleted in
+  the same push).
+- Media cleanup: a full `push` deletes remote images that are no longer in
+  `media/` (kept if their URL still appears in the content). `--only` and
+  `--no-prune` never delete media; neither does a docs folder without `media/`.
 - Each language is a separate article entry sharing one `slug`. Sending only
   `en` entries will delete the other languages.
 

@@ -95,14 +95,16 @@ export class RecapClient {
     return this.request<RemoteProject>("GET", `/projects/${slug}`);
   }
 
+  /** Null when the article does not exist (404); any other failure throws. */
   async getArticle(slug: string, articleSlug: string, lang: string): Promise<RemoteArticle | null> {
     try {
       return await this.request<RemoteArticle>(
         "GET",
         `/projects/${slug}/articles/${encodeURIComponent(articleSlug)}?lang=${encodeURIComponent(lang)}`,
       );
-    } catch {
-      return null;
+    } catch (err) {
+      if (err instanceof Error && err.message.startsWith("API 404 ")) return null;
+      throw err;
     }
   }
 
@@ -116,6 +118,14 @@ export class RecapClient {
     body: { width?: number; height?: number; alt_text?: string },
   ): Promise<RecapImage> {
     return this.request<RecapImage>("PATCH", `/projects/${slug}/media/images/${imageId}`, body);
+  }
+
+  /** Delete images by id. Per-id failures come back in `errors`, not as a throw. */
+  deleteImages(
+    slug: string,
+    ids: string[],
+  ): Promise<{ deleted: string[]; errors: { id: string; error: string }[] }> {
+    return this.request("POST", `/projects/${slug}/media/images/batch-delete`, { ids });
   }
 
   sync(slug: string, payload: unknown): Promise<SyncStats> {

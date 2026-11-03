@@ -115,6 +115,45 @@ export function getArticleLang(article: Article, lang: string): ArticleLangResul
   return { ok: true, value: parsed.data };
 }
 
+// --- Keywords ---
+
+// Server-side limits (see the app's `lib/keywords.ts`). Checked locally so
+// `diff`/`push` fail before any media is uploaded.
+export const MAX_KEYWORDS = 20;
+export const MAX_KEYWORD_LENGTH = 40;
+
+/**
+ * Mirror server-side keyword normalization (strip leading `#`, trim, lowercase,
+ * dedupe, drop empty) so keyword comparisons don't report cosmetic differences.
+ * Lives here (not imported) because the standalone CLI cannot import the app's
+ * `@/lib/keywords` at publish time.
+ */
+export function normalizeKeywords(input: unknown): string[] {
+  if (!Array.isArray(input)) return [];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const raw of input) {
+    if (typeof raw !== "string") continue;
+    const n = raw.replace(/^#+/, "").trim().toLowerCase();
+    if (!n || seen.has(n)) continue;
+    seen.add(n);
+    out.push(n);
+  }
+  return out;
+}
+
+/** Same rules as the server's `validateKeywords`; returns an error or null. */
+export function keywordError(input: string[] | undefined): string | null {
+  if (input === undefined) return null;
+  const normalized = normalizeKeywords(input);
+  const tooLong = normalized.find((kw) => kw.length > MAX_KEYWORD_LENGTH);
+  if (tooLong) return `keyword exceeds ${MAX_KEYWORD_LENGTH} characters: "${tooLong}"`;
+  if (normalized.length > MAX_KEYWORDS) {
+    return `${normalized.length} keywords, max ${MAX_KEYWORDS} allowed`;
+  }
+  return null;
+}
+
 // --- Validation against the docs folder ---
 
 export interface ValidationReport {
@@ -127,14 +166,25 @@ export interface ValidationReport {
  * - every referenced markdown file exists (error)
  * - orphan `.md` files under each language dir that are not referenced (warning)
  * - per-language article objects are well-formed (error)
- * Mirrors the reference `validate()`.
+ * - keyword limits per chapter / article language (error, same as the server)
+ * - duplicate chapter slugs, or an article slug in two chapters (error — the
+ *   server stores articles uniquely per slug+language, across chapters)
  */
 export function validateManifest(manifest: SyncManifest, docsDir: string): ValidationReport {
   const errors: string[] = [];
   const warnings: string[] = [];
   const referenced = new Set<string>();
+  const chapterSlugs = new Set<string>();
+  const articleChapter = new Map<string, string>();
 
   for (const chapter of manifest.chapters) {
+    if (chapterSlugs.has(chapter.slug)) {
+      errors.push(`Duplicate chapter slug '${chapter.slug}'`);
+    }
+    chapterSlugs.add(chapter.slug);
+    const chKw = keywordError(chapter.keywords);
+    if (chKw) errors.push(`Chapter '${chapter.slug}' keywords: ${chKw}`);
+
     for (const [lang, rel] of Object.entries(chapter.content ?? {})) {
       referenced.add(rel);
       if (!existsSync(path.join(docsDir, rel))) {
@@ -143,12 +193,24 @@ export function validateManifest(manifest: SyncManifest, docsDir: string): Valid
     }
 
     for (const article of chapter.articles) {
+      const otherChapter = articleChapter.get(article.slug);
+      if (otherChapter !== undefined) {
+        errors.push(
+          `Article '${article.slug}' appears in chapters '${otherChapter}' and '${chapter.slug}' (slugs must be unique across chapters)`,
+        );
+      } else {
+        articleChapter.set(article.slug, chapter.slug);
+      }
       for (const lang of manifest.languages) {
         const got = getArticleLang(article, lang);
         if (got === null) continue;
         if (!got.ok) {
           errors.push(`Invalid article '${article.slug}' (${lang}): ${got.error}`);
           continue;
+        }
+        const artKw = keywordError(got.value.keywords);
+        if (artKw) {
+          errors.push(`Article '${chapter.slug}/${article.slug}' (${lang}) keywords: ${artKw}`);
         }
         const rel = got.value.file;
         referenced.add(rel);

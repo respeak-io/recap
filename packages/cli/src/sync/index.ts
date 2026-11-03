@@ -43,10 +43,14 @@ export interface SyncOptions {
   onWarn?: (message: string) => void;
 }
 
-/** Media upload tally for the push summary line. Sync never deletes images. */
+/**
+ * Media tally for the push summary line. `deleted` counts remote images removed
+ * because they are no longer in local `media/` (full mirror pushes only).
+ */
 export interface MediaStats {
   uploaded: number;
   reused: number;
+  deleted: number;
 }
 
 export interface PushResult {
@@ -69,7 +73,12 @@ export async function push(options: SyncOptions): Promise<PushResult> {
   const manifest = await loadAndValidate(options.docsDir, onProgress, onWarn);
   const client = new RecapClient({ baseUrl: options.url, apiKey: options.apiKey });
 
-  const { urls: imageUrls, media } = await syncMedia(manifest, client, options.docsDir, onProgress);
+  const {
+    urls: imageUrls,
+    media,
+    remote: remoteImages,
+    localFiles: localMedia,
+  } = await syncMedia(manifest, client, options.docsDir, onProgress);
 
   onProgress("Building sync payload...");
   // Cross-links must resolve against the WHOLE doc set even on a scoped push, so
@@ -84,6 +93,23 @@ export async function push(options: SyncOptions): Promise<PushResult> {
 
   onProgress("Syncing documentation...");
   const stats = await client.sync(scoped.project_slug, payload);
+
+  // Clean up after ourselves: a full mirror push also removes remote images that
+  // are gone from local `media/`. Runs only after the sync succeeded, never on
+  // additive pushes, and never when there is no local `media/` folder at all
+  // (that folder simply doesn't manage media). An image whose URL still appears
+  // anywhere in the pushed content is kept, as a safety net.
+  if (payload.prune && remoteImages) {
+    media.deleted = await pruneMedia(
+      client,
+      scoped.project_slug,
+      remoteImages,
+      localMedia,
+      JSON.stringify(payload),
+      onProgress,
+      onWarn,
+    );
+  }
 
   return { stats, media, warnings };
 }
@@ -144,7 +170,7 @@ export async function diff(options: SyncOptions): Promise<DiffResult> {
         localFiles.set(key, got.value.file);
         // Only fetch remote content for articles that exist on both sides.
         if (!remoteChapterSlugs.has(chapter.slug) || !remoteKeys?.has(key)) continue;
-        const ra = await client.getArticle(manifest.project_slug, article.slug, lang);
+        const ra = await fetchArticleWithRetry(client, manifest.project_slug, article.slug, lang, onWarn);
         if (ra) remoteArticles.set(key, ra);
       }
     }
@@ -218,6 +244,33 @@ export async function remove(options: RemoveOptions): Promise<RemoveResult> {
 
 // --- internals ---
 
+/**
+ * Fetch one article for the content comparison. Transient failures (network,
+ * 5xx, 429) get one retry; if that also fails the reason is surfaced as a
+ * warning instead of being swallowed, and the article shows as "could not
+ * fetch content" in the report.
+ */
+async function fetchArticleWithRetry(
+  client: RecapClient,
+  projectSlug: string,
+  articleSlug: string,
+  lang: string,
+  onWarn: (message: string) => void,
+): Promise<RemoteArticle | null> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      return await client.getArticle(projectSlug, articleSlug, lang);
+    } catch (err) {
+      lastError = err;
+    }
+  }
+  onWarn(
+    `Could not fetch remote article '${articleSlug}' (${lang}): ${(lastError as Error)?.message ?? lastError}`,
+  );
+  return null;
+}
+
 async function loadAndValidate(
   docsDir: string,
   onProgress: (message: string) => void,
@@ -238,13 +291,20 @@ async function syncMedia(
   client: RecapClient,
   docsDir: string,
   onProgress: (message: string) => void,
-): Promise<{ urls: Record<string, string>; media: MediaStats }> {
+): Promise<{
+  urls: Record<string, string>;
+  media: MediaStats;
+  /** Remote images before upload; null when there is no local `media/` folder. */
+  remote: RecapImage[] | null;
+  localFiles: Set<string>;
+}> {
   const mediaDir = path.join(docsDir, "media");
-  if (!existsSync(mediaDir)) return { urls: {}, media: { uploaded: 0, reused: 0 } };
+  if (!existsSync(mediaDir)) {
+    return { urls: {}, media: { uploaded: 0, reused: 0, deleted: 0 }, remote: null, localFiles: new Set() };
+  }
   const localFiles = (await readdir(mediaDir))
     .filter((f) => IMAGE_EXTENSIONS.has(path.extname(f).toLowerCase()))
     .sort();
-  if (localFiles.length === 0) return { urls: {}, media: { uploaded: 0, reused: 0 } };
 
   onProgress(`Uploading ${localFiles.length} media file(s)...`);
   const existing = new Map<string, RecapImage>();
@@ -273,11 +333,50 @@ async function syncMedia(
       if (dim) await client.patchImage(manifest.project_slug, result.imageId, dim);
     }
   }
-  return { urls, media: { uploaded, reused } };
+  return {
+    urls,
+    media: { uploaded, reused, deleted: 0 },
+    remote: list.images,
+    localFiles: new Set(localFiles),
+  };
 }
 
-async function listLocalImages(docsDir: string): Promise<string[]> {
+/**
+ * Delete remote images that are no longer in local `media/`. Images still
+ * referenced by URL in the pushed content are kept (and reported). Returns the
+ * number actually deleted; per-image failures become warnings.
+ */
+async function pruneMedia(
+  client: RecapClient,
+  projectSlug: string,
+  remote: RecapImage[],
+  localFiles: Set<string>,
+  pushedContent: string,
+  onProgress: (message: string) => void,
+  onWarn: (message: string) => void,
+): Promise<number> {
+  const orphans: RecapImage[] = [];
+  for (const img of remote) {
+    if (localFiles.has(img.filename)) continue;
+    if (pushedContent.includes(img.url)) {
+      onWarn(`Kept remote image '${img.filename}': not in media/ but still referenced by URL`);
+      continue;
+    }
+    orphans.push(img);
+  }
+  if (orphans.length === 0) return 0;
+
+  onProgress(`Deleting ${orphans.length} unused remote image(s)...`);
+  const result = await client.deleteImages(projectSlug, orphans.map((img) => img.id));
+  const names = new Map(orphans.map((img) => [img.id, img.filename]));
+  for (const e of result.errors ?? []) {
+    onWarn(`Could not delete remote image '${names.get(e.id) ?? e.id}': ${e.error}`);
+  }
+  return result.deleted?.length ?? 0;
+}
+
+async function listLocalImages(docsDir: string): Promise<string[] | null> {
   const mediaDir = path.join(docsDir, "media");
-  if (!existsSync(mediaDir)) return [];
+  if (!existsSync(mediaDir)) return null;
   return (await readdir(mediaDir)).filter((f) => IMAGE_EXTENSIONS.has(path.extname(f).toLowerCase()));
 }

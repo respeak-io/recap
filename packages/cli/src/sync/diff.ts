@@ -1,4 +1,11 @@
-import { getArticleLang, type SyncManifest, type ArticleLang } from "./manifest.js";
+import {
+  getArticleLang,
+  normalizeKeywords,
+  type SyncManifest,
+  type ArticleLang,
+} from "./manifest.js";
+
+export { normalizeKeywords };
 import type { RemoteProject, RemoteArticle, RemoteArticleSummary } from "./client.js";
 
 export interface DiffInput {
@@ -8,7 +15,8 @@ export interface DiffInput {
   remoteArticles: Map<string, RemoteArticle>;
   /** null when the remote image list could not be fetched (skip media comparison). */
   remoteImages: string[] | null;
-  localImages: string[];
+  /** null when there is no local `media/` folder (push then leaves remote media alone). */
+  localImages: string[] | null;
   /**
    * key `${slug}:${lang}` -> local `content_text`, rendered with the SAME
    * markdown->Tiptap converter the server uses. A truly-synced article is
@@ -32,26 +40,6 @@ export interface DiffReport {
   diffs: string[];
   info: string[];
   contentDiffs: ContentDiff[];
-}
-
-/**
- * Mirror server-side keyword normalization (strip leading `#`, trim, lowercase,
- * dedupe, drop empty) so keyword comparisons don't report cosmetic differences.
- * Reimplemented here because the standalone CLI cannot import the app's
- * `@/lib/keywords` at publish time.
- */
-export function normalizeKeywords(input: unknown): string[] {
-  if (!Array.isArray(input)) return [];
-  const seen = new Set<string>();
-  const out: string[] = [];
-  for (const raw of input) {
-    if (typeof raw !== "string") continue;
-    const n = raw.replace(/^#+/, "").trim().toLowerCase();
-    if (!n || seen.has(n)) continue;
-    seen.add(n);
-    out.push(n);
-  }
-  return out;
 }
 
 /**
@@ -225,12 +213,16 @@ export function computeDiff(input: DiffInput): DiffReport {
     info.push("Media comparison skipped (could not list remote images)");
   } else {
     const remoteSet = new Set(remoteImages);
-    const localSet = new Set(localImages);
+    const localSet = new Set(localImages ?? []);
     for (const f of sorted(localSet).filter((x) => !remoteSet.has(x))) {
       diffs.push(`Image '${f}' — local but not on remote`);
     }
     for (const f of sorted(remoteSet).filter((x) => !localSet.has(x))) {
-      info.push(`Image '${f}' — on remote but not in local media/`);
+      if (localImages === null) {
+        info.push(`Image '${f}' — on remote; no local media/ folder, so push leaves it`);
+      } else {
+        diffs.push(`Image '${f}' — on remote but not in local media/ (a full push deletes it)`);
+      }
     }
   }
 

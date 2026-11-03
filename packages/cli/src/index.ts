@@ -331,7 +331,9 @@ program
       console.log(
         `  articles: +${stats.articles.created} ~${stats.articles.updated} -${stats.articles.deleted}`
       );
-      console.log(`  images:   +${media.uploaded} uploaded, ${media.reused} unchanged`);
+      console.log(
+        `  images:   +${media.uploaded} uploaded, ${media.reused} unchanged, -${media.deleted} deleted`
+      );
       if (opts.only?.length) {
         console.log(`  scope:    ${opts.only.join(", ")} (additive — nothing deleted)`);
       } else if (opts.prune === false) {
