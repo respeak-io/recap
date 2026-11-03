@@ -1,6 +1,6 @@
 {
   "name": "@respeak/recap",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "Generate documentation from product videos",
   "bin": {
     "recap": "./dist/src/index.js"
