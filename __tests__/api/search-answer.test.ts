@@ -78,6 +78,18 @@ describe("POST /api/search/answer", () => {
     expect(generateContent).not.toHaveBeenCalled();
   });
 
+  it("rejects bodies over 8 KB even without a Content-Length header", async () => {
+    const big = new Request("http://localhost/api/search/answer", {
+      method: "POST",
+      headers: { "x-real-ip": "203.0.113.77" },
+      body: JSON.stringify({ ...validBody, padding: "x".repeat(9_000) }),
+    });
+    expect(big.headers.get("content-length")).toBeNull();
+    const res = await POST(big);
+    expect(res.status).toBe(413);
+    expect(generateContent).not.toHaveBeenCalled();
+  });
+
   it("ignores malformed ids and answers null without articles", async () => {
     const res = await POST(req({ ...validBody, articleIds: ["not-a-uuid", 42] }));
     expect(await res.json()).toEqual({ answer: null });

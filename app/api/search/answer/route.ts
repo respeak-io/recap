@@ -125,6 +125,25 @@ function normalizeQuery(query: string): string {
   return query.replace(/\s+/g, " ").trim().toLowerCase();
 }
 
+/** Request body as text, or `null` once it exceeds `maxBytes` (reading stops there). */
+async function readBodyLimited(request: Request, maxBytes: number): Promise<string | null> {
+  if (!request.body) return "";
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > maxBytes) {
+      await reader.cancel();
+      return null;
+    }
+    chunks.push(value);
+  }
+  return new TextDecoder().decode(Buffer.concat(chunks));
+}
+
 export async function POST(request: Request) {
   if (Number(request.headers.get("content-length") ?? 0) > MAX_BODY_BYTES) {
     return NextResponse.json({ answer: null, error: "Request too large" }, { status: 413 });
@@ -138,9 +157,16 @@ export async function POST(request: Request) {
     return tooManyRequests(limited.retryAfterSeconds, { answer: null, error: "rate_limited" });
   }
 
+  // Content-Length can be absent (chunked upload), so the limit is enforced
+  // while reading as well.
+  const raw = await readBodyLimited(request, MAX_BODY_BYTES);
+  if (raw === null) {
+    return NextResponse.json({ answer: null, error: "Request too large" }, { status: 413 });
+  }
+
   let body: { query?: unknown; projectId?: unknown; articleIds?: unknown; lang?: unknown };
   try {
-    body = await request.json();
+    body = JSON.parse(raw);
   } catch {
     return NextResponse.json({ answer: null, error: "Invalid JSON" }, { status: 400 });
   }

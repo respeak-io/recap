@@ -57,8 +57,14 @@ export function SearchDialog({ projectId, projectSlug, locale }: SearchDialogPro
     return () => document.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  // Focus input on open
+  // Focus input on open. On open and close, drop pending searches and AI answer
+  // requests so a closed dialog never triggers a paid answer and a reopened one
+  // never shows results for the previous query.
   useEffect(() => {
+    clearTimeout(debounceRef.current);
+    clearTimeout(answerTimerRef.current);
+    searchSeqRef.current++;
+    setLoading(false);
     if (open) {
       setTimeout(() => inputRef.current?.focus(), 0);
       setQuery("");

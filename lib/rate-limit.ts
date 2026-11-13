@@ -31,9 +31,19 @@ export const RATE_LIMITS = {
   analyticsPerMinute: { limit: 120, windowMs: 60_000 },
 } as const satisfies Record<string, RateLimit>;
 
+/**
+ * Drop expired windows; if the map is still over the cap (day-long windows stay
+ * live for 24 h), drop the oldest entries so the map stays bounded and the scan
+ * does not repeat on every following request.
+ */
 function evictExpired(now: number) {
   for (const [key, w] of windows) {
     if (w.resetAt <= now) windows.delete(key);
+  }
+  const target = Math.floor(MAX_TRACKED_KEYS * 0.9);
+  for (const key of windows.keys()) {
+    if (windows.size <= target) break;
+    windows.delete(key);
   }
 }
 

@@ -122,6 +122,11 @@ const fetchDocsProject = unstable_cache(
       )
       .eq("slug", slug)
       .eq("is_public", true)
+      // Slugs are unique per org only (`unique (org_id, slug)`), and docs URLs
+      // carry no org. If two orgs publish the same slug, the oldest project keeps
+      // the URL instead of the lookup erroring.
+      .order("created_at", { ascending: true })
+      .limit(1)
       .maybeSingle();
 
     if (error) throw new Error(`docs project lookup failed: ${error.message}`);
