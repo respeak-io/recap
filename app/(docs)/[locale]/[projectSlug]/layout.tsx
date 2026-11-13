@@ -1,9 +1,15 @@
-import { createClient } from "@/lib/supabase/server";
 import { Sidebar } from "@/components/docs/sidebar";
 import { DocsThemeProvider } from "@/components/docs/theme-provider";
 import { resolveTheme } from "@/lib/theme";
+import { createPublicClient } from "@/lib/supabase/public";
+import { getDocsProject } from "@/lib/docs/data";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+
+function publicAssetUrl(path: string | null | undefined): string | null {
+  if (!path) return null;
+  return createPublicClient().storage.from("assets").getPublicUrl(path).data.publicUrl;
+}
 
 export async function generateMetadata({
   params,
@@ -11,20 +17,10 @@ export async function generateMetadata({
   params: Promise<{ locale: string; projectSlug: string }>;
 }): Promise<Metadata> {
   const { projectSlug } = await params;
-  const supabase = await createClient();
-  const { data: project } = await supabase
-    .from("projects")
-    .select("name, theme")
-    .eq("slug", projectSlug)
-    .eq("is_public", true)
-    .single();
+  const project = await getDocsProject(projectSlug);
 
-  const theme = resolveTheme(project?.theme as Record<string, unknown>);
-  let faviconUrl: string | null = null;
-  if (theme.favicon_path) {
-    const { data } = supabase.storage.from("assets").getPublicUrl(theme.favicon_path);
-    faviconUrl = data.publicUrl;
-  }
+  const theme = resolveTheme(project?.theme ?? null);
+  const faviconUrl = publicAssetUrl(theme.favicon_path);
 
   return {
     title: {
@@ -43,47 +39,18 @@ export default async function DocsLayout({
   params: Promise<{ locale: string; projectSlug: string }>;
 }) {
   const { locale, projectSlug } = await params;
-  const supabase = await createClient();
-
-  const { data: project } = await supabase
-    .from("projects")
-    .select(
-      "*, chapters(id, title, slug, order, group, translations, articles(id, title, slug, language, status, \"order\"))"
-    )
-    .eq("slug", projectSlug)
-    .eq("is_public", true)
-    .single();
+  const project = await getDocsProject(projectSlug);
 
   if (!project) notFound();
 
-  // Resolve theme
-  const theme = resolveTheme(project.theme as Record<string, unknown>);
+  const theme = resolveTheme(project.theme);
+  const logoUrl = publicAssetUrl(theme.logo_path);
+  const faviconUrl = publicAssetUrl(theme.favicon_path);
 
-  // Get asset URLs
-  let logoUrl: string | null = null;
-  let faviconUrl: string | null = null;
-  if (theme.logo_path) {
-    const { data } = supabase.storage.from("assets").getPublicUrl(theme.logo_path);
-    logoUrl = data.publicUrl;
-  }
-  if (theme.favicon_path) {
-    const { data } = supabase.storage.from("assets").getPublicUrl(theme.favicon_path);
-    faviconUrl = data.publicUrl;
-  }
-
-  // Sort chapters by order
-  const chapters = (project.chapters ?? []).sort(
-    (a: { order: number }, b: { order: number }) => a.order - b.order
-  );
-
-  // Only consider published articles for language options
-  type ArticleInfo = { language: string; status: string };
-  const publishedArticles: ArticleInfo[] = chapters.flatMap(
-    (ch: { articles: ArticleInfo[] }) =>
-      ch.articles.filter((a) => a.status === "published")
-  );
-
-  const languages = [...new Set(publishedArticles.map((a) => a.language))];
+  // Languages offered in the switcher: those with published chapter articles.
+  const languages = [
+    ...new Set(project.chapters.flatMap((ch) => ch.articles.map((a) => a.language))),
+  ];
 
   return (
     <DocsThemeProvider
@@ -98,10 +65,10 @@ export default async function DocsLayout({
           projectName={project.name}
           projectSlug={projectSlug}
           locale={locale}
-          chapters={chapters}
+          chapters={project.chapters}
           languages={languages}
           logoUrl={logoUrl}
-          translations={project.translations as Record<string, { name?: string }> | null}
+          translations={project.translations}
         />
         <div className="flex-1 min-w-0">
           {children}

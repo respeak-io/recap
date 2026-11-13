@@ -158,6 +158,14 @@ pnpm dev
 
 See the full setup guide in the repo.
 
+### Public docs caching
+
+Public docs pages read their data through `lib/docs/data.ts`, which caches it in the Next.js data cache (anonymous client, tag `docs`, refreshed after at most 5 minutes). Every write that changes what readers see must purge that cache: wrap the route handler with `withDocsRevalidation()` or call `revalidateDocs()` from `lib/docs/cache.ts`. Signed video URLs are never cached.
+
+### AI models and search costs
+
+Every Gemini model is set per task in one place: `packages/cli/src/ai/models.ts` (shared with the web app through `@respeak/recap/models`) plus `lib/ai/models.ts` for app-only tasks such as search answers. The AI answer in the public docs search is limited per IP, cached per question and capped by a daily budget (`AI_DAILY_BUDGET_USD`, default $5). See [`docs/model-comparison-2026-11.md`](docs/model-comparison-2026-11.md) for the model choice and the search ranking.
+
 </details>
 
 ## License

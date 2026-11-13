@@ -3,6 +3,7 @@ import { validateApiKey, apiError } from "@/lib/api-key-auth";
 import { resolveProject, toSlug } from "@/lib/api-v1-helpers";
 import { markdownToTiptapRaw } from "@/lib/ai/markdown-to-tiptap";
 import { validateKeywords } from "@/lib/keywords";
+import { withDocsRevalidation } from "@/lib/docs/cache";
 
 interface SyncChapter {
   title: string;
@@ -37,7 +38,7 @@ function pickKeywords(
   return { ok: true, value: result.value };
 }
 
-export async function PUT(
+async function handlePut(
   request: Request,
   { params }: { params: Promise<{ slug: string }> }
 ) {
@@ -307,3 +308,5 @@ export async function PUT(
 
   return Response.json(stats);
 }
+
+export const PUT = withDocsRevalidation(handlePut);

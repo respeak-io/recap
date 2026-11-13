@@ -1,5 +1,6 @@
 import { GoogleGenAI, createUserContent, createPartFromUri } from "@google/genai";
 import { readFile } from "node:fs/promises";
+import { MODELS, thinkingConfigFor, type ModelChoice } from "./models.js";
 
 let _ai: GoogleGenAI | null = null;
 
@@ -41,10 +42,14 @@ export async function uploadVideo(source: string): Promise<{ uri: string; mimeTy
   return { uri: info.uri!, mimeType: info.mimeType! };
 }
 
-export async function extractVideoContent(fileUri: string, fileMimeType: string, model: string = "gemini-2.5-flash") {
+export async function extractVideoContent(
+  fileUri: string,
+  fileMimeType: string,
+  choice: ModelChoice = MODELS.videoExtraction,
+) {
   const ai = getAI();
   const response = await ai.models.generateContent({
-    model,
+    model: choice.model,
     contents: createUserContent([
       createPartFromUri(fileUri, fileMimeType),
       `Analyze this video and return a JSON array of segments. Each segment should cover a logical section of the video (30-120 seconds each).
@@ -58,27 +63,28 @@ For each segment provide:
 
 Return ONLY valid JSON, no markdown fences.`,
     ]),
-    config: { responseMimeType: "application/json" },
+    config: { responseMimeType: "application/json", ...thinkingConfigFor(choice) },
   });
 
   return JSON.parse(response.text!);
 }
 
-export async function generateText(prompt: string, model: string = "gemini-2.5-flash"): Promise<string> {
+export async function generateText(prompt: string, choice: ModelChoice): Promise<string> {
   const ai = getAI();
   const response = await ai.models.generateContent({
-    model,
+    model: choice.model,
     contents: [{ role: "user", parts: [{ text: prompt }] }],
+    config: thinkingConfigFor(choice),
   });
   return response.text ?? "";
 }
 
-export async function generateJson<T = unknown>(prompt: string, model: string = "gemini-2.5-flash"): Promise<T> {
+export async function generateJson<T = unknown>(prompt: string, choice: ModelChoice): Promise<T> {
   const ai = getAI();
   const response = await ai.models.generateContent({
-    model,
+    model: choice.model,
     contents: [{ role: "user", parts: [{ text: prompt }] }],
-    config: { responseMimeType: "application/json" },
+    config: { responseMimeType: "application/json", ...thinkingConfigFor(choice) },
   });
   return JSON.parse(response.text!);
 }

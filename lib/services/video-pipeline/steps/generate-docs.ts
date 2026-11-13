@@ -1,4 +1,5 @@
 import { generateText } from "@/lib/ai/generate";
+import { AI_MODELS } from "@/lib/ai/models";
 import { getDocGenerationPrompt } from "@/lib/ai/prompts";
 import { markdownToTiptap } from "@/lib/ai/markdown-to-tiptap";
 import slugify from "slugify";
@@ -42,7 +43,7 @@ export const generateDocs: PipelineStep = async (ctx, progress) => {
       ctx.segments! as unknown as Record<string, unknown>[],
     );
 
-    const responseText = await generateText(prompt, { json: true });
+    const responseText = await generateText(prompt, { model: AI_MODELS.docGeneration, json: true });
     const sanitizedJson = sanitizeJsonResponse(responseText);
     const doc = JSON.parse(sanitizedJson);
 

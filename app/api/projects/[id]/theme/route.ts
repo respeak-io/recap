@@ -1,7 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { withDocsRevalidation } from "@/lib/docs/cache";
 
-export async function PUT(
+async function handlePut(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -35,3 +36,5 @@ export async function PUT(
 
   return NextResponse.json({ ok: true, theme: updatedTheme });
 }
+
+export const PUT = withDocsRevalidation(handlePut);

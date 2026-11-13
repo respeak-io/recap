@@ -138,6 +138,10 @@ function renderNode(
           key={index}
           src={node.attrs?.src as string}
           alt={(node.attrs?.alt as string) ?? ""}
+          // Screenshots are ~100 KB PNGs each; only fetch them as they near the
+          // viewport so a long article doesn't download every image up front.
+          loading="lazy"
+          decoding="async"
           className="rounded-lg"
           style={imgWidth ? { width: imgWidth, height: imgHeight ?? "auto", maxWidth: "100%" } : undefined}
         />
@@ -281,7 +285,7 @@ function renderNode(
         );
       }
       return (
-        <video key={index} controls className="w-full rounded-lg my-4" title={title}>
+        <video key={index} controls preload="metadata" className="w-full rounded-lg my-4" title={title}>
           <source src={src} />
           Your browser does not support the video tag.
         </video>

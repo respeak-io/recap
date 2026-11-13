@@ -22,7 +22,7 @@ export interface ProduceOptions {
 }
 
 export async function produceOutput(options: ProduceOptions): Promise<void> {
-  const { planPath, apiKey, model = "gemini-2.5-flash", onProgress = () => {} } = options;
+  const { planPath, apiKey, model, onProgress = () => {} } = options;
 
   if (!(await checkFfmpeg())) {
     throw new Error(

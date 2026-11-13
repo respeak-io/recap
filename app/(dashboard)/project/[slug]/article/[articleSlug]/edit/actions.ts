@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { revalidateDocs } from "@/lib/docs/cache";
 import { validateKeywords } from "@/lib/keywords";
 
 export async function saveArticleAction(
@@ -30,6 +31,7 @@ export async function saveArticleAction(
     .eq("id", id);
 
   if (error) throw error;
+  revalidateDocs();
 }
 
 export async function togglePublishAction(id: string, publish: boolean) {
@@ -40,6 +42,7 @@ export async function togglePublishAction(id: string, publish: boolean) {
     .eq("id", id);
 
   revalidatePath("/");
+  revalidateDocs();
 }
 
 export async function batchTogglePublishAction(
@@ -65,4 +68,5 @@ export async function batchTogglePublishAction(
   }
 
   revalidatePath("/");
+  revalidateDocs();
 }

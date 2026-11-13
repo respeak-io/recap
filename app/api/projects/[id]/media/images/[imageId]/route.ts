@@ -1,9 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { withDocsRevalidation } from "@/lib/docs/cache";
 
 type Params = { params: Promise<{ id: string; imageId: string }> };
 
-export async function PATCH(request: Request, { params }: Params) {
+async function handlePatch(request: Request, { params }: Params) {
   const { id, imageId } = await params;
   const body = await request.json();
   const supabase = await createClient();
@@ -25,7 +26,7 @@ export async function PATCH(request: Request, { params }: Params) {
   return NextResponse.json({ ok: true });
 }
 
-export async function DELETE(_request: Request, { params }: Params) {
+async function handleDelete(_request: Request, { params }: Params) {
   const { id, imageId } = await params;
   const supabase = await createClient();
 
@@ -55,3 +56,6 @@ export async function DELETE(_request: Request, { params }: Params) {
 
   return NextResponse.json({ ok: true });
 }
+
+export const PATCH = withDocsRevalidation(handlePatch);
+export const DELETE = withDocsRevalidation(handleDelete);

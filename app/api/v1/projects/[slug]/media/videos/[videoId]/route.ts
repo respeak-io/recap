@@ -1,8 +1,9 @@
 import { createServiceClient } from "@/lib/supabase/service";
 import { validateApiKey, apiError } from "@/lib/api-key-auth";
 import { resolveProject } from "@/lib/api-v1-helpers";
+import { withDocsRevalidation } from "@/lib/docs/cache";
 
-export async function PATCH(
+async function handlePatch(
   request: Request,
   { params }: { params: Promise<{ slug: string; videoId: string }> }
 ) {
@@ -41,7 +42,7 @@ export async function PATCH(
   });
 }
 
-export async function DELETE(
+async function handleDelete(
   request: Request,
   { params }: { params: Promise<{ slug: string; videoId: string }> }
 ) {
@@ -75,3 +76,6 @@ export async function DELETE(
 
   return new Response(null, { status: 204 });
 }
+
+export const PATCH = withDocsRevalidation(handlePatch);
+export const DELETE = withDocsRevalidation(handleDelete);

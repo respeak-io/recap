@@ -29,6 +29,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(
         ref={videoRef}
         src={src}
         controls
+        preload="metadata"
         className={`w-full rounded-lg ${className ?? ""}`}
       >
         Your browser does not support the video tag.

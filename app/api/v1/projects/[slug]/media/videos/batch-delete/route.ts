@@ -2,8 +2,9 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { validateApiKey, apiError } from "@/lib/api-key-auth";
 import { resolveProject } from "@/lib/api-v1-helpers";
 import { batchDeleteMedia } from "@/lib/services/media";
+import { withDocsRevalidation } from "@/lib/docs/cache";
 
-export async function POST(
+async function handlePost(
   request: Request,
   { params }: { params: Promise<{ slug: string }> }
 ) {
@@ -26,3 +27,5 @@ export async function POST(
   const result = await batchDeleteMedia(db, "videos", "videos", project.id, ids);
   return Response.json(result);
 }
+
+export const POST = withDocsRevalidation(handlePost);

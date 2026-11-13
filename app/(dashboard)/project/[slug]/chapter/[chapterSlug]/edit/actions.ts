@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { revalidateDocs } from "@/lib/docs/cache";
 import { validateKeywords } from "@/lib/keywords";
 
 export async function saveChapterAction(
@@ -27,4 +28,5 @@ export async function saveChapterAction(
 
   if (error) throw error;
   revalidatePath("/");
+  revalidateDocs();
 }

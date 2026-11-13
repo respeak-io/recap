@@ -19,6 +19,15 @@ interface SearchDialogProps {
   locale: string;
 }
 
+/**
+ * The AI answer costs a Gemini call, so it is only requested once typing has
+ * paused for this long after the results arrived (search-as-you-type would
+ * otherwise ask for an answer to every intermediate query), and only for
+ * queries of at least MIN_ANSWER_CHARS characters.
+ */
+const ANSWER_DELAY_MS = 700;
+const MIN_ANSWER_CHARS = 4;
+
 export function SearchDialog({ projectId, projectSlug, locale }: SearchDialogProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -30,6 +39,9 @@ export function SearchDialog({ projectId, projectSlug, locale }: SearchDialogPro
   const router = useRouter();
   const currentLang = locale;
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const answerTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  // Incremented per search; responses for an older query are dropped.
+  const searchSeqRef = useRef(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -45,8 +57,14 @@ export function SearchDialog({ projectId, projectSlug, locale }: SearchDialogPro
     return () => document.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  // Focus input on open
+  // Focus input on open. On open and close, drop pending searches and AI answer
+  // requests so a closed dialog never triggers a paid answer and a reopened one
+  // never shows results for the previous query.
   useEffect(() => {
+    clearTimeout(debounceRef.current);
+    clearTimeout(answerTimerRef.current);
+    searchSeqRef.current++;
+    setLoading(false);
     if (open) {
       setTimeout(() => inputRef.current?.focus(), 0);
       setQuery("");
@@ -59,9 +77,12 @@ export function SearchDialog({ projectId, projectSlug, locale }: SearchDialogPro
 
   const search = useCallback(
     async (q: string) => {
+      const seq = ++searchSeqRef.current;
+      clearTimeout(answerTimerRef.current);
+      setAiAnswer(null);
+
       if (!q.trim()) {
         setResults([]);
-        setAiAnswer(null);
         setFallback(null);
         return;
       }
@@ -72,30 +93,33 @@ export function SearchDialog({ projectId, projectSlug, locale }: SearchDialogPro
           `/api/search?q=${encodeURIComponent(q)}&projectId=${projectId}&lang=${currentLang}`
         );
         const data = await res.json();
+        if (seq !== searchSeqRef.current) return;
         setResults(data.articles ?? []);
         setFallback(data.fallback ?? null);
         setActiveIndex(0);
 
-        // Fetch AI answer in background
-        if (data.articles?.length > 0) {
-          fetch("/api/search/answer", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              query: q,
-              projectId,
-              articleIds: data.articles.map((a: { id: string }) => a.id),
-              lang: currentLang,
-            }),
-          })
-            .then((r) => r.json())
-            .then((d) => setAiAnswer(d.answer))
-            .catch(() => {});
-        } else {
-          setAiAnswer(null);
+        // AI answer in the background, once the user has stopped typing.
+        if (data.articles?.length > 0 && q.trim().length >= MIN_ANSWER_CHARS) {
+          answerTimerRef.current = setTimeout(() => {
+            fetch("/api/search/answer", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                query: q,
+                projectId,
+                articleIds: data.articles.map((a: { id: string }) => a.id),
+                lang: currentLang,
+              }),
+            })
+              .then((r) => r.json())
+              .then((d) => {
+                if (seq === searchSeqRef.current) setAiAnswer(d.answer ?? null);
+              })
+              .catch(() => {});
+          }, ANSWER_DELAY_MS);
         }
       } finally {
-        setLoading(false);
+        if (seq === searchSeqRef.current) setLoading(false);
       }
     },
     [projectId, currentLang]
@@ -105,6 +129,7 @@ export function SearchDialog({ projectId, projectSlug, locale }: SearchDialogPro
     (value: string) => {
       setQuery(value);
       clearTimeout(debounceRef.current);
+      clearTimeout(answerTimerRef.current);
       debounceRef.current = setTimeout(() => search(value), 300);
     },
     [search]

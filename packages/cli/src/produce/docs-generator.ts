@@ -4,6 +4,7 @@ import { generateText } from "../ai/gemini.js";
 import { getDocsPolishPrompt } from "../ai/prompts.js";
 import { translateNarration } from "./translate.js";
 import type { Plan, Feature, RecordingManifest } from "../analyze/plan-schema.js";
+import { modelFor } from "../ai/models.js";
 
 export interface RawDocInput {
   title: string;
@@ -32,7 +33,7 @@ export function assembleRawDoc(input: RawDocInput): string {
 export async function generateDocs(
   plan: Plan,
   manifest: RecordingManifest,
-  model: string = "gemini-2.5-flash",
+  model: string | undefined,
   onProgress?: (message: string) => void
 ): Promise<string[]> {
   const log = onProgress ?? (() => {});
@@ -69,7 +70,7 @@ export async function generateDocs(
 
         // Polish with AI
         const polishPrompt = getDocsPolishPrompt(feature.title, stepsWithScreenshots);
-        let polished = await generateText(polishPrompt, model);
+        let polished = await generateText(polishPrompt, modelFor("docWriting", model));
 
         // Translate if non-English
         if (lang !== "en") {

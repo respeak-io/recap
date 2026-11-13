@@ -47,7 +47,11 @@ export async function updateSession(
     }
   );
 
-  await supabase.auth.getUser();
+  // Refreshes an expired session and writes the new cookies. getClaims() verifies
+  // the JWT locally when the project uses asymmetric signing keys (no network
+  // round trip); with legacy symmetric keys it falls back to an Auth API call,
+  // which is what getUser() did on every request before.
+  await supabase.auth.getClaims();
 
   // Persist the resolved locale so a later bare-URL visit (search result,
   // bookmark, shared link) remembers the reader's language. Only write when it

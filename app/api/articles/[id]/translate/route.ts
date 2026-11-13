@@ -1,8 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { translateTiptapJson } from "@/lib/ai/translate";
+import { withDocsRevalidation } from "@/lib/docs/cache";
 
-export async function POST(
+async function handlePost(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -56,3 +57,5 @@ export async function POST(
 
   return NextResponse.json({ success: true });
 }
+
+export const POST = withDocsRevalidation(handlePost);

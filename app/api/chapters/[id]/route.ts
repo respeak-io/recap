@@ -1,7 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { withDocsRevalidation } from "@/lib/docs/cache";
 
-export async function PATCH(
+async function handlePatch(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -20,3 +21,5 @@ export async function PATCH(
 
   return NextResponse.json({ success: true });
 }
+
+export const PATCH = withDocsRevalidation(handlePatch);

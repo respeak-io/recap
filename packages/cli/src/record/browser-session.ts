@@ -20,7 +20,7 @@ export async function recordFeature(
   plan: Plan,
   screenshotDir: string,
   tempVideoDir: string,
-  model: string,
+  model: string | undefined,
   onProgress?: (message: string) => void
 ): Promise<FeatureRecordingResult> {
   const log = onProgress ?? (() => {});
@@ -124,7 +124,7 @@ export async function recordFeature(
   }
 }
 
-async function performAuth(page: Page, plan: Plan, model: string): Promise<void> {
+async function performAuth(page: Page, plan: Plan, model: string | undefined): Promise<void> {
   const { auth } = plan.app;
   const baseUrl = plan.app.url;
 

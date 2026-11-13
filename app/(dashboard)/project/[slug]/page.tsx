@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { FileText, Video, Globe, Upload, ExternalLink, BarChart3 } from "lucide-react";
 import Link from "next/link";
 import { getRecentJobs } from "@/lib/queries/processing-jobs";
+import { getProject } from "@/lib/queries/projects";
 import { ActiveJobs } from "@/components/dashboard/active-jobs";
 import { notFound } from "next/navigation";
 
@@ -16,23 +17,20 @@ export default async function ProjectOverviewPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const supabase = await createClient();
-
-  const { data: project } = await supabase
-    .from("projects")
-    .select("*")
-    .eq("slug", slug)
-    .single();
+  const project = await getProject(slug);
 
   if (!project) notFound();
 
-  const videos = await getProjectVideos(project.id);
-
-  const { data: articles } = await supabase
-    .from("articles")
-    .select("id, title, slug, language, status, created_at")
-    .eq("project_id", project.id)
-    .order("created_at", { ascending: false });
+  const supabase = await createClient();
+  const [videos, { data: articles }, recentJobs] = await Promise.all([
+    getProjectVideos(project.id),
+    supabase
+      .from("articles")
+      .select("id, title, slug, language, status, created_at")
+      .eq("project_id", project.id)
+      .order("created_at", { ascending: false }),
+    getRecentJobs(project.id),
+  ]);
 
   const allArticles = articles ?? [];
 
@@ -56,7 +54,6 @@ export default async function ProjectOverviewPage({
   const publishedCount = allArticles.filter((a) => a.status === "published").length;
   const draftCount = allArticles.filter((a) => a.status === "draft").length;
   const recentArticles = Array.from(articleMap.values()).slice(0, 5);
-  const recentJobs = await getRecentJobs(project.id);
 
   return (
     <>

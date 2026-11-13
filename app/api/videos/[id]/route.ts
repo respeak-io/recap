@@ -1,7 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { withDocsRevalidation } from "@/lib/docs/cache";
 
-export async function DELETE(
+async function handleDelete(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -25,3 +26,5 @@ export async function DELETE(
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
 }
+
+export const DELETE = withDocsRevalidation(handleDelete);

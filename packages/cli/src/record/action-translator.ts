@@ -1,6 +1,7 @@
 import type { Page } from "playwright";
 import { generateText } from "../ai/gemini.js";
 import { getActionTranslationPrompt } from "../ai/prompts.js";
+import { modelFor } from "../ai/models.js";
 
 // --- Deterministic parsing ---
 
@@ -95,12 +96,12 @@ export async function executeParsedAction(
 async function executeWithAI(
   page: Page,
   action: string,
-  model: string,
+  model: string | undefined,
   timeout: number
 ): Promise<void> {
   const snapshot = await page.locator("body").ariaSnapshot();
   const prompt = getActionTranslationPrompt(action, snapshot);
-  const playwrightCode = await generateText(prompt, model);
+  const playwrightCode = await generateText(prompt, modelFor("browserActions", model));
 
   const cleanCode = playwrightCode.trim().replace(/^```\w*\n?/, "").replace(/\n?```$/, "").trim();
 
@@ -126,7 +127,7 @@ export async function translateAndExecute(
   page: Page,
   action: string,
   baseUrl: string,
-  model: string,
+  model: string | undefined,
   timeout: number = 10000
 ): Promise<void> {
   const parsed = parseDeterministic(action);

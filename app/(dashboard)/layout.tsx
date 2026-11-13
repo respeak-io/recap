@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import { getProjects } from "@/lib/queries/projects";
+import { createPublicClient } from "@/lib/supabase/public";
+import { getCurrentUser, getProjects } from "@/lib/queries/projects";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/dashboard/app-sidebar";
 
@@ -9,14 +9,17 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Both memoised per request (React cache), so the page below reuses them.
+  // getProjects() awaits the same auth check; it throws when signed out, which
+  // the redirect below handles.
+  const [user, projects] = await Promise.all([
+    getCurrentUser(),
+    getProjects().catch(() => []),
+  ]);
 
   if (!user) redirect("/login");
 
-  const projects = await getProjects();
+  const storage = createPublicClient().storage.from("assets");
 
   // Resolve favicon URLs from theme data for each project (logo as fallback)
   const projectsWithLogos = projects.map((p) => {
@@ -24,7 +27,7 @@ export default async function DashboardLayout({
     const assetPath = (theme?.favicon_path ?? theme?.logo_path) as string | undefined;
     let logoUrl: string | null = null;
     if (assetPath) {
-      const { data } = supabase.storage.from("assets").getPublicUrl(assetPath);
+      const { data } = storage.getPublicUrl(assetPath);
       logoUrl = data.publicUrl;
     }
     return { id: p.id, name: p.name, slug: p.slug, logoUrl };
