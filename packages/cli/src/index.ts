@@ -38,8 +38,8 @@ program
   .option("--output <dir>", "Output directory", "./docs")
   .option("-k, --api-key <key>", "Gemini API key (or set GEMINI_API_KEY env var)")
   .option("-f, --format <format>", "Output format: markdown, mdx", "markdown")
-  .option("-m, --model <model>", "Gemini model to use", "gemini-2.5-flash")
-  .action(async (source: string | undefined, opts: { output: string; apiKey?: string; format: string; model: string }) => {
+  .option("-m, --model <model>", "Gemini model for every step (default: a recommended model per task)")
+  .action(async (source: string | undefined, opts: { output: string; apiKey?: string; format: string; model?: string }) => {
     if (!source) {
       program.help();
       return;
@@ -88,7 +88,7 @@ program
   .requiredOption("--codebase <dir>", "Path to the codebase to analyze")
   .requiredOption("--app <url>", "URL of the running app")
   .option("-k, --api-key <key>", "Gemini API key (or set GEMINI_API_KEY)")
-  .option("-m, --model <model>", "Gemini model", "gemini-2.5-flash")
+  .option("-m, --model <model>", "Gemini model for every step (default: a recommended model per task)")
   .option("-o, --output <path>", "Plan file output path", "./plan.yaml")
   .option("--hints <text>", "Focus hints for feature discovery")
   .action(async (opts, cmd: Command) => {
@@ -130,7 +130,7 @@ program
   .description("Record browser walkthroughs from a plan file")
   .requiredOption("--plan <path>", "Path to the plan YAML file")
   .option("-k, --api-key <key>", "Gemini API key (or set GEMINI_API_KEY)")
-  .option("-m, --model <model>", "Gemini model", "gemini-2.5-flash")
+  .option("-m, --model <model>", "Gemini model for every step (default: a recommended model per task)")
   .option("--concurrency <n>", "Max concurrent recordings", parseInt)
   .action(async (opts, cmd: Command) => {
     const apiKey = cmd.optsWithGlobals().apiKey || process.env.GEMINI_API_KEY;
@@ -175,7 +175,7 @@ program
   .description("Generate narrated videos and text docs from recordings")
   .requiredOption("--plan <path>", "Path to the plan YAML file")
   .option("-k, --api-key <key>", "Gemini API key (or set GEMINI_API_KEY)")
-  .option("-m, --model <model>", "Gemini model", "gemini-2.5-flash")
+  .option("-m, --model <model>", "Gemini model for every step (default: a recommended model per task)")
   .action(async (opts, cmd: Command) => {
     const apiKey = cmd.optsWithGlobals().apiKey || process.env.GEMINI_API_KEY;
     if (!apiKey) {
@@ -208,7 +208,7 @@ program
   .requiredOption("--codebase <dir>", "Path to the codebase to analyze")
   .requiredOption("--app <url>", "URL of the running app")
   .option("-k, --api-key <key>", "Gemini API key (or set GEMINI_API_KEY)")
-  .option("-m, --model <model>", "Gemini model", "gemini-2.5-flash")
+  .option("-m, --model <model>", "Gemini model for every step (default: a recommended model per task)")
   .option("-o, --output <path>", "Plan file path", "./plan.yaml")
   .option("--hints <text>", "Focus hints for feature discovery")
   .option("--concurrency <n>", "Max concurrent recordings", parseInt)

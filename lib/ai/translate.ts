@@ -1,4 +1,5 @@
 import { generateText } from "./generate";
+import { AI_MODELS } from "./models";
 
 export function getTranslationPrompt(targetLanguage: string, content: string) {
   return `Translate the following documentation to ${targetLanguage}.
@@ -21,7 +22,7 @@ export async function translateContent(
   targetLanguage: string
 ): Promise<string> {
   const prompt = getTranslationPrompt(targetLanguage, content);
-  const result = await generateText(prompt);
+  const result = await generateText(prompt, { model: AI_MODELS.translation });
   return result || content;
 }
 
@@ -30,7 +31,7 @@ export async function translateVtt(
   targetLanguage: string
 ): Promise<string> {
   const prompt = getVttTranslationPrompt(targetLanguage, vtt);
-  const result = await generateText(prompt);
+  const result = await generateText(prompt, { model: AI_MODELS.translation });
   return result || vtt;
 }
 
@@ -55,7 +56,7 @@ Rules:
 
 ${JSON.stringify(contentJson)}`;
 
-  const responseText = await generateText(jsonPrompt, { json: true });
+  const responseText = await generateText(jsonPrompt, { model: AI_MODELS.translation, json: true });
 
   let translatedTitle: string | undefined;
   if (title) {

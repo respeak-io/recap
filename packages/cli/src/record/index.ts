@@ -17,7 +17,7 @@ export interface RecordOptions {
 }
 
 export async function recordFeatures(options: RecordOptions): Promise<RecordingManifest> {
-  const { planPath, apiKey, model = "gemini-2.5-flash", onProgress = () => {} } = options;
+  const { planPath, apiKey, model, onProgress = () => {} } = options;
 
   // Load and validate plan
   const planContent = await readFile(planPath, "utf-8");

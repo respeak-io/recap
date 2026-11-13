@@ -2,6 +2,7 @@ import { initAI, uploadVideo, extractVideoContent, getAI } from "./gemini.js";
 import { getDocGenerationPrompt } from "./prompts.js";
 import { isYouTubeUrl, downloadYouTube } from "../download.js";
 import { unlink } from "node:fs/promises";
+import { modelFor, thinkingConfigFor } from "./models.js";
 
 export interface Segment {
   start_time: number;
@@ -38,7 +39,7 @@ export async function processVideo(
   apiKey: string,
   options?: PipelineOptions
 ): Promise<GeneratedDoc> {
-  const model = options?.model ?? "gemini-2.5-flash";
+  const modelOverride = options?.model;
   const log = options?.onProgress ?? (() => {});
 
   initAI(apiKey);
@@ -57,14 +58,15 @@ export async function processVideo(
     const { uri, mimeType } = await uploadVideo(videoPath);
 
     log("extract", "Extracting content from video...");
-    const segments: Segment[] = await extractVideoContent(uri, mimeType, model);
+    const segments: Segment[] = await extractVideoContent(uri, mimeType, modelFor("videoExtraction", modelOverride));
 
     log("generate", "Generating documentation...");
     const prompt = getDocGenerationPrompt(segments as unknown as Record<string, unknown>[]);
+    const docModel = modelFor("docWriting", modelOverride);
     const response = await getAI().models.generateContent({
-      model,
+      model: docModel.model,
       contents: [{ role: "user", parts: [{ text: prompt }] }],
-      config: { responseMimeType: "application/json" },
+      config: { responseMimeType: "application/json", ...thinkingConfigFor(docModel) },
     });
 
     const doc = JSON.parse(response.text!);

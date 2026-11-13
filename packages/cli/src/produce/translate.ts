@@ -1,21 +1,22 @@
 import { generateText } from "../ai/gemini.js";
+import { modelFor } from "../ai/models.js";
 import { getNarrationTranslationPrompt } from "../ai/prompts.js";
 
 export async function translateNarration(
   narration: string,
   targetLanguage: string,
-  model: string = "gemini-2.5-flash"
+  model?: string
 ): Promise<string> {
   if (targetLanguage === "en") return narration;
 
   const prompt = getNarrationTranslationPrompt(narration, targetLanguage);
-  return await generateText(prompt, model);
+  return await generateText(prompt, modelFor("translation", model));
 }
 
 export async function translateNarrations(
   narrations: string[],
   targetLanguage: string,
-  model: string = "gemini-2.5-flash"
+  model?: string
 ): Promise<string[]> {
   if (targetLanguage === "en") return narrations;
 
@@ -27,7 +28,7 @@ Return each line with its original number prefix. Return ONLY the translated lin
 
 ${combined}`;
 
-  const result = await generateText(prompt, model);
+  const result = await generateText(prompt, modelFor("translation", model));
 
   const lines = result.split("\n").filter((l) => l.trim());
   return lines.map((line) => line.replace(/^\[\d+\]\s*/, ""));

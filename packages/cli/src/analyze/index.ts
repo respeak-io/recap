@@ -7,6 +7,7 @@ import { scanNextjs } from "./scanners/nextjs.js";
 import { scanGeneric } from "./scanners/generic.js";
 import { PlanSchema, type Plan } from "./plan-schema.js";
 import type { CodebaseSummary } from "./scanners/nextjs.js";
+import { modelFor } from "../ai/models.js";
 
 export interface AnalyzeOptions {
   codebaseDir: string;
@@ -23,7 +24,7 @@ export async function analyzeCodebase(options: AnalyzeOptions): Promise<Plan> {
     codebaseDir,
     appUrl,
     apiKey,
-    model = "gemini-2.5-flash",
+    model,
     hints,
     outputPath = "./plan.yaml",
     onProgress = () => {},
@@ -47,7 +48,7 @@ export async function analyzeCodebase(options: AnalyzeOptions): Promise<Plan> {
 
   // Step 2: Send to Gemini for feature discovery
   const prompt = getFeatureDiscoveryPrompt(summary, hints);
-  const aiResponse = await generateJson<{ features: unknown[] }>(prompt, model);
+  const aiResponse = await generateJson<{ features: unknown[] }>(prompt, modelFor("analyze", model));
 
   // Step 3: Assemble and validate the plan
   const rawPlan = {

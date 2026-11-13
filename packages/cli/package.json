@@ -15,6 +15,7 @@
   "exports": {
     ".": "./dist/src/ai/pipeline.js",
     "./ai": "./dist/src/ai/gemini.js",
+    "./models": "./dist/src/ai/models.js",
     "./markdown": "./dist/src/markdown/markdown-to-tiptap.js",
     "./prompts": "./dist/src/ai/prompts.js",
     "./analyze": "./dist/src/analyze/index.js",
