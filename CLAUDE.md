@@ -6,6 +6,17 @@
 - The `docs/` folder contains plans and design documents. Check these when you need deeper context about the project's architecture, features, or decisions.
 - This project uses native Claude Code and the Superpowers plugin, so expect artifacts from both (e.g., skill invocations, plans, worktrees).
 
+## Caching
+
+- Public docs data (`app/(docs)/…`) comes from `lib/docs/data.ts` and is cached under the `docs` tag. Any new route handler or server action that changes articles, chapters, projects (details, theme, assets) or media used in docs must purge it: `export const PATCH = withDocsRevalidation(handlePatch)` for routes, `revalidateDocs()` in server actions (both in `lib/docs/cache.ts`). Otherwise readers see stale content for up to 5 minutes.
+- Do not add a `loading.tsx` above docs pages: it turns `notFound()`/`redirect()` in the page into soft 404s (status 200) and client-side redirects.
+- Dashboard server components share per-request lookups via React `cache()` in `lib/queries/projects.ts` (`getCurrentUser`, `getProjects`, `getProject`). Use those instead of calling `supabase.auth.getUser()` or re-querying the project.
+
+## AI models and public endpoints
+
+- Never hardcode a Gemini model ID at a call site. Use `MODELS` / `modelFor()` in `packages/cli/src/ai/models.ts` (CLI and shared tasks) or `AI_MODELS` in `lib/ai/models.ts` (app-only tasks), and update `MODEL_PRICES_USD_PER_MTOK` when adding a model there. Rationale and test results: `docs/model-comparison-2026-11.md`.
+- Public, unauthenticated routes that cost money or write rows must use `checkRateLimit()` from `lib/rate-limit.ts`; AI calls from public routes must go through `isWithinDailyBudget()` / `recordAiUsage()` in `lib/ai/budget.ts`.
+
 ## Git
 
 - Use `--no-gpg-sign` for all git commits
