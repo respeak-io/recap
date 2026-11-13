@@ -15,6 +15,7 @@ export interface MockChain {
   delete: MockFn;
   eq: MockFn;
   neq: MockFn;
+  in: MockFn;
   order: MockFn;
   limit: MockFn;
   single: MockFn;
@@ -37,6 +38,7 @@ function createChain(result?: { data?: unknown; error?: unknown }): MockChain {
   chain.delete = vi.fn(self);
   chain.eq = vi.fn(self);
   chain.neq = vi.fn(self);
+  chain.in = vi.fn(self);
   chain.order = vi.fn(self);
   chain.limit = vi.fn(self);
   chain.single = vi.fn(self);

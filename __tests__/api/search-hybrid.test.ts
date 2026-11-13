@@ -6,78 +6,88 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 
 import { createClient } from "@/lib/supabase/server";
+import { resetRateLimits } from "@/lib/rate-limit";
 
 function makeRequest(q: string, projectId = "p1", lang = "de") {
   const url = `http://localhost/api/search?q=${encodeURIComponent(q)}&projectId=${projectId}&lang=${lang}`;
   return new Request(url);
 }
 
-describe("GET /api/search — hybrid pipeline", () => {
+describe("GET /api/search — ranked search", () => {
   let supa: ReturnType<typeof mockSupabase>;
 
+  const art = (id: string, matched_terms: number) => ({
+    id, title: id, slug: id, content_text: "", keywords: [], project_id: "p1", chapters: null, matched_terms,
+  });
+
   beforeEach(() => {
+    resetRateLimits();
     supa = mockSupabase();
     vi.mocked(createClient).mockResolvedValue(
       supa.client as unknown as Awaited<ReturnType<typeof createClient>>
     );
   });
 
-  it("returns strict hits with fallback: null when stage 1 has results", async () => {
-    supa.setTable("articles", {
-      data: [
-        { id: "a1", title: "Chat Zugriff", slug: "chat", content_text: "...", keywords: [], project_id: "p1", chapters: { title: "C", keywords: [] } },
-      ],
-      error: null,
-    });
+  it("calls search_articles_ranked once with the meaningful terms", async () => {
+    supa.client.rpc = vi.fn().mockResolvedValue({ data: [art("a1", 2), art("a2", 1)], error: null });
 
     const { GET } = await import("@/app/api/search/route");
-    const res = await GET(makeRequest("chat zugriff"));
-    const body = await res.json();
+    const body = await (await GET(makeRequest("chat zugriff"))).json();
 
-    expect(body.articles).toHaveLength(1);
+    expect(body.articles.map((a: { id: string }) => a.id)).toEqual(["a1", "a2"]);
     expect(body.fallback).toBeNull();
-    expect(supa.client.rpc).not.toHaveBeenCalled();
+    expect(supa.client.rpc).toHaveBeenCalledTimes(1);
+    expect(supa.client.rpc).toHaveBeenCalledWith("search_articles_ranked", {
+      p_project_id: "p1",
+      p_terms: ["chat", "zugriff"],
+      p_lang: "de",
+      p_limit: 10,
+    });
   });
 
-  it("falls back to OR RPC when strict returns empty", async () => {
-    supa.setTable("articles", { data: [], error: null });
-    supa.client.rpc = vi.fn().mockResolvedValue({
-      data: [
-        { id: "a1", title: "Chat Zugriff", slug: "chat", content_text: "...", keywords: [], project_id: "p1", chapters: { title: "C", keywords: [] } },
-      ],
-      error: null,
-    });
+  it("does not expose the internal matched_terms column", async () => {
+    supa.client.rpc = vi.fn().mockResolvedValue({ data: [art("a1", 2)], error: null });
 
     const { GET } = await import("@/app/api/search/route");
-    const res = await GET(makeRequest("chat zugriff bekommen"));
-    const body = await res.json();
+    const body = await (await GET(makeRequest("chat zugriff"))).json();
 
-    expect(body.articles).toHaveLength(1);
-    expect(body.fallback).toBe("or");
-    expect(supa.client.rpc).toHaveBeenCalledWith(
-      "search_articles_loose",
-      expect.objectContaining({
-        p_project_id: "p1",
-        p_query: "chat | zugriff | bekommen",
-        p_lang: "de",
-      })
-    );
+    expect(body.articles[0]).not.toHaveProperty("matched_terms");
   });
 
-  it("returns empty with fallback: null when both stages empty", async () => {
-    supa.setTable("articles", { data: [], error: null });
+  it("drops stop words so natural-language questions still match", async () => {
     supa.client.rpc = vi.fn().mockResolvedValue({ data: [], error: null });
 
     const { GET } = await import("@/app/api/search/route");
-    const res = await GET(makeRequest("nothingmatches"));
-    const body = await res.json();
+    await GET(makeRequest("Kann ich Ergebnisse exportieren?"));
 
-    expect(body.articles).toEqual([]);
-    expect(body.fallback).toBeNull();
+    expect(supa.client.rpc).toHaveBeenCalledWith(
+      "search_articles_ranked",
+      expect.objectContaining({ p_terms: ["ergebnisse", "exportieren"] }),
+    );
   });
 
-  it("sanitizes punctuation from OR tokens", async () => {
-    supa.setTable("articles", { data: [], error: null });
+  it("reports fallback 'or' when no result contains every term, and logs it", async () => {
+    supa.client.rpc = vi.fn().mockResolvedValue({ data: [art("a1", 2)], error: null });
+
+    const { GET } = await import("@/app/api/search/route");
+    const body = await (await GET(makeRequest("chat zugriff bekommen"))).json();
+
+    expect(body.fallback).toBe("or");
+    expect(supa.getChain("search_events").insert).toHaveBeenCalledWith(
+      expect.objectContaining({ fallback_level: "or", query: "chat zugriff bekommen" }),
+    );
+  });
+
+  it("returns empty with fallback: null when nothing matches", async () => {
+    supa.client.rpc = vi.fn().mockResolvedValue({ data: [], error: null });
+
+    const { GET } = await import("@/app/api/search/route");
+    const body = await (await GET(makeRequest("nothing matches"))).json();
+
+    expect(body).toEqual({ articles: [], fallback: null });
+  });
+
+  it("sanitizes punctuation into plain terms", async () => {
     const rpcMock = vi.fn().mockResolvedValue({ data: [], error: null });
     supa.client.rpc = rpcMock;
 
@@ -85,51 +95,30 @@ describe("GET /api/search — hybrid pipeline", () => {
     await GET(makeRequest("foo's bar; baz!"));
 
     expect(rpcMock).toHaveBeenCalledWith(
-      "search_articles_loose",
-      expect.objectContaining({ p_query: "foos | bar | baz" })
+      "search_articles_ranked",
+      expect.objectContaining({ p_terms: ["foo", "bar", "baz"] }),
     );
   });
 
-  it("short-circuits with empty response when query is only punctuation", async () => {
-    supa.setTable("articles", { data: [], error: null });
+  it("short-circuits with an empty response when the query is only punctuation", async () => {
     const rpcMock = vi.fn();
     supa.client.rpc = rpcMock;
 
     const { GET } = await import("@/app/api/search/route");
-    const res = await GET(makeRequest("###"));
-    const body = await res.json();
+    const body = await (await GET(makeRequest("###"))).json();
 
-    expect(body.articles).toEqual([]);
-    expect(body.fallback).toBeNull();
+    expect(body).toEqual({ articles: [], fallback: null });
     expect(rpcMock).not.toHaveBeenCalled();
   });
 
-  it("logs fallback_level on search_events insert", async () => {
-    supa.setTable("articles", { data: [], error: null });
-    supa.client.rpc = vi.fn().mockResolvedValue({
-      data: [{ id: "a1", title: "x", slug: "x", content_text: "", keywords: [], project_id: "p1", chapters: null }],
-      error: null,
-    });
-
-    const { GET } = await import("@/app/api/search/route");
-    await GET(makeRequest("chat zugriff bekommen"));
-
-    expect(supa.getChain("search_events").insert).toHaveBeenCalledWith(
-      expect.objectContaining({ fallback_level: "or", query: "chat zugriff bekommen" })
-    );
-  });
-
-  it("logs fallback_level: null when strict succeeds", async () => {
-    supa.setTable("articles", {
-      data: [{ id: "a1", title: "x", slug: "x", content_text: "", keywords: [], project_id: "p1", chapters: null }],
-      error: null,
-    });
+  it("logs fallback_level: null when a result contains every term", async () => {
+    supa.client.rpc = vi.fn().mockResolvedValue({ data: [art("a1", 1)], error: null });
 
     const { GET } = await import("@/app/api/search/route");
     await GET(makeRequest("chat"));
 
     expect(supa.getChain("search_events").insert).toHaveBeenCalledWith(
-      expect.objectContaining({ fallback_level: null, query: "chat" })
+      expect.objectContaining({ fallback_level: null, query: "chat" }),
     );
   });
 });

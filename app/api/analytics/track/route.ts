@@ -1,7 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { RATE_LIMITS, checkRateLimit, clientIp, tooManyRequests } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
+  const limited = checkRateLimit(`analytics:${clientIp(request)}`, RATE_LIMITS.analyticsPerMinute);
+  if (!limited.ok) return tooManyRequests(limited.retryAfterSeconds);
+
   const body = await request.json();
   const { type, projectId, articleSlug, articleId, language, query, resultsCount } = body;
 

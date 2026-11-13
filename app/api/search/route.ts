@@ -1,18 +1,27 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { buildSearchTsQueries } from "@/lib/search/query";
+import { RATE_LIMITS, checkRateLimit, clientIp, tooManyRequests } from "@/lib/rate-limit";
 
 type FallbackLevel = null | "or";
 
-function tokenize(q: string): string[] {
-  return q
-    .split(/\s+/)
-    .map((t) => t.replace(/[^\p{L}\p{N}_-]/gu, ""))
-    .filter((t) => t.length > 0);
-}
+const MAX_QUERY_CHARS = 300;
+const RESULT_LIMIT = 10;
 
+/**
+ * Docs search, ranked by relevance in one call to `search_articles_ranked`:
+ * articles matching any meaningful term, ordered by how many terms they contain,
+ * then title relevance, then body relevance. `fallback: "or"` tells the UI that
+ * no result contains every term (partial matches only).
+ */
 export async function GET(request: Request) {
+  const limited = checkRateLimit(`search:${clientIp(request)}`, RATE_LIMITS.searchPerMinute);
+  if (!limited.ok) {
+    return tooManyRequests(limited.retryAfterSeconds, { articles: [], fallback: null, error: "rate_limited" });
+  }
+
   const { searchParams } = new URL(request.url);
-  const query = searchParams.get("q");
+  const query = searchParams.get("q")?.slice(0, MAX_QUERY_CHARS) ?? null;
   const projectId = searchParams.get("projectId");
   const lang = searchParams.get("lang");
 
@@ -20,51 +29,24 @@ export async function GET(request: Request) {
     return NextResponse.json({ articles: [], fallback: null });
   }
 
-  const supabase = await createClient();
-
-  const cleanedQuery = query.replace(/#/g, " ").replace(/\s+/g, " ").trim();
-  if (!cleanedQuery) {
+  const tsQueries = buildSearchTsQueries(query);
+  if (!tsQueries) {
     return NextResponse.json({ articles: [], fallback: null });
   }
 
-  // Stage 1 — strict AND via websearch_to_tsquery
-  let strictQuery = supabase
-    .from("articles")
-    .select("id, title, slug, content_text, keywords, project_id, chapters(title, keywords)")
-    .eq("project_id", projectId)
-    .eq("status", "published")
-    .textSearch("fts", cleanedQuery, { type: "websearch", config: "simple" })
-    .limit(10);
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("search_articles_ranked", {
+    p_project_id: projectId,
+    p_terms: tsQueries.terms,
+    p_lang: lang ?? null,
+    p_limit: RESULT_LIMIT,
+  });
+  if (error) console.error("[search] ranked search failed:", error.message);
 
-  if (lang) strictQuery = strictQuery.eq("language", lang);
-
-  const { data: strictHits, error: strictErr } = await strictQuery;
-  if (strictErr) console.error("[search] strict stage failed:", strictErr.message);
-
-  let articles = strictHits ?? [];
-  let fallback: FallbackLevel = null;
-
-  // Stage 2 — OR fallback via RPC
-  if (articles.length === 0) {
-    const tokens = tokenize(cleanedQuery);
-    if (tokens.length > 0) {
-      const orQuery = tokens.join(" | ");
-      const { data: looseHits, error: looseErr } = await supabase.rpc(
-        "search_articles_loose",
-        {
-          p_project_id: projectId,
-          p_query: orQuery,
-          p_lang: lang ?? null,
-          p_limit: 10,
-        }
-      );
-      if (looseErr) console.error("[search] loose stage failed:", looseErr.message);
-      if (looseHits && looseHits.length > 0) {
-        articles = looseHits;
-        fallback = "or";
-      }
-    }
-  }
+  const rows = (data ?? []) as ({ matched_terms?: number } & Record<string, unknown>)[];
+  const fallback: FallbackLevel =
+    rows.length > 0 && !rows.some((r) => (r.matched_terms ?? 0) >= tsQueries.terms.length) ? "or" : null;
+  const articles = rows.map(({ matched_terms: _matched, ...article }) => article);
 
   // Log event (fire-and-forget)
   supabase
