@@ -37,6 +37,8 @@ The answer can only be as good as the 3 articles the search hands over. In the c
 - **Before:** the strict stage required every word (stop words like "kann" and "ich" included) and returned matches in no particular order. A ranked OR search ran only when the strict stage found nothing.
 - **Now:** `search_articles_ranked` (migrations `20261113140000` and `20261113150000`) gets the meaningful terms, with German and English stop words removed (`lib/search/query.ts`). It matches word prefixes and ranks by one score: matched terms + 2 × title relevance + body relevance. Sorting by matched terms first and relevance second ranked worse on the same queries (MRR 0.66 instead of 0.73).
 
+German compounds the docs never use are split into words that do, based on the project's search vocabulary (`lib/search/compounds.ts`, RPC `docs_search_vocabulary`): "akteneinträge" becomes "akte" + "einträge" when the docs only say "Einträge in der Akte". Only terms with no match at all are split, so words like "einstellungen" stay intact.
+
 On 15 test queries (the 10 above plus 5 short keyword searches), the expected article is now in the top 3 for 14 queries, up from 10. The mean reciprocal rank rose from 0.49 to 0.73.
 
 ## Cost protection for the public search
