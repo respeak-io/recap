@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { createClient } from "@/lib/supabase/server";
 import { extractHeadings } from "@/lib/extract-headings";
 import { Toc } from "@/components/docs/toc";
 import { DocsBreadcrumb } from "@/components/docs/docs-breadcrumb";
@@ -8,119 +7,27 @@ import { ChapterPage } from "@/components/docs/chapter-page";
 import { PageNav, type NavItem } from "@/components/docs/page-nav";
 import { notFound, redirect } from "next/navigation";
 import { ArticleWithVideo } from "./article-with-video";
-import {
-  buildAlternates,
-  isLocale,
-  projectDefaultLocale,
-} from "@/lib/docs-locale";
+import { buildAlternates, projectDefaultLocale } from "@/lib/docs-locale";
+import { getDocsArticle, getDocsChapter, getDocsProject, type DocsProject } from "@/lib/docs/data";
+import { resolveDocsVideoUrls } from "@/lib/docs/videos";
 
-interface NavChapter {
-  slug: string;
-  title: string;
-  description?: string;
-  order: number;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  translations?: Record<string, { title?: string; description?: string; content_json?: any }> | null;
-  articles: { slug: string; title: string; description?: string; language: string; status: string; order: number }[];
-}
+/** Language used for embedded-video fallback when a variant is missing. */
+const PROJECT_DEFAULT_LANGUAGE = "en";
 
-function buildNavList(chapters: NavChapter[], lang: string): NavItem[] {
+type Params = Promise<{ locale: string; projectSlug: string; articleSlug: string }>;
+
+function buildNavList(project: DocsProject, lang: string): NavItem[] {
   const items: NavItem[] = [];
-  const sorted = [...chapters].sort((a, b) => a.order - b.order);
-  for (const ch of sorted) {
+  for (const ch of project.chapters) {
     const title = ch.translations?.[lang]?.title ?? ch.title;
-    const description = ch.translations?.[lang]?.description ?? ch.description;
+    const description = ch.translations?.[lang]?.description ?? ch.description ?? undefined;
     items.push({ title, description, slug: ch.slug });
-    const arts = ch.articles
-      .filter((a) => a.language === lang && a.status === "published")
-      .sort((a, b) => a.order - b.order);
-    for (const a of arts) {
-      items.push({ title: a.title, description: a.description, slug: a.slug });
+    for (const a of ch.articles) {
+      if (a.language !== lang) continue;
+      items.push({ title: a.title, description: a.description ?? undefined, slug: a.slug });
     }
   }
   return items;
-}
-
-async function resolveVideoUrls(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  contentJson: Record<string, unknown>,
-  language: string,
-  projectDefaultLanguage: string
-): Promise<Record<string, string>> {
-  const videoIds = new Set<string>();
-  const videoGroupIds = new Set<string>();
-
-  function walk(nodes: unknown[]) {
-    for (const node of nodes) {
-      const n = node as Record<string, unknown>;
-      if (n.type === "projectVideo" && n.attrs) {
-        const attrs = n.attrs as Record<string, unknown>;
-        if (attrs.videoGroupId) videoGroupIds.add(attrs.videoGroupId as string);
-        else if (attrs.videoId) videoIds.add(attrs.videoId as string);
-      }
-      if (Array.isArray(n.content)) walk(n.content);
-    }
-  }
-
-  const content = (contentJson as Record<string, unknown>).content;
-  if (Array.isArray(content)) walk(content);
-
-  if (videoIds.size === 0 && videoGroupIds.size === 0) return {};
-
-  const urls: Record<string, string> = {};
-
-  // Handle legacy videoId references
-  if (videoIds.size > 0) {
-    const { data: legacyVideos } = await supabase
-      .from("videos")
-      .select("id, storage_path")
-      .in("id", Array.from(videoIds))
-      .eq("status", "ready");
-
-    for (const video of legacyVideos ?? []) {
-      if (video.storage_path) {
-        const { data } = await supabase.storage
-          .from("videos")
-          .createSignedUrl(video.storage_path, 3600);
-        if (data?.signedUrl) urls[video.id] = data.signedUrl;
-      }
-    }
-  }
-
-  // Handle videoGroupId references with language fallback
-  if (videoGroupIds.size > 0) {
-    const { data: groupVideos } = await supabase
-      .from("videos")
-      .select("id, video_group_id, language, storage_path, created_at")
-      .in("video_group_id", Array.from(videoGroupIds))
-      .eq("status", "ready");
-
-    const grouped = new Map<string, typeof groupVideos>();
-    for (const v of groupVideos ?? []) {
-      const list = grouped.get(v.video_group_id) ?? [];
-      list.push(v);
-      grouped.set(v.video_group_id, list);
-    }
-
-    for (const [groupId, variants] of grouped) {
-      if (!variants || variants.length === 0) continue;
-
-      // Fallback chain: requested language -> project default -> oldest
-      const match =
-        variants.find((v) => v.language === language) ??
-        variants.find((v) => v.language === projectDefaultLanguage) ??
-        [...variants].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())[0];
-
-      if (match?.storage_path) {
-        const { data } = await supabase.storage
-          .from("videos")
-          .createSignedUrl(match.storage_path, 3600);
-        if (data?.signedUrl) urls[groupId] = data.signedUrl;
-      }
-    }
-  }
-
-  return urls;
 }
 
 function findPrevNext(navList: NavItem[], currentSlug: string) {
@@ -132,44 +39,29 @@ function findPrevNext(navList: NavItem[], currentSlug: string) {
   };
 }
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ locale: string; projectSlug: string; articleSlug: string }>;
-}): Promise<Metadata> {
+/**
+ * What this slug resolves to in this locale. Article wins over chapter; a
+ * chapter wins over redirecting to an article variant in another language
+ * (chapters are locale-agnostic and render in every locale).
+ */
+function resolveSlug(project: DocsProject, slug: string, lang: string) {
+  const articleLangs = project.articleLocales[slug] ?? [];
+  if (articleLangs.includes(lang)) return { kind: "article" as const, articleLangs };
+  if (project.chapters.some((ch) => ch.slug === slug)) return { kind: "chapter" as const, articleLangs };
+  return { kind: "missing" as const, articleLangs };
+}
+
+export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { locale, projectSlug, articleSlug } = await params;
   const lang = locale;
-  const supabase = await createClient();
+  const project = await getDocsProject(projectSlug);
+  if (!project) return { title: "Not Found" };
 
-  // Languages this slug is published in — drives the hreflang alternates.
-  const { data: variants } = await supabase
-    .from("articles")
-    .select("language, projects!inner(slug)")
-    .eq("projects.slug", projectSlug)
-    .eq("slug", articleSlug)
-    .eq("status", "published");
+  const target = resolveSlug(project, articleSlug, lang);
 
-  let available = [
-    ...new Set((variants ?? []).map((v) => v.language)),
-  ].filter(isLocale);
-
-  // Chapters have no per-language rows; fall back to the project's published locales.
-  if (available.length === 0) {
-    const { data } = await supabase
-      .from("projects")
-      .select("articles(language, status)")
-      .eq("slug", projectSlug)
-      .eq("is_public", true)
-      .single();
-    available = [
-      ...new Set(
-        ((data?.articles ?? []) as { language: string; status: string }[])
-          .filter((a) => a.status === "published")
-          .map((a) => a.language),
-      ),
-    ].filter(isLocale);
-  }
-
+  // hreflang: the languages this slug is published in; chapters have no
+  // per-language rows, so they fall back to the project's published locales.
+  const available = target.articleLangs.length > 0 ? target.articleLangs : project.locales;
   const alternates = available.length
     ? buildAlternates({
         pathWithoutLocale: `/${projectSlug}/${articleSlug}`,
@@ -178,176 +70,103 @@ export async function generateMetadata({
       })
     : undefined;
 
-  // Try article first
-  const { data: article } = await supabase
-    .from("articles")
-    .select("title, projects!inner(name)")
-    .eq("projects.slug", projectSlug)
-    .eq("slug", articleSlug)
-    .eq("language", lang)
-    .eq("status", "published")
-    .single();
-
-  if (article) {
-    const projectName = (article.projects as unknown as { name: string }).name;
-    return { title: `${article.title} | ${projectName}`, alternates };
+  if (target.kind === "article") {
+    const article = await getDocsArticle(project.id, articleSlug, lang);
+    if (article) return { title: `${article.title} | ${project.name}`, alternates };
   }
 
-  // Try chapter
-  const { data: chapter } = await supabase
-    .from("chapters")
-    .select("title, translations, projects!inner(name)")
-    .eq("projects.slug", projectSlug)
-    .eq("slug", articleSlug)
-    .single();
-
+  const chapter = project.chapters.find((ch) => ch.slug === articleSlug);
   if (chapter) {
-    const projectName = (chapter.projects as unknown as { name: string }).name;
-    const title =
-      (chapter.translations as Record<string, { title?: string }> | null)?.[lang]
-        ?.title ?? chapter.title;
-    return { title: `${title} | ${projectName}`, alternates };
+    const title = chapter.translations?.[lang]?.title ?? chapter.title;
+    return { title: `${title} | ${project.name}`, alternates };
   }
 
   return { title: "Not Found" };
 }
 
-export default async function ArticleOrChapterPage({
-  params,
-}: {
-  params: Promise<{ locale: string; projectSlug: string; articleSlug: string }>;
-}) {
+export default async function ArticleOrChapterPage({ params }: { params: Params }) {
   const { locale, projectSlug, articleSlug } = await params;
   const lang = locale;
-  const supabase = await createClient();
 
-  // Resolve project ID first
-  const { data: project } = await supabase
-    .from("projects")
-    .select("id, name, translations")
-    .eq("slug", projectSlug)
-    .eq("is_public", true)
-    .single();
-
+  const project = await getDocsProject(projectSlug);
   if (!project) notFound();
 
-  const projectTranslations = project.translations as Record<string, { name?: string }> | null;
-  const resolvedProjectName = projectTranslations?.[lang]?.name || project.name;
+  const resolvedProjectName = project.translations?.[lang]?.name || project.name;
+  const { prev, next } = findPrevNext(buildNavList(project, lang), articleSlug);
+  const target = resolveSlug(project, articleSlug, lang);
 
-  // Fetch nav tree for prev/next (used by both article and chapter pages)
-  const { data: navChapters } = await supabase
-    .from("chapters")
-    .select("slug, title, description, order, translations, articles(slug, title, description, language, status, \"order\")")
-    .eq("project_id", project.id)
-    .order("order");
+  if (target.kind === "article") {
+    const article = await getDocsArticle(project.id, articleSlug, lang);
+    if (article) {
+      const { primaryUrl, embeddedUrls } = await resolveDocsVideoUrls({
+        contentJson: article.content_json,
+        primaryVideoId: article.video_id,
+        language: lang,
+        projectDefaultLanguage: PROJECT_DEFAULT_LANGUAGE,
+      });
 
-  const navList = buildNavList((navChapters ?? []) as NavChapter[], lang);
-  const { prev, next } = findPrevNext(navList, articleSlug);
+      const headings = extractHeadings(article.content_json);
 
-  // Try article first
-  const { data: article } = await supabase
-    .from("articles")
-    .select("*, videos(*), chapters(title, slug, translations)")
-    .eq("project_id", project.id)
-    .eq("slug", articleSlug)
-    .eq("language", lang)
-    .eq("status", "published")
-    .single();
-
-  if (article) {
-    let videoUrl: string | null = null;
-    if (article.videos?.storage_path) {
-      const { data } = await supabase.storage
-        .from("videos")
-        .createSignedUrl(article.videos.storage_path, 3600);
-      videoUrl = data?.signedUrl ?? null;
+      return (
+        <div className="flex gap-8">
+          <article className="flex-1 max-w-[720px] mx-auto px-8 py-12 min-w-0">
+            <DocsBreadcrumb
+              projectName={resolvedProjectName}
+              projectSlug={projectSlug}
+              locale={locale}
+              chapterTitle={article.chapter?.translations?.[lang]?.title ?? article.chapter?.title}
+              chapterSlug={article.chapter?.slug}
+              articleTitle={article.title}
+            />
+            <ArticleWithVideo
+              title={article.title}
+              description={article.description ?? undefined}
+              content={article.content_json}
+              videoUrl={primaryUrl}
+              videoUrls={embeddedUrls}
+              locale={locale}
+            />
+            <PageNav prev={prev} next={next} projectSlug={projectSlug} locale={locale} />
+          </article>
+          <Toc headings={headings} />
+          <AnalyticsTracker
+            projectId={project.id}
+            articleSlug={articleSlug}
+            articleId={article.id}
+            language={lang}
+          />
+        </div>
+      );
     }
-
-    const embeddedVideoUrls = await resolveVideoUrls(supabase, article.content_json, lang, "en");
-
-    const headings = extractHeadings(article.content_json);
-
-    return (
-      <div className="flex gap-8">
-        <article className="flex-1 max-w-[720px] mx-auto px-8 py-12 min-w-0">
-          <DocsBreadcrumb
-            projectName={resolvedProjectName}
-            projectSlug={projectSlug}
-            locale={locale}
-            chapterTitle={article.chapters?.translations?.[lang]?.title ?? article.chapters?.title}
-            chapterSlug={article.chapters?.slug}
-            articleTitle={article.title}
-          />
-          <ArticleWithVideo
-            title={article.title}
-            description={article.description}
-            content={article.content_json}
-            videoUrl={videoUrl}
-            videoUrls={embeddedVideoUrls}
-            locale={locale}
-          />
-          <PageNav prev={prev} next={next} projectSlug={projectSlug} locale={locale} />
-        </article>
-        <Toc headings={headings} />
-        <AnalyticsTracker
-          projectId={project.id}
-          articleSlug={articleSlug}
-          articleId={article.id}
-          language={lang}
-        />
-      </div>
-    );
   }
 
-  // Try chapter next. Chapters are locale-agnostic (they render in every locale via
-  // translation fallback), so a chapter matching this slug wins over redirecting the
-  // reader to an article variant in another language.
-  const { data: chapter } = await supabase
-    .from("chapters")
-    .select("*, articles(id, title, description, slug, language, status, \"order\")")
-    .eq("project_id", project.id)
-    .eq("slug", articleSlug)
-    .single();
+  const chapterSummary = project.chapters.find((ch) => ch.slug === articleSlug);
+  const chapter = chapterSummary ? await getDocsChapter(project.id, articleSlug) : null;
 
-  if (!chapter) {
+  if (!chapter || !chapterSummary) {
     // No article in this locale and no chapter: if this slug is published as an
     // article in another locale, send the reader there (e.g. an English deep-link
     // to a German-only article → `/de/…`); otherwise 404.
-    const { data: otherVariants } = await supabase
-      .from("articles")
-      .select("language")
-      .eq("project_id", project.id)
-      .eq("slug", articleSlug)
-      .eq("status", "published");
-
-    const otherLocales = [
-      ...new Set((otherVariants ?? []).map((v) => v.language)),
-    ].filter(isLocale);
+    const otherLocales = target.articleLangs.filter((l) => l !== lang);
     if (otherLocales.length > 0) {
       redirect(`/${projectDefaultLocale(otherLocales)}/${projectSlug}/${articleSlug}`);
     }
-
     notFound();
   }
 
-  const chapterTitle =
-    chapter.translations?.[lang]?.title ?? chapter.title;
+  const chapterTitle = chapter.translations?.[lang]?.title ?? chapter.title;
   const chapterDescription =
-    chapter.translations?.[lang]?.description ?? chapter.description;
-
-  const articles = (chapter.articles ?? [])
-    .filter(
-      (a: { language: string; status: string }) =>
-        a.language === lang && a.status === "published"
-    )
-    .sort(
-      (a: { order: number }, b: { order: number }) => a.order - b.order
-    );
+    chapter.translations?.[lang]?.description ?? chapter.description ?? undefined;
+  const articles = chapterSummary.articles
+    .filter((a) => a.language === lang)
+    .map((a) => ({ ...a, description: a.description ?? undefined }));
 
   const chapterContentJson = chapter.translations?.[lang]?.content_json ?? chapter.content_json;
-  const chapterVideoUrls = chapterContentJson
-    ? await resolveVideoUrls(supabase, chapterContentJson as Record<string, unknown>, lang, "en")
-    : {};
+  const { embeddedUrls: chapterVideoUrls } = await resolveDocsVideoUrls({
+    contentJson: chapterContentJson,
+    language: lang,
+    projectDefaultLanguage: PROJECT_DEFAULT_LANGUAGE,
+  });
 
   return (
     <ChapterPage

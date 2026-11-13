@@ -1,6 +1,7 @@
 import { createServiceClient } from "@/lib/supabase/service";
 import { validateApiKey, apiError } from "@/lib/api-key-auth";
 import { resolveProject } from "@/lib/api-v1-helpers";
+import { withDocsRevalidation } from "@/lib/docs/cache";
 
 export async function GET(
   request: Request,
@@ -33,7 +34,7 @@ export async function GET(
   return Response.json({ ...project, chapters });
 }
 
-export async function PATCH(
+async function handlePatch(
   request: Request,
   { params }: { params: Promise<{ slug: string }> }
 ) {
@@ -61,3 +62,5 @@ export async function PATCH(
 
   return Response.json({ ok: true });
 }
+
+export const PATCH = withDocsRevalidation(handlePatch);

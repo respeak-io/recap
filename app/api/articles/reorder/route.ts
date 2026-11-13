@@ -1,7 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { withDocsRevalidation } from "@/lib/docs/cache";
 
-export async function POST(request: Request) {
+async function handlePost(request: Request) {
   const { items } = await request.json();
   // items: Array<{ id: string; order: number; chapter_id: string | null }>
   const supabase = await createClient();
@@ -15,3 +16,5 @@ export async function POST(request: Request) {
 
   return NextResponse.json({ success: true });
 }
+
+export const POST = withDocsRevalidation(handlePost);

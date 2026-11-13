@@ -1,5 +1,5 @@
-import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
+import { getProject } from "@/lib/queries/projects";
 
 export default async function ProjectLayout({
   children,
@@ -9,13 +9,8 @@ export default async function ProjectLayout({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const supabase = await createClient();
-
-  const { data: project } = await supabase
-    .from("projects")
-    .select("id, name, slug")
-    .eq("slug", slug)
-    .single();
+  // Memoised per request: pages under this layout call getProject(slug) too.
+  const project = await getProject(slug);
 
   if (!project) notFound();
 

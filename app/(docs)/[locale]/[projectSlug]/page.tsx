@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { createClient } from "@/lib/supabase/server";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { ChevronRight, FileText } from "lucide-react";
@@ -8,38 +7,7 @@ import {
   isLocale,
   projectDefaultLocale,
 } from "@/lib/docs-locale";
-
-interface Chapter {
-  id: string;
-  title: string;
-  slug: string;
-  description: string;
-  order: number;
-  group?: string;
-  translations?: Record<
-    string,
-    { title?: string; description?: string; group?: string }
-  > | null;
-  articles: {
-    id: string;
-    title: string;
-    description: string;
-    slug: string;
-    language: string;
-    status: string;
-    order: number;
-  }[];
-}
-
-function publishedLocales(
-  articles: { language: string; status: string }[],
-): string[] {
-  return [
-    ...new Set(
-      articles.filter((a) => a.status === "published").map((a) => a.language),
-    ),
-  ].filter(isLocale);
-}
+import { getDocsProject } from "@/lib/docs/data";
 
 export async function generateMetadata({
   params,
@@ -47,17 +15,9 @@ export async function generateMetadata({
   params: Promise<{ locale: string; projectSlug: string }>;
 }): Promise<Metadata> {
   const { locale, projectSlug } = await params;
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("projects")
-    .select("articles(language, status)")
-    .eq("slug", projectSlug)
-    .eq("is_public", true)
-    .single();
+  const project = await getDocsProject(projectSlug);
 
-  const available = publishedLocales(
-    (data?.articles ?? []) as { language: string; status: string }[],
-  );
+  const available = project?.locales ?? [];
   if (available.length === 0) return {};
 
   return {
@@ -76,47 +36,34 @@ export default async function DocsIndexPage({
 }) {
   const { locale, projectSlug } = await params;
   const lang = locale;
-  const supabase = await createClient();
-
-  const { data: project } = await supabase
-    .from("projects")
-    .select(
-      "id, name, slug, subtitle, translations, chapters(id, title, slug, description, order, \"group\", translations, articles(id, title, description, slug, language, status, \"order\"))"
-    )
-    .eq("slug", projectSlug)
-    .eq("is_public", true)
-    .single();
+  const project = await getDocsProject(projectSlug);
 
   if (!project) notFound();
 
   // Redirect to a locale that has content (e.g. `/en/<german-only-project>` → `/de/…`),
   // so a stale/mistyped locale never renders an empty page.
-  const allArticles = ((project.chapters ?? []) as Chapter[]).flatMap(
-    (ch) => ch.articles,
-  );
-  const available = publishedLocales(allArticles);
+  const available = [
+    ...new Set(project.chapters.flatMap((ch) => ch.articles.map((a) => a.language))),
+  ].filter(isLocale);
   if (available.length > 0 && !available.includes(locale)) {
     redirect(`/${projectDefaultLocale(available)}/${projectSlug}`);
   }
 
-  const projectTranslations = project.translations as Record<string, { name?: string; subtitle?: string }> | null;
+  const projectTranslations = project.translations;
   const resolvedName = projectTranslations?.[lang]?.name || project.name;
   const resolvedSubtitle = projectTranslations?.[lang]?.subtitle || project.subtitle;
 
   // Filter and sort chapters with published articles in the current language
-  const chapters = ((project.chapters ?? []) as Chapter[])
+  const chapters = project.chapters
     .map((ch) => ({
       ...ch,
       resolvedTitle: ch.translations?.[lang]?.title ?? ch.title,
       resolvedDescription:
         ch.translations?.[lang]?.description ?? ch.description,
       resolvedGroup: ch.translations?.[lang]?.group ?? ch.group,
-      articles: ch.articles
-        .filter((a) => a.language === lang && a.status === "published")
-        .sort((a, b) => a.order - b.order),
+      articles: ch.articles.filter((a) => a.language === lang),
     }))
-    .filter((ch) => ch.articles.length > 0)
-    .sort((a, b) => a.order - b.order);
+    .filter((ch) => ch.articles.length > 0);
 
   // Group chapters by their group field
   const grouped: { group: string | undefined; chapters: typeof chapters }[] =

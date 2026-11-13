@@ -1,6 +1,6 @@
-import { createClient } from "@/lib/supabase/server";
 import { BreadcrumbNav } from "@/components/dashboard/breadcrumb-nav";
 import { notFound } from "next/navigation";
+import { getProject } from "@/lib/queries/projects";
 import { MediaGallery } from "./media-gallery";
 
 export default async function MediaPage({
@@ -9,13 +9,7 @@ export default async function MediaPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const supabase = await createClient();
-
-  const { data: project } = await supabase
-    .from("projects")
-    .select("id, name, slug")
-    .eq("slug", slug)
-    .single();
+  const project = await getProject(slug);
 
   if (!project) notFound();
 

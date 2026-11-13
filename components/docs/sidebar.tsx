@@ -27,14 +27,14 @@ interface Chapter {
   id: string;
   title: string;
   slug: string;
-  group?: string;
+  group?: string | null;
   translations?: Record<string, { title?: string; group?: string }> | null;
+  /** Published articles only, all languages (needed by the language switcher). */
   articles: {
     id: string;
     title: string;
     slug: string;
     language: string;
-    status: string;
     order: number;
   }[];
 }
@@ -69,11 +69,7 @@ function DocsSidebarContent({
     .map((ch) => ({
       ...ch,
       articles: ch.articles
-        .filter(
-          (a) =>
-            a.language === currentLang &&
-            a.status === "published"
-        )
+        .filter((a) => a.language === currentLang)
         .sort((a, b) => a.order - b.order),
     }))
     .filter((ch) => ch.articles.length > 0);
@@ -114,7 +110,7 @@ function DocsSidebarContent({
     if (articleSlug) {
       const exists = chapters.some((ch) =>
         ch.articles.some(
-          (a) => a.slug === articleSlug && a.language === lang && a.status === "published"
+          (a) => a.slug === articleSlug && a.language === lang
         )
       );
       if (exists) {

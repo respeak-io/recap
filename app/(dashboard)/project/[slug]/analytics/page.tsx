@@ -1,10 +1,10 @@
-import { createClient } from "@/lib/supabase/server";
 import { getPageViewStats, getSearchStats, type TimeRange } from "@/lib/queries/analytics";
 import { BreadcrumbNav } from "@/components/dashboard/breadcrumb-nav";
 import { AnalyticsCharts } from "@/components/dashboard/analytics-charts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Eye, Search, Globe } from "lucide-react";
 import { notFound } from "next/navigation";
+import { getProject } from "@/lib/queries/projects";
 
 export default async function AnalyticsPage({
   params,
@@ -17,13 +17,7 @@ export default async function AnalyticsPage({
   const { range = "30d" } = await searchParams;
   const timeRange = (["7d", "30d", "90d"].includes(range) ? range : "30d") as TimeRange;
 
-  const supabase = await createClient();
-
-  const { data: project } = await supabase
-    .from("projects")
-    .select("id, name, slug")
-    .eq("slug", slug)
-    .single();
+  const project = await getProject(slug);
 
   if (!project) notFound();
 

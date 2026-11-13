@@ -13,22 +13,24 @@ export default async function ArticleEditPage({
   const { lang = "en" } = await searchParams;
   const supabase = await createClient();
 
-  const { data: article } = await supabase
-    .from("articles")
-    .select("*, keywords, projects!inner(*), videos(*)")
-    .eq("projects.slug", slug)
-    .eq("slug", articleSlug)
-    .eq("language", lang)
-    .single();
+  // Article and its sibling language versions in parallel (siblings are looked
+  // up through the project slug so they don't wait for the article's project_id).
+  const [{ data: article }, { data: siblingLanguages }] = await Promise.all([
+    supabase
+      .from("articles")
+      .select("*, keywords, projects!inner(*), videos(*)")
+      .eq("projects.slug", slug)
+      .eq("slug", articleSlug)
+      .eq("language", lang)
+      .single(),
+    supabase
+      .from("articles")
+      .select("id, language, status, projects!inner(slug)")
+      .eq("projects.slug", slug)
+      .eq("slug", articleSlug),
+  ]);
 
   if (!article) notFound();
-
-  // Fetch sibling language versions
-  const { data: siblingLanguages } = await supabase
-    .from("articles")
-    .select("id, language, status")
-    .eq("project_id", article.project_id)
-    .eq("slug", articleSlug);
 
   // Get signed URL for video if present
   let videoUrl: string | null = null;
@@ -55,7 +57,7 @@ export default async function ArticleEditPage({
       projectName={article.projects.name}
       projectId={article.project_id}
       videoUrl={videoUrl}
-      siblingLanguages={siblingLanguages ?? []}
+      siblingLanguages={(siblingLanguages ?? []).map(({ id, language, status }) => ({ id, language, status }))}
       currentLanguage={lang}
     />
   );

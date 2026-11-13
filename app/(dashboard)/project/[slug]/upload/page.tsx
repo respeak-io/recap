@@ -1,7 +1,7 @@
-import { createClient } from "@/lib/supabase/server";
 import { BreadcrumbNav } from "@/components/dashboard/breadcrumb-nav";
 import { VideoUpload } from "@/components/video-upload";
 import { notFound } from "next/navigation";
+import { getProject } from "@/lib/queries/projects";
 
 export default async function UploadPage({
   params,
@@ -9,13 +9,7 @@ export default async function UploadPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const supabase = await createClient();
-
-  const { data: project } = await supabase
-    .from("projects")
-    .select("id, name, slug")
-    .eq("slug", slug)
-    .single();
+  const project = await getProject(slug);
 
   if (!project) notFound();
 

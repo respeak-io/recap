@@ -3,8 +3,9 @@ import { validateApiKey, apiError } from "@/lib/api-key-auth";
 import { resolveProject, toSlug } from "@/lib/api-v1-helpers";
 import { markdownToTiptapRaw } from "@/lib/ai/markdown-to-tiptap";
 import { validateKeywords } from "@/lib/keywords";
+import { withDocsRevalidation } from "@/lib/docs/cache";
 
-export async function POST(
+async function handlePost(
   request: Request,
   { params }: { params: Promise<{ slug: string }> }
 ) {
@@ -66,3 +67,5 @@ export async function POST(
 
   return Response.json(data, { status: 201 });
 }
+
+export const POST = withDocsRevalidation(handlePost);

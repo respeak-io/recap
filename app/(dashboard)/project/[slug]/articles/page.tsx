@@ -5,6 +5,7 @@ import { ArticleTree } from "@/components/dashboard/article-tree";
 import { VideoGallery } from "@/components/dashboard/video-gallery";
 import { Separator } from "@/components/ui/separator";
 import { notFound } from "next/navigation";
+import { getProject } from "@/lib/queries/projects";
 
 export default async function ArticlesPage({
   params,
@@ -12,29 +13,24 @@ export default async function ArticlesPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const supabase = await createClient();
-
-  const { data: project } = await supabase
-    .from("projects")
-    .select("id, name, slug")
-    .eq("slug", slug)
-    .single();
+  const project = await getProject(slug);
 
   if (!project) notFound();
 
-  const { data: chapters } = await supabase
-    .from("chapters")
-    .select("id, title, slug, order, group")
-    .eq("project_id", project.id)
-    .order("order");
-
-  const { data: articles } = await supabase
-    .from("articles")
-    .select("id, title, slug, language, status, order, chapter_id")
-    .eq("project_id", project.id)
-    .order("order");
-
-  const videos = await getProjectVideos(project.id);
+  const supabase = await createClient();
+  const [{ data: chapters }, { data: articles }, videos] = await Promise.all([
+    supabase
+      .from("chapters")
+      .select("id, title, slug, order, group")
+      .eq("project_id", project.id)
+      .order("order"),
+    supabase
+      .from("articles")
+      .select("id, title, slug, language, status, order, chapter_id")
+      .eq("project_id", project.id)
+      .order("order"),
+    getProjectVideos(project.id),
+  ]);
 
   const allArticles = articles ?? [];
   const languages = [...new Set(allArticles.map((a) => a.language))];

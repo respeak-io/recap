@@ -1,7 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { withDocsRevalidation } from "@/lib/docs/cache";
 
-export async function POST(
+async function handlePost(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -69,3 +70,5 @@ export async function POST(
     publicUrl: urlData.publicUrl,
   });
 }
+
+export const POST = withDocsRevalidation(handlePost);

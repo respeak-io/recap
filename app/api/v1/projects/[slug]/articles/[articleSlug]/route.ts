@@ -3,6 +3,7 @@ import { validateApiKey, apiError } from "@/lib/api-key-auth";
 import { resolveProject } from "@/lib/api-v1-helpers";
 import { markdownToTiptapRaw } from "@/lib/ai/markdown-to-tiptap";
 import { validateKeywords } from "@/lib/keywords";
+import { withDocsRevalidation } from "@/lib/docs/cache";
 
 export async function GET(
   request: Request,
@@ -32,7 +33,7 @@ export async function GET(
   return Response.json(data);
 }
 
-export async function PATCH(
+async function handlePatch(
   request: Request,
   { params }: { params: Promise<{ slug: string; articleSlug: string }> }
 ) {
@@ -107,7 +108,7 @@ export async function PATCH(
   return Response.json(data);
 }
 
-export async function DELETE(
+async function handleDelete(
   request: Request,
   { params }: { params: Promise<{ slug: string; articleSlug: string }> }
 ) {
@@ -137,3 +138,6 @@ export async function DELETE(
 
   return new Response(null, { status: 204 });
 }
+
+export const PATCH = withDocsRevalidation(handlePatch);
+export const DELETE = withDocsRevalidation(handleDelete);
