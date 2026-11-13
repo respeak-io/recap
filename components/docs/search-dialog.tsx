@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { Search as SearchIcon, FileText, Hash, X } from "lucide-react";
+import { AiAnswer, type AiAnswerState } from "./ai-answer";
 
 interface SearchResult {
   id: string;
@@ -32,8 +33,13 @@ export function SearchDialog({ projectId, projectSlug, locale }: SearchDialogPro
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
+  // The query the current results belong to; "No results" shows only once the
+  // search for what is typed has actually finished (not during the debounce).
+  const [resultsFor, setResultsFor] = useState<string | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
-  const [aiAnswer, setAiAnswer] = useState<string | null>(null);
+  const [aiAnswer, setAiAnswer] = useState<AiAnswerState | null>(null);
+  // The articles the answer is generated from (the answer route uses the top 3).
+  const [answerSources, setAnswerSources] = useState<SearchResult[]>([]);
   const [fallback, setFallback] = useState<"or" | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -95,12 +101,16 @@ export function SearchDialog({ projectId, projectSlug, locale }: SearchDialogPro
         const data = await res.json();
         if (seq !== searchSeqRef.current) return;
         setResults(data.articles ?? []);
+        setResultsFor(q);
         setFallback(data.fallback ?? null);
         setActiveIndex(0);
 
         // AI answer in the background, once the user has stopped typing.
         if (data.articles?.length > 0 && q.trim().length >= MIN_ANSWER_CHARS) {
           answerTimerRef.current = setTimeout(() => {
+            if (seq !== searchSeqRef.current) return;
+            setAnswerSources((data.articles as SearchResult[]).slice(0, 3));
+            setAiAnswer({ status: "loading" });
             fetch("/api/search/answer", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -113,9 +123,13 @@ export function SearchDialog({ projectId, projectSlug, locale }: SearchDialogPro
             })
               .then((r) => r.json())
               .then((d) => {
-                if (seq === searchSeqRef.current) setAiAnswer(d.answer ?? null);
+                if (seq !== searchSeqRef.current) return;
+                // No answer (no budget, rate-limited, error): hide the card.
+                setAiAnswer(d.answer ? { status: "ready", text: d.answer } : null);
               })
-              .catch(() => {});
+              .catch(() => {
+                if (seq === searchSeqRef.current) setAiAnswer(null);
+              });
           }, ANSWER_DELAY_MS);
         }
       } finally {
@@ -253,17 +267,19 @@ export function SearchDialog({ projectId, projectSlug, locale }: SearchDialogPro
                   </div>
                 )}
 
-                {!loading && results.length === 0 && query.trim() && (
+                {!loading && results.length === 0 && query.trim() && resultsFor === query && (
                   <div className="py-8 text-center text-sm text-muted-foreground">
                     No results found.
                   </div>
                 )}
 
                 {aiAnswer && (
-                  <div className="mb-2 rounded-lg bg-primary/5 p-3">
-                    <p className="mb-1 text-xs font-medium text-primary">AI Answer</p>
-                    <p className="text-sm text-muted-foreground leading-relaxed">{aiAnswer}</p>
-                  </div>
+                  <AiAnswer
+                    state={aiAnswer}
+                    sources={answerSources}
+                    locale={currentLang}
+                    onOpenSource={handleSelect}
+                  />
                 )}
 
                 {fallback === "or" && results.length > 0 && (

@@ -1,12 +1,17 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { mockSupabase } from "@/__tests__/helpers/mock-supabase";
 
+vi.mock("@/lib/search/vocabulary", () => ({
+  // Default: no compound splitting; individual tests override.
+  expandSearchTerms: vi.fn(async (terms: string[]) => terms),
+}));
 vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn(),
 }));
 
 import { createClient } from "@/lib/supabase/server";
 import { resetRateLimits } from "@/lib/rate-limit";
+import { expandSearchTerms } from "@/lib/search/vocabulary";
 
 function makeRequest(q: string, projectId = "p1", lang = "de") {
   const url = `http://localhost/api/search?q=${encodeURIComponent(q)}&projectId=${projectId}&lang=${lang}`;
@@ -45,6 +50,21 @@ describe("GET /api/search — ranked search", () => {
     });
   });
 
+  it("searches with compound parts and judges fallback against them", async () => {
+    vi.mocked(expandSearchTerms).mockResolvedValueOnce(["lese", "akte", "einträge"]);
+    supa.client.rpc = vi.fn().mockResolvedValue({ data: [art("a1", 3)], error: null });
+
+    const { GET } = await import("@/app/api/search/route");
+    const body = await (await GET(makeRequest("wie lese ich akteneinträge?"))).json();
+
+    expect(expandSearchTerms).toHaveBeenCalledWith(["lese", "akteneinträge"], "p1", "de");
+    expect(supa.client.rpc).toHaveBeenCalledWith(
+      "search_articles_ranked",
+      expect.objectContaining({ p_terms: ["lese", "akte", "einträge"] }),
+    );
+    expect(body.fallback).toBeNull();
+  });
+
   it("does not expose the internal matched_terms column", async () => {
     supa.client.rpc = vi.fn().mockResolvedValue({ data: [art("a1", 2)], error: null });
 
@@ -66,8 +86,8 @@ describe("GET /api/search — ranked search", () => {
     );
   });
 
-  it("reports fallback 'or' when no result contains every term, and logs it", async () => {
-    supa.client.rpc = vi.fn().mockResolvedValue({ data: [art("a1", 2)], error: null });
+  it("reports fallback 'or' when no result contains two thirds of the terms, and logs it", async () => {
+    supa.client.rpc = vi.fn().mockResolvedValue({ data: [art("a1", 1)], error: null });
 
     const { GET } = await import("@/app/api/search/route");
     const body = await (await GET(makeRequest("chat zugriff bekommen"))).json();
@@ -109,6 +129,15 @@ describe("GET /api/search — ranked search", () => {
 
     expect(body).toEqual({ articles: [], fallback: null });
     expect(rpcMock).not.toHaveBeenCalled();
+  });
+
+  it("no fallback hint when the best result has two thirds of the terms", async () => {
+    supa.client.rpc = vi.fn().mockResolvedValue({ data: [art("a1", 2)], error: null });
+
+    const { GET } = await import("@/app/api/search/route");
+    const body = await (await GET(makeRequest("chat zugriff bekommen"))).json();
+
+    expect(body.fallback).toBeNull();
   });
 
   it("logs fallback_level: null when a result contains every term", async () => {

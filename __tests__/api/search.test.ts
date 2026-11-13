@@ -3,6 +3,10 @@ import { mockSupabase, makeRequest } from "../helpers/mock-supabase";
 import { resetRateLimits } from "@/lib/rate-limit";
 
 const supabaseMock = mockSupabase();
+vi.mock("@/lib/search/vocabulary", () => ({
+  // Default: no compound splitting; individual tests override.
+  expandSearchTerms: vi.fn(async (terms: string[]) => terms),
+}));
 vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn().mockResolvedValue(supabaseMock.client),
 }));
