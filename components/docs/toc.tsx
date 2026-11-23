@@ -342,7 +342,7 @@ export function Toc({ headings }: { headings: TocItem[] }) {
                 }
               }}
               className={cn(
-                "relative text-xs leading-relaxed py-1 transition-colors",
+                "relative text-xs leading-relaxed py-1 transition-colors [overflow-wrap:anywhere]",
                 h.level <= 2 && "pl-4",
                 h.level === 3 && "pl-7",
                 h.level >= 4 && "pl-10",
