@@ -149,9 +149,11 @@ function renderNode(
     }
     case "table":
       return (
-        <table key={index} className="border-collapse w-full">
-          <tbody>{children}</tbody>
-        </table>
+        <div key={index} className="my-6 overflow-x-auto">
+          <table className="border-collapse w-full my-0">
+            <tbody>{children}</tbody>
+          </table>
+        </div>
       );
     case "tableRow":
       return <tr key={index}>{children}</tr>;

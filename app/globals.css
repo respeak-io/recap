@@ -221,6 +221,11 @@
 .prose table {
   font-size: 0.875rem;
 }
+/* Typography wraps inline code in literal backticks; the chip style already marks it as code. */
+.prose code::before,
+.prose code::after {
+  content: none;
+}
 
 /* Accordion/Details in editor —
    DOM: div[data-type="details"] > button + div > (summary + div[data-type="detailsContent"][hidden])
