@@ -229,6 +229,7 @@ function useThumbDot(
 
 export function Toc({ headings }: { headings: TocItem[] }) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const asideRef = useRef<HTMLElement>(null);
   const observerRef = useRef<TocObserver | null>(null);
   const [activeIds, setActiveIds] = useState<string[]>([]);
   const [svg, setSvg] = useState<SvgData | null>(null);
@@ -281,6 +282,19 @@ export function Toc({ headings }: { headings: TocItem[] }) {
     return () => ro.disconnect();
   }, [refresh]);
 
+  // A TOC taller than the viewport scrolls on its own; keep the entry being read in view.
+  useEffect(() => {
+    const aside = asideRef.current;
+    if (!aside || activeIds.length === 0 || aside.scrollHeight <= aside.clientHeight) return;
+    const link = aside.querySelector<HTMLElement>(`a[href="#${CSS.escape(activeIds[0])}"]`);
+    if (!link) return;
+    const box = aside.getBoundingClientRect();
+    const item = link.getBoundingClientRect();
+    const margin = 48;
+    if (item.top < box.top + margin) aside.scrollTop -= box.top + margin - item.top;
+    else if (item.bottom > box.bottom - margin) aside.scrollTop += item.bottom - (box.bottom - margin);
+  }, [activeIds]);
+
   if (headings.length === 0) return null;
 
   const activeSet = new Set(activeIds);
@@ -290,7 +304,10 @@ export function Toc({ headings }: { headings: TocItem[] }) {
       : "polygon(0 0, 0 0, 0 0, 0 0)";
 
   return (
-    <aside className="hidden xl:block w-[220px] flex-shrink-0 sticky top-16 h-fit pr-8">
+    <aside
+      ref={asideRef}
+      className="hidden xl:block w-[220px] flex-shrink-0 sticky top-16 h-fit max-h-[calc(100vh-5rem)] overflow-y-auto overscroll-contain pr-8 pb-4"
+    >
       <p className="text-xs font-semibold uppercase text-muted-foreground mb-3">
         On this page
       </p>
