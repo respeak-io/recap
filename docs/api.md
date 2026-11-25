@@ -307,8 +307,8 @@ Optionally include `name`, `subtitle`, and/or `translations` at the top level to
 
 - Chapters are matched by `slug`
 - Articles are matched by `slug` + `language`
-- `order` is set by array position
-- Chapters/articles not in the payload are **deleted**
+- `order` (chapters and articles, optional non-negative integer) sets the sort position. Without it, a full sync uses the array position. With `"prune": false`, existing chapters/articles keep their stored order and new ones are appended (as are articles moved in from another chapter), because the payload may hold only part of the project.
+- Chapters/articles not in the payload are **deleted**, unless the payload sets `"prune": false`
 - **Multilingual articles:** Each language variant is a separate entry with the same `slug` but different `language`. If you only include `"language": "en"` entries, all other language variants will be deleted.
 - **`translations` is for chapters only** (sidebar title/group). Article content per language must be sent as separate article entries.
 - **Chapter content:** A chapter's default-language (`en`) body is set from its top-level `content` (Markdown), persisted directly to `content_json`. Like `keywords`, chapter `content` is **preserve-on-omit**: a chapter sent without `content` keeps its existing body (it is not wiped), and a newly-created chapter without `content` starts from an empty document. Other languages' chapter bodies are sent as `translations.<lang>.content`.

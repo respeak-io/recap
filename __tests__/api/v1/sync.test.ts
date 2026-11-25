@@ -653,4 +653,120 @@ describe("PUT /api/v1/projects/[slug]/sync", () => {
     expect(json.error).toMatch(/'dup' \(en\).*also in chapter 'a'/);
     expect(supabaseMock.getChain("articles").insert).not.toHaveBeenCalled();
   });
+
+  // --- Order ---
+
+  describe("order", () => {
+    const CHAPTERS = [
+      { id: "ch-a", slug: "a", order: 0 },
+      { id: "ch-b", slug: "b", order: 1 },
+      { id: "ch-c", slug: "c", order: 2 },
+    ];
+    const ARTICLES = [
+      { id: "art-1", slug: "one", language: "en", chapter_id: "ch-c", order: 0 },
+      { id: "art-2", slug: "two", language: "en", chapter_id: "ch-c", order: 2 },
+      { id: "art-3", slug: "three", language: "en", chapter_id: "ch-c", order: 4 },
+      { id: "art-b", slug: "in-b", language: "en", chapter_id: "ch-b", order: 5 },
+    ];
+
+    async function sync(body: unknown) {
+      supabaseMock.setTable("chapters", { data: CHAPTERS });
+      supabaseMock.setTable("articles", { data: ARTICLES });
+      supabaseMock.setTable("projects", { data: null, error: null });
+      const chapters = supabaseMock.getChain("chapters");
+      chapters.single = vi.fn(() => ({
+        ...chapters,
+        then: vi.fn((r: (v: unknown) => void) => r({ data: { id: "ch-new" }, error: null })),
+      }));
+      const res = await PUT(
+        makeRequest("http://localhost/api/v1/projects/docs/sync", {
+          method: "PUT",
+          body,
+          headers: { Authorization: "Bearer rd_key" },
+        }),
+        { params: Promise.resolve({ slug: "docs" }) }
+      );
+      const args = (table: string, fn: "update" | "insert") =>
+        supabaseMock.getChain(table)[fn].mock.calls.map((c) => c[0] as Record<string, unknown>);
+      return { res, args };
+    }
+
+    it("keeps the stored order of existing rows when prune is false", async () => {
+      const { args } = await sync({
+        prune: false,
+        chapters: [
+          { title: "C", slug: "c", articles: [{ title: "Three", slug: "three", content: "x" }] },
+        ],
+      });
+      expect(args("chapters", "update")).toHaveLength(1);
+      expect(args("chapters", "update")[0]).not.toHaveProperty("order");
+      expect(args("articles", "update")).toHaveLength(1);
+      expect(args("articles", "update")[0]).not.toHaveProperty("order");
+    });
+
+    it("appends new rows, and articles moved into a chapter, when prune is false", async () => {
+      const { args } = await sync({
+        prune: false,
+        chapters: [
+          {
+            title: "C",
+            slug: "c",
+            articles: [
+              { title: "New 1", slug: "new-1", content: "x" },
+              { title: "In B", slug: "in-b", content: "x" },
+              { title: "New 2", slug: "new-2", content: "x" },
+            ],
+          },
+          { title: "D", slug: "d", articles: [{ title: "First", slug: "first", content: "x" }] },
+        ],
+      });
+      expect(args("chapters", "insert")[0]).toMatchObject({ slug: "d", order: 3 });
+      expect(args("articles", "insert").map((a) => [a.slug, a.order])).toEqual([
+        ["new-1", 5],
+        ["new-2", 7],
+        ["first", 0],
+      ]);
+      expect(args("articles", "update")[0]).toMatchObject({ chapter_id: "ch-c", order: 6 });
+    });
+
+    it("uses an explicit order from the payload, with and without prune", async () => {
+      for (const prune of [true, false]) {
+        const { args } = await sync({
+          prune,
+          chapters: [
+            {
+              title: "C",
+              slug: "c",
+              order: 2,
+              articles: [{ title: "Three", slug: "three", content: "x", order: 4 }],
+            },
+          ],
+        });
+        expect(args("chapters", "update")[0]).toMatchObject({ order: 2 });
+        expect(args("articles", "update")[0]).toMatchObject({ order: 4 });
+      }
+    });
+
+    it("falls back to the array position on a full mirror", async () => {
+      const { args } = await sync({
+        chapters: [
+          { title: "C", slug: "c", articles: [{ title: "Three", slug: "three", content: "x" }] },
+          { title: "A", slug: "a", articles: [] },
+        ],
+      });
+      expect(args("chapters", "update").map((u) => u.order)).toEqual([0, 1]);
+      expect(args("articles", "update")[0]).toMatchObject({ order: 0 });
+    });
+
+    it("rejects an order that is not a non-negative integer", async () => {
+      for (const order of [-1, 1.5, "2", null]) {
+        const { res } = await sync({ chapters: [{ title: "C", slug: "c", order, articles: [] }] });
+        expect(res.status).toBe(422);
+        const art = await sync({
+          chapters: [{ title: "C", slug: "c", articles: [{ title: "T", content: "x", order }] }],
+        });
+        expect(art.res.status).toBe(422);
+      }
+    });
+  });
 });

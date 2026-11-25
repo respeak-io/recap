@@ -85,7 +85,7 @@ export async function push(options: SyncOptions): Promise<PushResult> {
   // build the link map from the full manifest, then narrow what we actually send.
   const linkMap = buildLinkMap(manifest);
   const scoped = options.only?.length ? selectManifest(manifest, options.only) : manifest;
-  const payload = await buildPayload(scoped, options.docsDir, imageUrls, linkMap, onWarn);
+  const payload = await buildPayload(scoped, options.docsDir, imageUrls, linkMap, onWarn, manifest);
 
   // `--only` is inherently additive (a scoped push must never delete the rest);
   // `prune: false` opts a full push out of deletions too. Default stays a mirror.
