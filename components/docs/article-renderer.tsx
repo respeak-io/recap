@@ -124,7 +124,7 @@ function renderNode(
       const lang = (node.attrs?.language as string) || "";
       const codeText =
         node.content?.map((n) => n.text ?? "").join("") ?? "";
-      return <ShikiCodeBlock key={index} code={codeText} language={lang} />;
+      return <ShikiCodeBlock key={index} code={codeText} language={lang} locale={locale} />;
     }
     case "blockquote":
       return <blockquote key={index}>{children}</blockquote>;
