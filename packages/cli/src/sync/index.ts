@@ -5,6 +5,7 @@ import {
   loadManifest,
   validateManifest,
   getArticleLang,
+  DEFAULT_LANGUAGE,
   type SyncManifest,
 } from "./manifest.js";
 import { selectManifest, parseSelectors } from "./select.js";
@@ -141,8 +142,51 @@ export async function diff(options: SyncOptions): Promise<DiffResult> {
     remote.chapters.map((c) => [c.slug, new Set(c.articles.map((a) => `${a.slug}:${a.language}`))]),
   );
 
+  // Skip media comparison (rather than report false drift) if the list fails.
+  let remoteImageList: RecapImage[] | null;
+  try {
+    remoteImageList = (await client.listImages(manifest.project_slug)).images;
+  } catch {
+    remoteImageList = null;
+  }
+  const localImages = await listLocalImages(options.docsDir);
+  // The same media/ -> URL mapping push uses, so image sources compare equal.
+  const localImageSet = new Set(localImages ?? []);
+  const imageUrls = Object.fromEntries(
+    (remoteImageList ?? []).filter((i) => localImageSet.has(i.filename)).map((i) => [i.filename, i.url]),
+  );
+
+  // Render local markdown through the SAME pipeline as push/server: process it
+  // (strip H1, rewrite cross-links, swap media), then run the shared
+  // markdown->Tiptap converter.
+  const render = async (file: string) => {
+    const raw = await readFile(path.join(options.docsDir, file), "utf-8");
+    const processed = processMarkdown(raw, file, linkMap, manifest.project_slug, imageUrls, onWarn);
+    return processed ? markdownToTiptapRaw(processed) : null;
+  };
+
+  onProgress("Checking chapter bodies...");
+  const localChapterBodies = new Map<string, { doc: unknown; file: string }>();
+  const remoteChapterBodies = new Map<string, unknown>();
+  for (const chapter of manifest.chapters) {
+    for (const [lang, file] of Object.entries(chapter.content ?? {})) {
+      const rendered = await render(file);
+      if (!rendered) continue; // push skips an empty body, too
+      localChapterBodies.set(`${chapter.slug}:${lang}`, { doc: rendered.doc, file });
+    }
+    if (!remoteChapterSlugs.has(chapter.slug)) continue;
+    if (!localChapterBodies.has(`${chapter.slug}:${DEFAULT_LANGUAGE}`)) continue;
+    const remoteChapter = await withRetry(
+      () => client.getChapter(manifest.project_slug, chapter.slug),
+      `Could not fetch remote chapter '${chapter.slug}'`,
+      onWarn,
+    );
+    if (remoteChapter) remoteChapterBodies.set(chapter.slug, remoteChapter.content_json);
+  }
+
   const remoteArticles = new Map<string, RemoteArticle>();
   const localTexts = new Map<string, string>();
+  const localDocs = new Map<string, unknown>();
   const localFiles = new Map<string, string>();
 
   onProgress("Checking article content...");
@@ -153,47 +197,34 @@ export async function diff(options: SyncOptions): Promise<DiffResult> {
         const got = getArticleLang(article, lang);
         if (!got || !got.ok) continue;
         const key = `${article.slug}:${lang}`;
-        const raw = await readFile(path.join(options.docsDir, got.value.file), "utf-8");
-        // Render local content_text through the SAME pipeline as push/server:
-        // process the markdown (strip H1, rewrite cross-links, swap media), then
-        // run the shared markdown->Tiptap converter and take its plain text. A
-        // truly-synced article is byte-identical to the remote content_text.
-        const processed = processMarkdown(
-          raw,
-          got.value.file,
-          linkMap,
-          manifest.project_slug,
-          {},
-          onWarn,
-        );
-        localTexts.set(key, markdownToTiptapRaw(processed).text);
+        // A truly-synced article is identical to the remote content.
+        const rendered = (await render(got.value.file)) ?? markdownToTiptapRaw("");
+        localTexts.set(key, rendered.text);
+        localDocs.set(key, rendered.doc);
         localFiles.set(key, got.value.file);
         // Only fetch remote content for articles that exist on both sides.
         if (!remoteChapterSlugs.has(chapter.slug) || !remoteKeys?.has(key)) continue;
-        const ra = await fetchArticleWithRetry(client, manifest.project_slug, article.slug, lang, onWarn);
+        const ra = await withRetry(
+          () => client.getArticle(manifest.project_slug, article.slug, lang),
+          `Could not fetch remote article '${article.slug}' (${lang})`,
+          onWarn,
+        );
         if (ra) remoteArticles.set(key, ra);
       }
     }
   }
 
-  // Skip media comparison (rather than report false drift) if the list fails.
-  let remoteImages: string[] | null;
-  try {
-    const list = await client.listImages(manifest.project_slug);
-    remoteImages = list.images.map((i) => i.filename);
-  } catch {
-    remoteImages = null;
-  }
-  const localImages = await listLocalImages(options.docsDir);
-
   const report = computeDiff({
     manifest,
     remote,
     remoteArticles,
-    remoteImages,
+    remoteImages: remoteImageList?.map((i) => i.filename) ?? null,
     localImages,
     localTexts,
+    localDocs,
     localFiles,
+    localChapterBodies,
+    remoteChapterBodies,
   });
 
   return { report, warnings };
@@ -245,29 +276,25 @@ export async function remove(options: RemoveOptions): Promise<RemoveResult> {
 // --- internals ---
 
 /**
- * Fetch one article for the content comparison. Transient failures (network,
- * 5xx, 429) get one retry; if that also fails the reason is surfaced as a
- * warning instead of being swallowed, and the article shows as "could not
- * fetch content" in the report.
+ * Fetch something for the content comparison. Transient failures (network, 5xx,
+ * 429) get one retry; if that also fails the reason is surfaced as a warning
+ * instead of being swallowed, and the item shows as "could not fetch" in the
+ * report.
  */
-async function fetchArticleWithRetry(
-  client: RecapClient,
-  projectSlug: string,
-  articleSlug: string,
-  lang: string,
+async function withRetry<T>(
+  fetchOnce: () => Promise<T>,
+  failure: string,
   onWarn: (message: string) => void,
-): Promise<RemoteArticle | null> {
+): Promise<T | null> {
   let lastError: unknown;
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      return await client.getArticle(projectSlug, articleSlug, lang);
+      return await fetchOnce();
     } catch (err) {
       lastError = err;
     }
   }
-  onWarn(
-    `Could not fetch remote article '${articleSlug}' (${lang}): ${(lastError as Error)?.message ?? lastError}`,
-  );
+  onWarn(`${failure}: ${(lastError as Error)?.message ?? lastError}`);
   return null;
 }
 

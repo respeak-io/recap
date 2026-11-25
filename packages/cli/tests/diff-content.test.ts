@@ -61,7 +61,10 @@ function diffFor(localMd: string, remoteText: string): ReturnType<typeof compute
     remoteImages: [],
     localImages: [],
     localTexts: new Map([["art:en", render(localMd)]]),
+    localDocs: new Map([["art:en", undefined]]),
     localFiles: new Map([["art:en", "en/art.md"]]),
+    localChapterBodies: new Map(),
+    remoteChapterBodies: new Map(),
   };
   return computeDiff(input);
 }

@@ -43,7 +43,7 @@ export interface SyncPayload {
 }
 
 /** Chapters in sidebar order: the manifest's `order`, then array position. */
-function sortChapters(manifest: SyncManifest) {
+export function sortChapters(manifest: SyncManifest) {
   return [...manifest.chapters].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 }
 

@@ -32,11 +32,20 @@ The target defaults to `https://docs.respeak.io`. For local dev, add
 npx @respeak/recap diff ./docs
 ```
 
-Reports structural drift, per-article content changes (with the file path),
-unresolved cross-links, media differences, and project-metadata changes. A clean
-repo prints **"Local and remote are IN SYNC."** — trust it as a pre-push gate.
+Reports, with the file path where there is one:
 
-- `--verbose` prints the exact text that changed for each article.
+- chapters and articles missing on either side, and changed titles,
+  descriptions, groups, keywords and translations
+- changed **text** (`content differs`)
+- same text but changed **formatting** (`formatting differs`): code-block
+  language, link targets, bold/italic, heading levels, callout types, images
+- changed chapter bodies (`_index.md`)
+- a different **order** of chapters or articles
+- unresolved cross-links, media differences, project metadata
+
+A clean repo prints **"Local and remote are IN SYNC."** — trust it as a pre-push gate.
+
+- `--verbose` prints the exact text that changed.
 - `--exit-code` exits `1` when drift is found (use this to gate automation).
 
 **2. Publish — declarative, mutates the project:**
@@ -49,6 +58,16 @@ npx @respeak/recap push ./docs
 and any remote image no longer in local `media/`, is DELETED on the server.** Always `diff` first and read what would be removed.
 `push --dry-run` is identical to `diff`. Push prints a summary including an
 `images:` line so you can confirm media uploaded.
+
+⚠️ **`push` publishes the files on disk, not a commit.** Uncommitted edits in the
+docs folder go live too, including another person's or session's. Run
+`git status <docsDir>` first; if there are edits that are not yours to publish,
+push from a clean checkout (e.g. a separate git worktree). The reverse also
+holds: pushing an older checkout undoes whatever was published since, so treat
+every `diff` line you did not cause as a reason to stop.
+
+**3. Verify:** run `diff` again after the push. It must report IN SYNC, or only
+the differences you deliberately did not push.
 
 ### Granular / additive push
 
@@ -72,6 +91,12 @@ are **additive**: only the upserts happen, and remote items absent from the
 payload are left alone. Cross-links still resolve against the full doc set, so a
 scoped push won't break links to pages it didn't send. A selector that matches
 nothing in `sync.json` fails loudly.
+
+Order always follows `sync.json` (chapters by `order`, articles by array
+position), also on a scoped push: every item keeps its place in the whole
+project. If you insert a new chapter or article in the middle, follow up with a
+push that includes the items after it, because a scoped push does not renumber
+what it does not send. `diff` reports it if you forget.
 
 To remove something from the server (the additive counterpart to `--only`):
 
