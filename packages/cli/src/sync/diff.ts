@@ -1,4 +1,5 @@
 import {
+  DEFAULT_LANGUAGE,
   getArticleLang,
   normalizeKeywords,
   type SyncManifest,
@@ -6,6 +7,8 @@ import {
 } from "./manifest.js";
 
 export { normalizeKeywords };
+import { sortChapters } from "./payload.js";
+import { docText, firstStructureDiff } from "./structure.js";
 import type { RemoteProject, RemoteArticle, RemoteArticleSummary } from "./client.js";
 
 export interface DiffInput {
@@ -23,11 +26,23 @@ export interface DiffInput {
    * therefore byte-identical to the remote `content_text`.
    */
   localTexts: Map<string, string>;
+  /** key `${slug}:${lang}` -> local document, rendered like `localTexts`. */
+  localDocs: Map<string, unknown>;
+  /**
+   * key `${chapterSlug}:${lang}` -> local chapter body (`_index.md`). Only bodies
+   * a push would write; an absent one is not compared for the default language.
+   */
+  localChapterBodies: Map<string, { doc: unknown; file: string }>;
+  /**
+   * chapter slug -> remote default-language body. A chapter that is missing here
+   * could not be fetched. Other languages come with `remote.chapters`.
+   */
+  remoteChapterBodies: Map<string, unknown>;
   /** key `${slug}:${lang}` -> repo-relative markdown file (for verbose output) */
   localFiles: Map<string, string>;
 }
 
-/** A per-article content difference, carrying both rendered texts for `--verbose`. */
+/** An article or chapter-body text difference, carrying both rendered texts for `--verbose`. */
 export interface ContentDiff {
   slug: string;
   lang: string;
@@ -51,6 +66,8 @@ export interface DiffReport {
 export function computeDiff(input: DiffInput): DiffReport {
   const { manifest, remote, remoteArticles, remoteImages, localImages, localTexts, localFiles } =
     input;
+  const { localDocs, localChapterBodies, remoteChapterBodies } = input;
+  const structureOptions = { ignoreImageSrc: remoteImages === null };
   const diffs: string[] = [];
   const info: string[] = [];
   const contentDiffs: ContentDiff[] = [];
@@ -160,6 +177,66 @@ export function computeDiff(input: DiffInput): DiffReport {
     }
   }
 
+  // --- Order ---
+  // Relative order only: gaps and offsets in the stored positions are invisible
+  // to readers. Equal positions are drift too, since their order is undefined.
+  const compareOrder = (what: string, local: string[], remoteOrder: (slug: string) => number) => {
+    const positions = local.map(remoteOrder);
+    if (positions.every((p, i) => i === 0 || p > positions[i - 1])) return;
+    const remoteSequence = [...local].sort((a, b) => remoteOrder(a) - remoteOrder(b));
+    const ambiguous = new Set(positions).size < positions.length ? " (some share a position)" : "";
+    diffs.push(`${what}: remote=${arr(remoteSequence)}${ambiguous}, local=${arr(local)}`);
+  };
+  compareOrder(
+    "Chapter order",
+    sortChapters(manifest).map((c) => c.slug).filter((s) => remoteChapters.has(s)),
+    (s) => remoteChapters.get(s)!.order,
+  );
+  for (const slug of commonChapters) {
+    for (const lang of languages) {
+      const remoteOrders = new Map(
+        remoteChapters.get(slug)!.articles.filter((a) => a.language === lang).map((a) => [a.slug, a.order]),
+      );
+      const local = localChapters
+        .get(slug)!
+        .articles.filter((a) => getArticleLang(a, lang)?.ok && remoteOrders.has(a.slug))
+        .map((a) => a.slug);
+      compareOrder(`Chapter '${slug}' article order (${lang})`, local, (s) => remoteOrders.get(s)!);
+    }
+  }
+
+  // --- Chapter bodies ---
+  for (const slug of commonChapters) {
+    const rc = remoteChapters.get(slug)!;
+    for (const lang of languages) {
+      const local = localChapterBodies.get(`${slug}:${lang}`);
+      const isDefault = lang === DEFAULT_LANGUAGE;
+      const remoteDoc = isDefault ? remoteChapterBodies.get(slug) : rc.translations?.[lang]?.content_json;
+      if (!local) {
+        // A push leaves the default-language body alone when none is declared,
+        // but replaces the translations, which drops the other languages' bodies.
+        if (!isDefault && remoteDoc) {
+          diffs.push(`Chapter '${slug}' (${lang}) body — on remote but not in sync.json (push removes it)`);
+        }
+        continue;
+      }
+      if (isDefault && !remoteChapterBodies.has(slug)) {
+        info.push(`Chapter '${slug}' (${lang}) — could not fetch body`);
+        continue;
+      }
+      const found = firstStructureDiff(local.doc, remoteDoc, structureOptions);
+      if (!found) continue;
+      const localText = collapse(docText(local.doc));
+      const remoteText = collapse(docText(remoteDoc));
+      if (localText === remoteText) {
+        diffs.push(`Chapter '${slug}' (${lang}) body formatting differs: ${found}  [${local.file}]`);
+      } else {
+        diffs.push(`Chapter '${slug}' (${lang}) body differs  [${local.file}]`);
+        contentDiffs.push({ slug, lang, file: local.file, local: localText, remote: remoteText });
+      }
+    }
+  }
+
   // --- Content ---
   // `localTexts` is rendered through the same converter the server uses, so a
   // synced article is byte-identical to the remote `content_text`. Any
@@ -190,12 +267,24 @@ export function computeDiff(input: DiffInput): DiffReport {
         }
         const remoteNorm = collapse(ra.content_text);
         const localNorm = collapse(localText);
+        const file = localFiles.get(key) ?? "";
         if (remoteNorm === localNorm) {
-          matches++;
+          // Same text: what's left is structure (code language, links, marks, …).
+          const found =
+            ra.content_json === undefined
+              ? null
+              : firstStructureDiff(localDocs.get(key), ra.content_json, structureOptions);
+          if (!found) {
+            matches++;
+          } else {
+            differing++;
+            diffs.push(
+              `Article '${article.slug}' (${lang}) formatting differs: ${found}${file ? `  [${file}]` : ""}`,
+            );
+          }
           continue;
         }
         differing++;
-        const file = localFiles.get(key) ?? "";
         diffs.push(
           `Article '${article.slug}' (${lang}) content differs${file ? `  [${file}]` : ""}`,
         );

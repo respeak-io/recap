@@ -43,7 +43,10 @@ export interface RemoteChapter {
   slug: string;
   group?: string | null;
   order: number;
-  translations?: Record<string, { title?: string; group?: string; description?: string }> | null;
+  translations?: Record<
+    string,
+    { title?: string; group?: string; description?: string; content_json?: unknown }
+  > | null;
   articles: RemoteArticleSummary[];
 }
 
@@ -106,6 +109,11 @@ export class RecapClient {
       if (err instanceof Error && err.message.startsWith("API 404 ")) return null;
       throw err;
     }
+  }
+
+  /** One chapter including its default-language body, which `getProject` omits. */
+  getChapter(slug: string, chapterSlug: string): Promise<RemoteChapter & { content_json?: unknown }> {
+    return this.request("GET", `/projects/${slug}/chapters/${encodeURIComponent(chapterSlug)}`);
   }
 
   listImages(slug: string): Promise<{ images: RecapImage[] }> {
