@@ -218,6 +218,66 @@
 .prose pre {
   border: 1px solid var(--border);
 }
+/* Code blocks in public docs (components/docs/shiki-code-block.tsx). Same box
+   before and after highlighting, surface derived from the project theme. */
+.docs-code {
+  position: relative;
+  margin-block: 1.25rem;
+}
+.docs-code pre {
+  margin: 0;
+  /* Right padding: long lines can be scrolled clear of the copy button. */
+  padding: 0.875rem 3rem 0.875rem 1rem;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: color-mix(in oklch, var(--muted) 60%, var(--background));
+  color: var(--foreground);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  line-height: 1.7;
+  tab-size: 4;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklch, var(--foreground) 25%, transparent) transparent;
+}
+.docs-code pre span {
+  color: var(--shiki-light);
+}
+.dark .docs-code pre span {
+  color: var(--shiki-dark);
+}
+.docs-code-copy {
+  position: absolute;
+  top: 0.625rem;
+  right: 0.625rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--background);
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: opacity 0.15s, color 0.15s;
+}
+.docs-code-copy:hover,
+.docs-code-copy[data-copied] {
+  color: var(--foreground);
+}
+/* With a mouse the button stays out of the way until the block is hovered or
+   focused; touch devices always show it. */
+@media (hover: hover) {
+  .docs-code-copy {
+    opacity: 0;
+  }
+  .docs-code:hover .docs-code-copy,
+  .docs-code-copy:focus-visible,
+  .docs-code-copy[data-copied] {
+    opacity: 1;
+  }
+}
 .prose table {
   font-size: 0.875rem;
 }
