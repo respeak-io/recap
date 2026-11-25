@@ -11,6 +11,7 @@ interface SyncChapter {
   content?: string;
   slug?: string;
   group?: string;
+  order?: number;
   keywords?: string[];
   translations?: Record<string, { title?: string; group?: string; description?: string; content?: string }>;
   articles?: SyncArticle[];
@@ -23,7 +24,14 @@ interface SyncArticle {
   content: string;
   language?: string;
   status?: string;
+  order?: number;
   keywords?: string[];
+}
+
+/** `order` is optional, but when sent it must be usable as a sort position. */
+function orderError(order: unknown, path: string): Response | null {
+  if (order === undefined || (Number.isInteger(order) && (order as number) >= 0)) return null;
+  return apiError(`${path}: order must be a non-negative integer`, "VALIDATION_ERROR", 422);
 }
 
 function pickKeywords(
@@ -86,6 +94,9 @@ async function handlePut(
     firstSeenChapter.set(chSlug, ci);
     chapterSlugs.push(chSlug);
 
+    const chOrderError = orderError(ch.order, chPath);
+    if (chOrderError) return chOrderError;
+
     const chKeywords = pickKeywords(ch.keywords, chPath);
     if (!chKeywords.ok) return chKeywords.res;
     chapterKeywords.push(chKeywords.value);
@@ -108,6 +119,8 @@ async function handlePut(
         );
       }
       firstSeenArticle.set(artKey, chSlug);
+      const artOrderError = orderError(art.order, artPath);
+      if (artOrderError) return artOrderError;
       const artKeywords = pickKeywords(art.keywords, artPath);
       if (!artKeywords.ok) return artKeywords.res;
       kws.push(artKeywords.value);
@@ -143,13 +156,13 @@ async function handlePut(
   // Fetch existing chapters and articles
   const { data: existingChapters, error: chFetchError } = await db
     .from("chapters")
-    .select("id, slug")
+    .select("id, slug, order")
     .eq("project_id", project.id);
   if (chFetchError) return failed("fetching chapters", chFetchError);
 
   const { data: existingArticles, error: artFetchError } = await db
     .from("articles")
-    .select("id, slug, language, chapter_id")
+    .select("id, slug, language, chapter_id, order")
     .eq("project_id", project.id);
   if (artFetchError) return failed("fetching articles", artFetchError);
 
@@ -161,6 +174,41 @@ async function handlePut(
   const existArticleMap = new Map(
     (existingArticles ?? []).map((a) => [`${a.slug}:${a.language}`, a])
   );
+
+  // Sort position: an explicit `order` always wins. Without one, a full mirror
+  // uses the array position. An additive push may hold only part of the project,
+  // so its array position means nothing: existing rows keep their stored order
+  // and new ones (or articles moved in from another chapter) are appended.
+  let lastChapterOrder = Math.max(-1, ...(existingChapters ?? []).map((c) => c.order ?? -1));
+  const lastArticleOrder = new Map<string, number>();
+  for (const a of existingArticles ?? []) {
+    if (!a.chapter_id) continue;
+    lastArticleOrder.set(a.chapter_id, Math.max(lastArticleOrder.get(a.chapter_id) ?? -1, a.order ?? -1));
+  }
+  const chapterOrder = (sent: number | undefined, index: number, isExisting: boolean) => {
+    if (sent !== undefined) {
+      lastChapterOrder = Math.max(lastChapterOrder, sent);
+      return sent;
+    }
+    if (prune) return index;
+    return isExisting ? undefined : ++lastChapterOrder;
+  };
+  const articleOrder = (
+    sent: number | undefined,
+    index: number,
+    chapterId: string,
+    staysInChapter: boolean
+  ) => {
+    const last = lastArticleOrder.get(chapterId) ?? -1;
+    if (sent !== undefined) {
+      lastArticleOrder.set(chapterId, Math.max(last, sent));
+      return sent;
+    }
+    if (prune) return index;
+    if (staysInChapter) return undefined;
+    lastArticleOrder.set(chapterId, last + 1);
+    return last + 1;
+  };
 
   const seenChapterSlugs = new Set<string>();
   const seenArticleKeys = new Set<string>();
@@ -174,6 +222,7 @@ async function handlePut(
     const existing = existChapterMap.get(chSlug);
     let chapterId: string;
     const chKeywords = chapterKeywords[ci];
+    const chOrder = chapterOrder(ch.order, ci, !!existing);
 
     const translations = ch.translations
       ? Object.fromEntries(
@@ -200,7 +249,7 @@ async function handlePut(
           description: ch.description ?? "",
           group: ch.group ?? null,
           translations,
-          order: ci,
+          ...(chOrder !== undefined ? { order: chOrder } : {}),
           ...(chapterContentJson !== undefined ? { content_json: chapterContentJson } : {}),
           ...(chKeywords !== undefined ? { keywords: chKeywords } : {}),
         })
@@ -219,7 +268,7 @@ async function handlePut(
           slug: chSlug,
           group: ch.group ?? null,
           translations,
-          order: ci,
+          order: chOrder,
           ...(chKeywords !== undefined ? { keywords: chKeywords } : {}),
         })
         .select("id")
@@ -242,6 +291,7 @@ async function handlePut(
       const { doc, text } = markdownToTiptapRaw(art.content);
       const existingArt = existArticleMap.get(artKey);
       const artKeywords = articleKeywords[ci][ai];
+      const artOrder = articleOrder(art.order, ai, chapterId, existingArt?.chapter_id === chapterId);
 
       if (existingArt) {
         const { error } = await db
@@ -253,7 +303,7 @@ async function handlePut(
             content_json: doc,
             content_text: text,
             status: art.status || "draft",
-            order: ai,
+            ...(artOrder !== undefined ? { order: artOrder } : {}),
             updated_at: new Date().toISOString(),
             ...(artKeywords !== undefined ? { keywords: artKeywords } : {}),
           })
@@ -271,7 +321,7 @@ async function handlePut(
           content_json: doc,
           content_text: text,
           status: art.status || "draft",
-          order: ai,
+          order: artOrder,
           ...(artKeywords !== undefined ? { keywords: artKeywords } : {}),
         });
         if (error) return failed(`creating article '${artSlug}' (${lang})`, error);
